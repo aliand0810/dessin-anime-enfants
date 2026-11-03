@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Dessin Animé Enfants — Image par Image</title>
+<title>Dessin Animé Studio</title>
+<meta name="theme-color" content="#0f0f13">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dessin Animé">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     :root {
@@ -160,6 +167,64 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .hidden { display: none !important; }
+
+    /* ── Studio : barre d'en-tête + deux colonnes ── */
+    body { max-width: none; padding: 0 0 6rem; }
+    .appbar {
+        position: sticky; top: 0; z-index: 200;
+        display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.8rem;
+        padding: 0.7rem 1.2rem; background: rgba(15,15,19,0.92); backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+    .brand-icon { width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0; }
+    .brand-name { font-weight: 800; font-size: 1rem; letter-spacing: -0.02em; white-space: nowrap; }
+    .brand-name span { background: linear-gradient(135deg, #ff6b9d, #4a6cf7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .brand-sub { font-size: 0.68rem; color: var(--ink-dim); white-space: nowrap; }
+    .appbar-center { display: flex; gap: 0.5rem; justify-content: center; }
+    .appbar-center .btn-primary { width: auto; margin: 0; padding: 0.7rem 1.4rem; font-size: 0.9rem; white-space: nowrap; }
+    .appbar-center .btn-stop { width: auto; margin: 0; padding: 0.7rem 1rem; }
+    .appbar-center .btn-stop.visible { display: inline-block; }
+    .appbar-right { display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; }
+    .icon-btn { padding: 0.45rem 0.8rem; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--ink); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+    .api-dot { width: 14px; height: 14px; border-radius: 50%; border: none; background: var(--error); cursor: pointer; box-shadow: 0 0 0 3px rgba(192,57,43,0.25); }
+    .api-dot.ok { background: var(--success); box-shadow: 0 0 0 3px rgba(45,138,78,0.25); }
+    .layout { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1rem; max-width: 1500px; margin: 0 auto; }
+    @media (min-width: 960px) {
+        .layout { grid-template-columns: 380px 1fr; align-items: start; }
+        .controls-col { position: sticky; top: 76px; max-height: calc(100vh - 90px); overflow-y: auto; padding-right: 4px; }
+    }
+    @media (max-width: 640px) {
+        .appbar { grid-template-columns: 1fr auto; padding: 0.6rem 0.8rem; }
+        .brand-sub { display: none; }
+        .appbar-center { grid-column: 1 / -1; grid-row: 2; }
+        .appbar-center .btn-primary { flex: 1; }
+    }
+    .results-col { min-width: 0; }
+
+    /* ── Bibliothèque ── */
+    .lib-empty { font-size: 0.78rem; color: var(--ink-faint); text-align: center; padding: 0.8rem 0; }
+    .lib-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: 8px; background: var(--panel-2); margin-bottom: 0.45rem; }
+    .lib-thumb { width: 46px; height: 46px; border-radius: 6px; overflow: hidden; background: var(--bg); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .lib-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .lib-info { flex: 1; min-width: 0; }
+    .lib-title { font-size: 0.82rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lib-meta { font-size: 0.68rem; color: var(--ink-dim); }
+    .lib-actions { display: flex; gap: 0.3rem; }
+    .lib-actions button { width: 32px; height: 32px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel); color: var(--ink); cursor: pointer; }
+
+    /* ── Impression : seule la planche ── */
+    @media print {
+        body.printing-board > *:not(.layout) { display: none !important; }
+        body.printing-board .layout { display: block; padding: 0; }
+        body.printing-board .controls-col, body.printing-board .results-col > *:not(#section-board) { display: none !important; }
+        body.printing-board #section-board { border: none; background: #fff; }
+        body.printing-board #section-board .section-header, body.printing-board #section-board .board-check,
+        body.printing-board #section-board .player-controls { display: none !important; }
+        body.printing-board .section-body { max-height: none !important; }
+        body.printing-board .board-wrap canvas { width: 100%; }
+        body { background: #fff; }
+    }
     .board-wrap { background: #fff; border-radius: 8px; overflow: hidden; margin-bottom: 0.8rem; }
     .board-wrap canvas { width: 100%; height: auto; display: block; }
     .board-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--ink-dim); margin-right: 1rem; cursor: pointer; }
@@ -175,11 +240,23 @@
 </head>
 <body>
 
-<header>
-    <h1>🎨 Dessin Animé Enfants</h1>
-    <p class="subtitle">Image par image · Vidéos animées pour les petits</p>
+<header class="appbar">
+    <div class="brand">
+        <img src="icon.svg" alt="" class="brand-icon">
+        <div><div class="brand-name">Dessin Animé <span>Studio</span></div><div class="brand-sub">Dessins animés · BD · Planches photo</div></div>
+    </div>
+    <div class="appbar-center">
+        <button type="button" class="btn-primary" id="generate-btn" disabled>🎬 Générer le dessin animé</button>
+        <button type="button" class="btn-stop" id="stop-btn">⏹ Arrêter</button>
+    </div>
+    <div class="appbar-right">
+        <button type="button" class="icon-btn hidden" id="install-btn" title="Installer l'application">⬇ Installer</button>
+        <button type="button" class="api-dot" id="api-dot" title="Clé API"></button>
+    </div>
 </header>
 
+<div class="layout">
+<aside class="controls-col" id="controls-col">
 <div class="api-panel" id="api-panel">
     <input type="password" class="api-key-input" id="api-key-input" placeholder="Collez votre clé API Agnes (sk-...)" autocomplete="off" spellcheck="false">
     <button type="button" class="api-save-btn" id="api-save-btn">Enregistrer la clé</button>
@@ -267,9 +344,20 @@
     </div></div>
 </div>
 
-<button type="button" class="btn-primary" id="generate-btn" disabled>🎬 Générer le dessin animé</button>
-<button type="button" class="btn-stop" id="stop-btn">⏹ Arrêter la génération</button>
-<button type="button" class="btn-secondary hidden" id="restore-btn">📂 Reprendre le dernier dessin animé</button>
+<button type="button" class="btn-secondary hidden" id="restore-btn">📂 Reprendre le dernier projet</button>
+
+<div class="section open" id="section-library">
+    <div class="section-header" data-toggle="section-library">
+        <span class="section-title">📚 Bibliothèque <span id="library-count"></span></span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div id="library-list"><div class="lib-empty">Chargement…</div></div>
+    </div></div>
+</div>
+</aside>
+
+<main class="results-col" id="results-col">
 
 <div class="console-panel" id="console-panel">
     <div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">[Système]</span> <span class="log-text">En attente de votre histoire...</span></div>
@@ -307,7 +395,10 @@
         <label class="board-check"><input type="checkbox" id="opt-titlebar" checked> Titre en haut</label>
         <div class="player-controls" style="padding:0.7rem 0 0;background:none;">
             <button type="button" id="board-recompose-btn">🔄 Réassembler</button>
-            <button type="button" id="board-download-btn">⬇ Télécharger PNG</button>
+            <button type="button" id="board-download-btn">⬇ PNG</button>
+            <button type="button" id="board-pdf-btn">📄 PDF</button>
+            <button type="button" id="board-print-btn">🖨 Imprimer</button>
+            <button type="button" id="board-save-btn">💾 Enregistrer</button>
             <button type="button" id="board-animate-btn">🎬 Animer en vidéo</button>
         </div>
     </div></div>
@@ -340,6 +431,9 @@
         <div class="progress-bar"><div class="progress-bar-fill" id="player-progress" style="width:0%"></div></div>
         <div style="font-size:0.75rem;color:var(--ink-dim);margin-top:0.5rem;text-align:center;" id="player-info">Scène 1</div>
     </div></div>
+</div>
+
+</main>
 </div>
 
 <div class="status-bar" id="status-bar"><div class="spinner"></div><span id="status-text">Préparation…</span></div>
@@ -383,58 +477,166 @@ const state = {
 // ══════════════════════════════════════════════════════════════════
 // SAUVEGARDE / REPRISE DU PROJET
 // ══════════════════════════════════════════════════════════════════
+const DB_NAME = 'dessin_anime_db', DB_STORE = 'projects';
+function openDB() {
+    return new Promise((res, rej) => {
+        const r = indexedDB.open(DB_NAME, 1);
+        r.onupgradeneeded = () => r.result.createObjectStore(DB_STORE, { keyPath: 'id' });
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+    });
+}
+async function dbOp(mode, fn) {
+    const db = await openDB();
+    return new Promise((res, rej) => {
+        const tx = db.transaction(DB_STORE, mode);
+        const req = fn(tx.objectStore(DB_STORE));
+        tx.oncomplete = () => res(req && req.result);
+        tx.onerror = () => rej(tx.error);
+    });
+}
+const dbPut = rec => dbOp('readwrite', st => st.put(rec));
+const dbGetAll = () => dbOp('readonly', st => st.getAll());
+const dbGet = id => dbOp('readonly', st => st.get(id));
+const dbDelete = id => dbOp('readwrite', st => st.delete(id));
+
+function projectSnapshot() {
+    return {
+        savedAt: Date.now(), idea: state.idea, style: state.selectedStyle, mode: state.mode,
+        scenario: state.scenario,
+        images: state.images.map(im => ({ sceneIndex: im.sceneIndex, url: im.url })),
+        videos: state.videos.map(v => v ? { sceneIndex: v.sceneIndex, url: v.url, sceneNumber: v.sceneNumber } : null),
+        femaleCharacters: state.femaleCharacters
+    };
+}
 function saveProject() {
-    try {
-        localStorage.setItem(PROJECT_KEY, JSON.stringify({
-            savedAt: Date.now(), idea: state.idea, style: state.selectedStyle, mode: state.mode,
-            scenario: state.scenario,
-            images: state.images.map(im => ({ sceneIndex: im.sceneIndex, url: im.url })),
-            videos: state.videos.map(v => v ? { sceneIndex: v.sceneIndex, url: v.url, sceneNumber: v.sceneNumber } : null),
-            femaleCharacters: state.femaleCharacters
-        }));
-    } catch (e) {}
+    try { localStorage.setItem(PROJECT_KEY, JSON.stringify({ ...projectSnapshot(), projectId: state.projectId })); } catch (e) {}
 }
 function loadProject() {
     try { return JSON.parse(localStorage.getItem(PROJECT_KEY) || 'null'); } catch (e) { return null; }
 }
-function restoreProject() {
-    const p = loadProject();
-    if (!p || !p.scenario) { showToast('Aucun projet sauvegardé', 'warn'); return; }
+
+// Copie locale d'une image (évite l'expiration des liens Agnes et les blocages CORS)
+async function fetchImageBlob(url) {
+    try { const r = await fetch(url); if (!r.ok) return null; const b = await r.blob(); return b.type.startsWith('image') ? b : null; }
+    catch (e) { return null; }
+}
+
+// Enregistre le projet courant dans la bibliothèque (avec les images en local quand le serveur l'autorise)
+async function saveToLibrary(silent) {
+    if (!state.scenario || !state.images.length) { if (!silent) showToast('Rien à enregistrer pour l\'instant', 'warn'); return; }
+    if (!state.projectId) state.projectId = 'p' + Date.now().toString(36);
+    try {
+        const old = await dbGet(state.projectId).catch(() => null);
+        const oldBlobs = (old && old.blobs) || {};
+        const blobs = {};
+        let saved = 0;
+        for (const im of state.images) {
+            const prev = oldBlobs[im.sceneIndex];
+            if (prev && prev.url === im.url) { blobs[im.sceneIndex] = prev; saved++; continue; }
+            const blob = await fetchImageBlob(im.url);
+            if (blob) { blobs[im.sceneIndex] = { url: im.url, blob }; saved++; }
+        }
+        await dbPut({ id: state.projectId, title: state.scenario.title, ...projectSnapshot(), blobs });
+        saveProject();
+        logConsole('Projet enregistré dans la bibliothèque (' + saved + '/' + state.images.length + ' images copiées en local)', 'success');
+        if (saved < state.images.length) logConsole('Les images non copiées restent des liens Agnes et peuvent expirer.', 'warn');
+        if (!silent) showToast('Projet enregistré 💾', 'success');
+        renderLibrary();
+    } catch (e) {
+        logConsole('Enregistrement impossible : ' + e.message, 'error');
+        if (!silent) showToast('Enregistrement impossible', 'error');
+    }
+}
+
+function applyProject(p, blobs) {
+    stopAllVideos();
+    state.projectId = p.id || p.projectId || null;
     state.scenario = p.scenario;
     state.idea = p.idea || '';
     state.selectedStyle = p.style || 'cartoon-cute';
+    document.getElementById('style-select').value = state.selectedStyle;
     if (p.mode) { document.getElementById('mode-select').value = p.mode; updateModeUI(); }
     state.femaleCharacters = p.femaleCharacters || [];
-    state.images = (p.images || []).map(im => ({ ...im, scene: p.scenario.scenes[im.sceneIndex] }));
+    state.images = (p.images || []).map(im => {
+        const b = blobs && blobs[im.sceneIndex];
+        return { ...im, scene: p.scenario.scenes[im.sceneIndex], localUrl: b && b.blob ? URL.createObjectURL(b.blob) : null };
+    });
     state.videos = (p.videos || []).map(v => v ? { ...v, dialogue: (p.scenario.scenes[v.sceneIndex] || {}).dialogue } : null);
 
     document.getElementById('idea-input').value = state.idea;
     document.getElementById('generated-images').innerHTML = '';
     document.getElementById('generated-videos').innerHTML = '';
+    ['section-board', 'section-videos', 'section-player'].forEach(id => document.getElementById(id).classList.add('hidden'));
     displayScenario(state.scenario);
-    state.images.forEach(im => displayGeneratedImage(im.url, 'Scène ' + (im.sceneIndex + 1), im.sceneIndex));
+    state.images.forEach(im => displayGeneratedImage(im.localUrl || im.url, 'Scène ' + (im.sceneIndex + 1), im.sceneIndex));
     if (state.images.length && state.mode !== 'video') composeBoard();
     state.videos.forEach((v, i) => {
         if (!v || !v.url) return;
-        const grid = document.getElementById('generated-videos');
         const ph = document.createElement('div');
         ph.id = 'pending-video-' + i;
-        grid.appendChild(ph);
+        document.getElementById('generated-videos').appendChild(ph);
         replacePendingWithVideo(i, v.url, v.dialogue, v.sceneNumber || i + 1);
     });
-    const hasVideos = state.videos.some(v => v && v.url);
-    if (hasVideos) {
+    if (state.videos.some(v => v && v.url)) {
         document.getElementById('section-videos').classList.remove('hidden');
         document.getElementById('section-player').classList.remove('hidden');
     }
     updateGenerateBtn();
-    logConsole('Projet restauré : « ' + state.scenario.title + ' »', 'success');
-    logConsole('Note : les liens vidéo peuvent expirer côté serveur — téléchargez vos clips ⬇.', 'warn');
-    showToast('Projet restauré', 'success');
+    logConsole('Projet ouvert : « ' + state.scenario.title + ' »', 'success');
+    showToast('Projet ouvert', 'success');
+    document.getElementById('results-col').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function restoreProject() {
+    const p = loadProject();
+    if (!p || !p.scenario) { showToast('Aucun projet sauvegardé', 'warn'); return; }
+    let blobs = null;
+    if (p.projectId) { try { const rec = await dbGet(p.projectId); if (rec) blobs = rec.blobs; } catch (e) {} }
+    applyProject(p, blobs);
 }
 function updateRestoreBtn() {
     const p = loadProject();
     document.getElementById('restore-btn').classList.toggle('hidden', !(p && p.scenario));
+}
+
+const _thumbUrls = [];
+async function renderLibrary() {
+    const list = document.getElementById('library-list');
+    let items = [];
+    try { items = await dbGetAll(); } catch (e) { list.innerHTML = '<div class="lib-empty">Bibliothèque indisponible sur ce navigateur</div>'; return; }
+    _thumbUrls.splice(0).forEach(u => URL.revokeObjectURL(u));
+    items.sort((a, b) => b.savedAt - a.savedAt);
+    document.getElementById('library-count').textContent = items.length ? '(' + items.length + ')' : '';
+    if (!items.length) { list.innerHTML = '<div class="lib-empty">Aucun projet enregistré. Vos créations apparaîtront ici.</div>'; return; }
+    const modeLbl = { video: '🎬 Dessin animé', comic: '💬 BD', photo: '🖼️ Planche' };
+    list.innerHTML = '';
+    items.forEach(it => {
+        const firstIdx = it.images && it.images.length ? it.images[0].sceneIndex : null;
+        const b = it.blobs && firstIdx != null && it.blobs[firstIdx];
+        let thumb = '';
+        if (b && b.blob) { const u = URL.createObjectURL(b.blob); _thumbUrls.push(u); thumb = u; }
+        else if (it.images && it.images[0]) thumb = it.images[0].url;
+        const row = document.createElement('div');
+        row.className = 'lib-item';
+        row.innerHTML = '<div class="lib-thumb">' + (thumb ? '<img src="' + esc(thumb) + '" alt="">' : '🎨') + '</div>' +
+            '<div class="lib-info"><div class="lib-title">' + esc(it.title || 'Sans titre') + '</div>' +
+            '<div class="lib-meta">' + (modeLbl[it.mode] || '') + ' · ' + ((it.images || []).length) + ' images · ' +
+            new Date(it.savedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div></div>' +
+            '<div class="lib-actions"><button type="button" data-open title="Ouvrir">📂</button><button type="button" data-del title="Supprimer">🗑</button></div>';
+        row.querySelector('[data-open]').addEventListener('click', () => {
+            if (state.isRunning) { showToast('Attendez la fin de la génération', 'warn'); return; }
+            applyProject(it, it.blobs);
+        });
+        row.querySelector('[data-del]').addEventListener('click', async () => {
+            if (!confirm('Supprimer « ' + (it.title || 'ce projet') + ' » de la bibliothèque ?')) return;
+            await dbDelete(it.id);
+            if (state.projectId === it.id) state.projectId = null;
+            renderLibrary();
+            showToast('Projet supprimé', 'warn');
+        });
+        list.appendChild(row);
+    });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -566,6 +768,9 @@ function updateApiPanel() {
     const key = getApiKey();
     if (key) { line.classList.add('ok'); txt.textContent = 'Clé API active · ' + key.slice(0, 8) + '…' + key.slice(-4); input.value = key; }
     else { line.classList.remove('ok'); txt.textContent = 'Aucune clé API enregistrée'; input.value = ''; }
+    const dot = document.getElementById('api-dot');
+    dot.classList.toggle('ok', !!key);
+    dot.title = key ? 'Clé API active' : 'Aucune clé API — cliquez pour la saisir';
     updateGenerateBtn();
 }
 function updateGenerateBtn() {
@@ -752,7 +957,7 @@ async function runFullPipeline() {
         videoSeconds: parseInt(document.getElementById('duration-select').value),
         selectedStyle: document.getElementById('style-select').value,
         mode: document.getElementById('mode-select').value,
-        images: [], videos: []
+        images: [], videos: [], projectId: null
     });
 
     document.getElementById('stop-btn').classList.add('visible');
@@ -854,10 +1059,12 @@ Réponds UNIQUEMENT en JSON valide, sans markdown.`;
         if (state.mode !== 'video') {
             // ═══ BD / PLANCHE PHOTO : assemblage, pas de vidéo ═══
             await composeBoard();
+            await saveToLibrary(true);
             setStatus(null);
             showToast(state.mode === 'photo' ? 'Planche photo prête !' : 'Bande dessinée prête !', 'success');
         } else {
             await runVideoStage();
+            await saveToLibrary(true);
             setStatus('✦ Dessin animé terminé ✦');
             await sleep(3000);
             setStatus(null);
@@ -995,7 +1202,7 @@ async function regenerateImage(sceneIndex) {
     try {
         const url = await callImageAPI(buildImagePrompt(scene), '1K', '1:1');
         const existing = state.images.find(im => im.sceneIndex === sceneIndex);
-        if (existing) existing.url = url;
+        if (existing) { existing.url = url; existing.localUrl = null; }
         else { state.images.push({ sceneIndex, url, scene }); state.images.sort((a, b) => a.sceneIndex - b.sceneIndex); }
         displayGeneratedImage(url, 'Scène ' + (sceneIndex + 1), sceneIndex);
         saveProject();
@@ -1121,98 +1328,190 @@ function getBoardColumns(n) {
     return 3;
 }
 
-async function composeBoard() {
-    const imgs = state.images.slice().sort((a, b) => a.sceneIndex - b.sceneIndex);
-    if (!imgs.length) return;
-    const isComic = state.mode !== 'photo';
-    const withBubbles = document.getElementById('opt-bubbles').checked;
-    const withCaptions = document.getElementById('opt-captions').checked;
-    const withTitle = document.getElementById('opt-titlebar').checked;
+function boardOptions() {
+    return {
+        isComic: state.mode !== 'photo',
+        withBubbles: document.getElementById('opt-bubbles').checked,
+        withCaptions: document.getElementById('opt-captions').checked,
+        withTitle: document.getElementById('opt-titlebar').checked
+    };
+}
 
-    const section = document.getElementById('section-board');
-    section.classList.remove('hidden');
-    section.classList.add('open');
-    document.getElementById('board-title').textContent = isComic ? '💬 Bande dessinée' : '🖼️ Planche photo';
-    setStatus('Assemblage de la planche…');
-
-    // chaque image est chargée indépendamment : une image en échec n'empêche plus la planche
-    const loaded = await Promise.all(imgs.map(im => loadImageForCanvas(im.url).catch(e => {
+async function loadBoardImages(imgs) {
+    // chaque image est chargée indépendamment : une image en échec n'empêche pas la planche
+    const loaded = await Promise.all(imgs.map(im => loadImageForCanvas(im.localUrl || im.url).catch(e => {
         logConsole('Image scène ' + (im.sceneIndex + 1) + ' introuvable (lien expiré ?)', 'error');
         return null;
     })));
-    if (!loaded.some(Boolean)) { setStatus(null); showToast('Aucune image chargeable — regénérez-les ↻', 'error', 4000); return; }
-    _boardTainted = loaded.some(im => im && im._tainted);
+    return loaded;
+}
 
+// Dessine des cases sur un canvas. opts : isComic, withBubbles, withCaptions, titleText, cols, panel, numberOffset, footer
+function renderBoard(canvas, imgs, loaded, opts) {
+    const { isComic, withBubbles, withCaptions } = opts;
     const n = imgs.length;
-    const cols = getBoardColumns(n);
+    const cols = opts.cols;
     const rows = Math.ceil(n / cols);
-    const colsGuess = getBoardColumns(n), rowsGuess = Math.ceil(n / colsGuess);
-    const fitArea = Math.sqrt(14e6 / (colsGuess * rowsGuess * 1.25));
-    const fitSide = Math.min(15000 / (colsGuess * 1.05), 15000 / (rowsGuess * 1.3));
-    const panel = Math.max(200, Math.floor(Math.min(700, fitArea, fitSide)));  // taille d'une case
-    const gap = isComic ? 24 : 10;
-    const border = isComic ? 6 : 0;
+    const panel = opts.panel;
     const sk = panel / 700;
+    const gap = Math.round((isComic ? 24 : 10) * Math.max(sk, 0.5));
+    const border = isComic ? Math.max(3, Math.round(6 * sk)) : 0;
     const captionH = withCaptions ? Math.round((isComic ? 90 : 60) * sk) : 0;
-    const titleH = withTitle ? Math.max(110, Math.round(110 * sk)) : 0;
-    const outer = isComic ? 40 : 16;
+    const titleH = opts.titleText ? Math.max(90, Math.round(110 * sk)) : 0;
+    const footerH = opts.footer ? 50 : 0;
+    const outer = Math.round((isComic ? 40 : 16) * Math.max(sk, 0.6));
 
-    const canvas = document.getElementById('board-canvas');
-    canvas.width = outer * 2 + cols * panel + (cols - 1) * gap;
-    canvas.height = outer * 2 + titleH + rows * (panel + captionH) + (rows - 1) * gap;
+    canvas.width = opts.width || (outer * 2 + cols * panel + (cols - 1) * gap);
+    canvas.height = opts.height || (outer * 2 + titleH + footerH + rows * (panel + captionH) + (rows - 1) * gap);
     const ctx = canvas.getContext('2d');
+    const contentW = cols * panel + (cols - 1) * gap;
+    const left = (canvas.width - contentW) / 2;
 
     ctx.fillStyle = isComic ? '#fffdf5' : '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (withTitle && state.scenario) {
+    if (opts.titleText) {
         ctx.fillStyle = isComic ? '#e94560' : '#222';
-        ctx.font = 'bold 64px "Comic Sans MS", "Chalkboard SE", sans-serif';
+        ctx.font = 'bold ' + Math.round(Math.min(64, titleH * 0.55)) + 'px "Comic Sans MS", "Chalkboard SE", sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(state.scenario.title, canvas.width / 2, outer + titleH / 2 - 6, canvas.width - outer * 2);
+        ctx.fillText(opts.titleText, canvas.width / 2, outer + titleH / 2 - 6, canvas.width - outer * 2);
     }
 
     imgs.forEach((im, k) => {
         const c = k % cols, r = Math.floor(k / cols);
-        // centre la dernière ligne si incomplète
-        const inRow = Math.min(cols, n - r * cols);
+        const inRow = Math.min(cols, n - r * cols);           // centre la dernière ligne si incomplète
         const rowOffset = (cols - inRow) * (panel + gap) / 2;
-        const x = outer + rowOffset + c * (panel + gap);
+        const x = left + rowOffset + c * (panel + gap);
         const y = outer + titleH + r * (panel + captionH + gap);
+        const num = (opts.numberOffset || 0) + k + 1;
 
         if (loaded[k]) ctx.drawImage(loaded[k], x, y, panel, panel);
         else {
             ctx.fillStyle = '#eee'; ctx.fillRect(x, y, panel, panel);
-            ctx.fillStyle = '#999'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#999'; ctx.font = 'bold ' + Math.round(40 * sk) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('Image indisponible ↻', x + panel / 2, y + panel / 2);
         }
-        if (border) {
-            ctx.strokeStyle = '#111';
-            ctx.lineWidth = border;
-            ctx.strokeRect(x, y, panel, panel + captionH);
-        }
+        if (border) { ctx.strokeStyle = '#111'; ctx.lineWidth = border; ctx.strokeRect(x, y, panel, panel + captionH); }
         const scene = (state.scenario && state.scenario.scenes[im.sceneIndex]) || im.scene || {};
-        if (isComic && withBubbles && scene.dialogue && scene.dialogue.text) {
-            drawBubble(ctx, x, y, panel, scene.dialogue, k % 2 === 1);
-        }
+        if (isComic && withBubbles && scene.dialogue && scene.dialogue.text) drawBubble(ctx, x, y, panel, scene.dialogue, num % 2 === 0);
         if (withCaptions) {
             ctx.fillStyle = isComic ? '#fff3c4' : '#fff';
             ctx.fillRect(x + border / 2, y + panel, panel - border, captionH - border / 2);
-            if (isComic) { ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + panel); ctx.lineTo(x + panel, y + panel); ctx.stroke(); }
-            ctx.fillStyle = '#333';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
+            if (isComic) { ctx.strokeStyle = '#111'; ctx.lineWidth = Math.max(2, 3 * sk); ctx.beginPath(); ctx.moveTo(x, y + panel); ctx.lineTo(x + panel, y + panel); ctx.stroke(); }
+            ctx.fillStyle = '#333'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
             const fs = Math.round((isComic ? 24 : 22) * sk);
             ctx.font = (isComic ? 'italic ' : '') + fs + 'px sans-serif';
-            const capLines = wrapLines(ctx, (k + 1) + '. ' + (scene.description || ''), panel - 30 * sk).slice(0, 2);
-            capLines.forEach((l, li) => ctx.fillText(l, x + 15 * sk, y + panel + 12 * sk + li * fs * 1.3));
+            wrapLines(ctx, num + '. ' + (scene.description || ''), panel - 30 * sk).slice(0, 2)
+                .forEach((l, li) => ctx.fillText(l, x + 15 * sk, y + panel + 12 * sk + li * fs * 1.3));
         }
     });
 
+    if (opts.footer) {
+        ctx.fillStyle = '#999'; ctx.font = '22px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(opts.footer, canvas.width / 2, canvas.height - outer / 2 - footerH / 2);
+    }
+}
+
+async function composeBoard() {
+    const imgs = state.images.slice().sort((a, b) => a.sceneIndex - b.sceneIndex);
+    if (!imgs.length) return;
+    const o = boardOptions();
+    const section = document.getElementById('section-board');
+    section.classList.remove('hidden');
+    section.classList.add('open');
+    document.getElementById('board-title').textContent = o.isComic ? '💬 Bande dessinée' : '🖼️ Planche photo';
+    setStatus('Assemblage de la planche…');
+
+    const loaded = await loadBoardImages(imgs);
+    if (!loaded.some(Boolean)) { setStatus(null); showToast('Aucune image chargeable — regénérez-les ↻', 'error', 4000); return; }
+    _boardTainted = loaded.some(im => im && im._tainted);
+
+    const n = imgs.length;
+    const cols = getBoardColumns(n), rows = Math.ceil(n / cols);
+    // cases réduites pour rester sous la limite canvas des téléphones (~16 M pixels, 16384 px par côté)
+    const fitArea = Math.sqrt(14e6 / (cols * rows * 1.25));
+    const fitSide = Math.min(15000 / (cols * 1.05), 15000 / (rows * 1.3));
+    const panel = Math.max(200, Math.floor(Math.min(700, fitArea, fitSide)));
+
+    renderBoard(document.getElementById('board-canvas'), imgs, loaded, {
+        ...o, cols, panel, titleText: o.withTitle && state.scenario ? state.scenario.title : ''
+    });
     setStatus(null);
-    if (_boardTainted) logConsole('Planche affichée. Export PNG bloqué par le serveur d\'images (CORS) : utilisez une capture d\'écran.', 'warn');
-    logConsole((isComic ? 'BD' : 'Planche') + ' assemblée : ' + n + ' cases, ' + cols + ' colonne(s)', 'success');
+    if (_boardTainted) logConsole('Planche affichée. Export PNG/PDF direct bloqué par le serveur d\'images : utilisez « Imprimer → PDF ».', 'warn');
+    logConsole((o.isComic ? 'BD' : 'Planche') + ' assemblée : ' + n + ' cases, ' + cols + ' colonne(s)', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EXPORT PDF (A4, 6 cases par page, couverture)
+// ══════════════════════════════════════════════════════════════════
+const PDF_PER_PAGE = 6;   // 2 colonnes × 3 lignes
+async function exportPDF() {
+    const imgs = state.images.slice().sort((a, b) => a.sceneIndex - b.sceneIndex);
+    if (!imgs.length) { showToast('Aucune image à exporter', 'warn'); return; }
+    if (!window.jspdf) { showToast('Module PDF non chargé (connexion ?) — utilisez Imprimer', 'error', 4000); return; }
+    setStatus('Création du PDF…');
+    const loaded = await loadBoardImages(imgs);
+    if (loaded.some(im => im && im._tainted)) {
+        setStatus(null);
+        logConsole('Export PDF direct bloqué par le serveur d\'images (CORS) → impression en PDF.', 'warn');
+        showToast('Choisissez « Enregistrer en PDF » dans la fenêtre d\'impression', 'warn', 5000);
+        return printBoard();
+    }
+    const o = boardOptions();
+    const title = (state.scenario && state.scenario.title) || 'Mon histoire';
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+    const W = 1240, H = 1754;  // A4 à 150 dpi
+    const c = document.createElement('canvas');
+    const pages = Math.ceil(imgs.length / PDF_PER_PAGE);
+
+    // Couverture : titre + première image
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = o.isComic ? '#fffdf5' : '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = o.isComic ? '#e94560' : '#222'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 84px "Comic Sans MS", "Chalkboard SE", sans-serif';
+    wrapLines(ctx, title, W - 160).slice(0, 3).forEach((l, i) => ctx.fillText(l, W / 2, 230 + i * 100));
+    if (loaded[0]) {
+        const side = 900;
+        ctx.drawImage(loaded[0], (W - side) / 2, 470, side, side);
+        if (o.isComic) { ctx.strokeStyle = '#111'; ctx.lineWidth = 8; ctx.strokeRect((W - side) / 2, 470, side, side); }
+    }
+    ctx.fillStyle = '#777'; ctx.font = '32px sans-serif';
+    const chars = state.scenario && state.scenario.characters.length ? 'Avec ' + state.scenario.characters.map(x => x.name).join(', ') : '';
+    if (chars) ctx.fillText(chars, W / 2, 1460, W - 160);
+    ctx.font = '26px sans-serif';
+    ctx.fillText((o.isComic ? 'Bande dessinée' : 'Album photo') + ' · ' + imgs.length + ' images · ' + new Date().toLocaleDateString('fr-FR'), W / 2, 1640);
+    pdf.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297);
+
+    for (let pg = 0; pg < pages; pg++) {
+        setStatus('PDF : page ' + (pg + 2) + '/' + (pages + 1) + '…');
+        const sub = imgs.slice(pg * PDF_PER_PAGE, (pg + 1) * PDF_PER_PAGE);
+        const subL = loaded.slice(pg * PDF_PER_PAGE, (pg + 1) * PDF_PER_PAGE);
+        renderBoard(c, sub, subL, { ...o, cols: 2, panel: 470, numberOffset: pg * PDF_PER_PAGE, titleText: '', footer: title + ' — page ' + (pg + 1) + '/' + pages, width: W, height: H });
+        pdf.addPage();
+        pdf.addImage(c.toDataURL('image/jpeg', 0.88), 'JPEG', 0, 0, 210, 297);
+        await sleep(0);
+    }
+    const name = title.replace(/[^\w\-]+/g, '_') + (o.isComic ? '_BD' : '_album') + '.pdf';
+    try {
+        const blob = pdf.output('blob');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob); a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+        showToast('PDF enregistré (' + (pages + 1) + ' pages)', 'success');
+        logConsole('PDF créé : ' + name + ' — ' + (pages + 1) + ' pages', 'success');
+    } catch (e) { showToast('Échec du PDF : ' + e.message, 'error'); }
+    setStatus(null);
+}
+
+// Secours : impression de la planche (« Enregistrer en PDF » du navigateur), fonctionne même si CORS bloque
+function printBoard() {
+    if (document.getElementById('section-board').classList.contains('hidden')) { showToast('Assemblez d\'abord la planche', 'warn'); return; }
+    document.body.classList.add('printing-board');
+    setTimeout(() => { window.print(); setTimeout(() => document.body.classList.remove('printing-board'), 500); }, 100);
 }
 
 function downloadBoard() {
@@ -1452,7 +1751,34 @@ function stopAllVideos() {
     updateApiPanel();
     updateGenerateBtn();
     updateRestoreBtn();
-    logConsole('Application prête pour les enfants.', 'info');
+    document.getElementById('board-pdf-btn').addEventListener('click', exportPDF);
+    document.getElementById('board-print-btn').addEventListener('click', printBoard);
+    document.getElementById('board-save-btn').addEventListener('click', () => saveToLibrary(false));
+    document.getElementById('api-dot').addEventListener('click', () => {
+        const inp = document.getElementById('api-key-input');
+        inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => inp.focus(), 300);
+    });
+    renderLibrary();
+
+    // ── Application installable (PWA) ──
+    let deferredInstall = null;
+    const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const installBtn = document.getElementById('install-btn');
+    window.addEventListener('beforeinstallprompt', e => {
+        e.preventDefault(); deferredInstall = e;
+        if (!isStandalone()) installBtn.classList.remove('hidden');
+    });
+    window.addEventListener('appinstalled', () => { installBtn.classList.add('hidden'); deferredInstall = null; showToast('Application installée', 'success'); });
+    installBtn.addEventListener('click', async () => {
+        if (!deferredInstall) return;
+        deferredInstall.prompt();
+        await deferredInstall.userChoice.catch(() => {});
+        deferredInstall = null; installBtn.classList.add('hidden');
+    });
+    if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+
+    logConsole('Studio prêt.', 'info');
 })();
 </script>
 </body>

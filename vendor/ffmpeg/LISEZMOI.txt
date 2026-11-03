@@ -1,0 +1,4 @@
+ffmpeg.wasm (@ffmpeg/ffmpeg 0.12.15, @ffmpeg/core 0.12.10) — https://github.com/ffmpegwasm/ffmpeg.wasm
+Utilisé uniquement pour convertir les vidéos enregistrées en MP4 (H.264 + AAC) quand le navigateur
+ne sait pas les produire directement. Chargé à la demande, jamais au démarrage de l'application.
+@ffmpeg/ffmpeg est sous licence MIT ; @ffmpeg/core embarque FFmpeg et x264 (licence GPL).

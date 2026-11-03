@@ -38,7 +38,7 @@
         font-size: 0.85rem; font-weight: 500;
         box-shadow: 0 4px 30px rgba(0,0,0,0.5);
         border: 1px solid var(--border);
-        z-index: 1000; opacity: 0;
+        z-index: 3000; opacity: 0;
         transition: transform 0.35s ease, opacity 0.35s ease;
         max-width: 90vw; text-align: center;
         display: flex; align-items: center; gap: 0.5rem;
@@ -302,6 +302,25 @@
     .viewer.recording #vw-rec { border-color: #ff4d4d; color: #ff8080; }
     @keyframes blink { 50% { opacity: 0.2; } }
     @media (prefers-reduced-motion: reduce) { .viewer .vw-scene .vw-kb img, .viewer .vw-scene .vw-kb { animation: none !important; } }
+    .vw-recbar { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.6rem 0.45rem 0.9rem; border-radius: 22px; background: rgba(200,30,30,0.92); color: #fff; font-size: 0.82rem; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,0.4); white-space: nowrap; }
+    .vw-recbar-dot { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1s steps(2) infinite; }
+    .vw-recbar button { border: none; background: rgba(255,255,255,0.22); color: #fff; font: inherit; font-size: 0.75rem; font-weight: 800; padding: 0.35rem 0.7rem; border-radius: 14px; cursor: pointer; }
+    .vw-modal { position: absolute; inset: 0; z-index: 10; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .vw-modal-box { background: #17171f; border: 1px solid #2e2e3e; border-radius: 16px; padding: 1.2rem; width: min(560px, 100%); max-height: 100%; overflow-y: auto; }
+    .vw-modal-box h3 { font-size: 1.05rem; margin-bottom: 0.9rem; }
+    .vw-formats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 0.9rem; }
+    .vw-format { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; padding: 0.7rem 0.3rem; border-radius: 10px; border: 2px solid #2e2e3e; cursor: pointer; text-align: center; }
+    .vw-format.sel { border-color: #ff6b9d; background: rgba(255,107,157,0.1); }
+    .vw-format input { display: none; }
+    .vw-fshape { height: 44px; max-width: 70px; border: 2px solid #ddd; border-radius: 4px; }
+    .vw-format b { font-size: 0.85rem; } .vw-format small { font-size: 0.64rem; color: #aaa; line-height: 1.25; }
+    .vw-modal-row { margin-bottom: 0.7rem; font-size: 0.8rem; color: #ccc; } .vw-modal-row select { width: auto; margin-left: 0.4rem; padding: 0.4rem 2rem 0.4rem 0.7rem; font-size: 0.8rem; }
+    .vw-modal-note { font-size: 0.76rem; color: #aaa; margin-bottom: 0.6rem; line-height: 1.45; }
+    .vw-modal-warn { font-size: 0.76rem; color: #ffd27a; background: rgba(212,160,23,0.12); border: 1px solid rgba(212,160,23,0.35); border-radius: 8px; padding: 0.6rem 0.7rem; margin-bottom: 0.7rem; line-height: 1.45; }
+    .vw-modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem; }
+    .vw-result video { display: block; width: auto; max-width: 100%; max-height: 50vh; margin: 0 auto 0.8rem; border-radius: 10px; background: #000; }
+    .vw-result-info { font-size: 0.76rem; color: #bbb; text-align: center; margin-bottom: 0.7rem; line-height: 1.5; word-break: break-all; }
+    @media (max-width: 520px) { .vw-formats { grid-template-columns: repeat(2, 1fr); } }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -621,6 +640,8 @@
         </div>
         <button type="button" class="vw-close" id="vw-close" title="Fermer (Échap)">✕</button>
     </div>
+    <div class="vw-recbar hidden" id="vw-recbar"><span class="vw-recbar-dot"></span><span class="vw-recbar-txt"></span><button type="button" id="vw-recbar-stop">⏹ Arrêter</button></div>
+    <div class="vw-modal hidden" id="vw-recmodal"></div>
     <div class="vw-stage" id="vw-stage">
         <button type="button" class="vw-nav prev" id="vw-prev" title="Précédent (←)">‹</button>
         <div class="vw-content" id="vw-content"></div>
@@ -2257,6 +2278,7 @@ async function openViewer(mode) {
     if (!state.images.length) { showToast('Aucune image à afficher', 'warn'); return; }
     viewer.open = true;
     viewer.index = 0;
+    document.getElementById('viewer').appendChild(document.getElementById('toast'));   // visible en plein écran
     const el = document.getElementById('viewer');
     el.classList.remove('hidden');
     document.getElementById('vw-title').textContent = (state.scenario && state.scenario.title) || 'Mon histoire';
@@ -2327,6 +2349,7 @@ function viewerGo(delta, keepReading) {
 function closeViewer() {
     stopReading();
     viewer.open = false;
+    document.body.appendChild(document.getElementById('toast'));
     document.getElementById('viewer').classList.add('hidden');
     try { if (document.fullscreenElement) document.exitFullscreen(); else if (document.webkitFullscreenElement) document.webkitExitFullscreen(); } catch (e) {}
 }
@@ -2631,45 +2654,69 @@ const music = (() => {
 })();
 
 // ══════════════════════════════════════════════════════════════════
-// ENREGISTREMENT VIDÉO DE LA LECTURE (canvas animé + musique + voix IA)
+// ENREGISTREMENT VIDÉO DE LA LECTURE (formats TikTok, YouTube, Instagram…)
 // ══════════════════════════════════════════════════════════════════
-const rec = { active: false, recorder: null, chunks: [], raf: 0, canvas: null, imgs: [], fade: null };
+const VIDEO_FORMATS = {
+    tiktok:    { label: 'TikTok · Reels · Shorts', ratio: '9:16', w: 1080, h: 1920 },
+    youtube:   { label: 'YouTube · écran large',    ratio: '16:9', w: 1920, h: 1080 },
+    instagram: { label: 'Instagram · Facebook',     ratio: '4:5',  w: 1080, h: 1350 },
+    square:    { label: 'Carré · WhatsApp',         ratio: '1:1',  w: 1080, h: 1080 }
+};
+const rec = { active: false, recorder: null, chunks: [], raf: 0, canvas: null, imgs: [], t0: 0, timer: 0, lastBlob: null, lastName: '', format: 'tiktok' };
 
+// MP4 H.264 en priorité : c'est le format accepté partout (TikTok, YouTube, Instagram, iPhone)
 function pickRecorderMime() {
-    const list = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    const list = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4;codecs=avc1.4D401F,mp4a.40.2', 'video/mp4;codecs=avc1,mp4a.40.2',
+                  'video/mp4;codecs=avc1.42E01E,opus', 'video/mp4;codecs=avc1', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
     return list.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+}
+const isH264Mp4 = mime => /mp4/.test(mime) && /avc1/.test(mime);
+const isAacAudio = mime => /mp4a/.test(mime);
+
+function recLayout(W, H) {
+    if (W > H) {                                     // paysage (YouTube) : image à gauche, texte à droite
+        const side = H - 150;
+        return { landscape: true, side, x0: 70, y0: 90, textX: 70 + side + 70, textW: W - (70 + side + 70) - 80, titleY: 48 };
+    }
+    const textBlock = Math.round(H * (H / W > 1.5 ? 0.2 : 0.22));
+    const side = Math.min(W - 120, H - 120 - textBlock - 60);
+    const total = side + 40 + textBlock;
+    const y0 = Math.max(100, Math.round((H - total) / 2));
+    return { landscape: false, side, x0: (W - side) / 2, y0, textX: 70, textW: W - 140, textY: y0 + side + 50, titleY: Math.max(46, y0 - 46) };
 }
 
 function drawRecFrame() {
     const c = rec.canvas, ctx = c.getContext('2d');
     const W = c.width, H = c.height, now = performance.now();
+    const u = Math.min(W, H) / 1080;                 // échelle des textes
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#1b1530'); g.addColorStop(1, '#0b0b12');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
 
+    const L = recLayout(W, H);
     const list = sortedImages();
     const i = Math.max(0, Math.min(viewer.index, list.length - 1));
     const im = rec.imgs[i];
     const sc = sceneOf(list[i]);
-    const side = 960, x0 = (W - side) / 2, y0 = 70;
+    const { side, x0, y0 } = L;
     const age = (now - anim.sceneT0) / 1000;
 
     // titre discret
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '600 30px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText((state.scenario && state.scenario.title) || '', W / 2, 38, W - 80);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '600 ' + Math.round(32 * u) + 'px sans-serif'; ctx.textBaseline = 'middle';
+    ctx.textAlign = L.landscape ? 'left' : 'center';
+    ctx.fillText((state.scenario && state.scenario.title) || '', L.landscape ? L.textX : W / 2, L.titleY, L.landscape ? L.textW : W - 80);
 
-    // image avec effet Ken Burns (zoom + travelling lents, direction alternée selon la scène)
+    // image : zoom et travelling lents (Ken Burns), direction alternée selon la scène
     ctx.save();
-    roundRect(ctx, x0, y0, side, side, 28); ctx.clip();
+    roundRect(ctx, x0, y0, side, side, 28 * u); ctx.clip();
     if (im) {
-        const p = Math.min(1, age / 14);
-        const ease = 1 - Math.pow(1 - p, 2);
+        const p = Math.min(1, age / 14), ease = 1 - Math.pow(1 - p, 2);
         const z = 1.04 + 0.12 * ease + (anim.phase === 'dialog' ? 0.012 * Math.sin(now / 120) : 0);
         const dir = i % 4;
-        const dx = (dir === 0 ? -1 : dir === 1 ? 1 : dir === 2 ? -0.5 : 0.5) * 40 * ease;
-        const dy = (dir < 2 ? -1 : 1) * 25 * ease;
+        const dx = (dir === 0 ? -1 : dir === 1 ? 1 : dir === 2 ? -0.5 : 0.5) * 40 * u * ease;
+        const dy = (dir < 2 ? -1 : 1) * 25 * u * ease;
         const s = side * z;
-        ctx.globalAlpha = Math.min(1, age / 0.6);              // fondu d'entrée de scène
+        ctx.globalAlpha = Math.min(1, age / 0.6);
         ctx.drawImage(im, x0 + (side - s) / 2 + dx, y0 + (side - s) / 2 + dy, s, s);
         ctx.globalAlpha = 1;
     } else { ctx.fillStyle = '#333'; ctx.fillRect(x0, y0, side, side); }
@@ -2683,39 +2730,40 @@ function drawRecFrame() {
         ctx.restore();
     }
 
-    // badge de la voix qui parle (petit, dans le coin de l'image)
+    // badge de la voix qui parle
     if (anim.phase === 'narr' || anim.phase === 'dialog') {
         const label = anim.phase === 'dialog' ? anim.speaker : narratorLabel();
-        ctx.font = 'bold 26px sans-serif';
+        ctx.font = 'bold ' + Math.round(26 * u) + 'px sans-serif';
         const tw = ctx.measureText(label).width;
-        const bw = tw + 110, bx = x0 + side - bw - 22, by = y0 + side - 70;
-        ctx.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(ctx, bx, by, bw, 50, 25); ctx.fill();
-        ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(label, bx + 22, by + 26);
-        for (let k = 0; k < 4; k++) {                          // ondes sonores animées
-            const h = 10 + 14 * Math.abs(Math.sin(now / 140 + k * 1.3));
-            ctx.fillStyle = '#ff6b9d'; ctx.fillRect(bx + bw - 70 + k * 12, by + 25 - h / 2, 6, h);
+        const bh = 50 * u, bw = tw + 110 * u, bx = x0 + side - bw - 22 * u, by = y0 + side - bh - 20 * u;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(ctx, bx, by, bw, bh, bh / 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(label, bx + 22 * u, by + bh / 2);
+        for (let k = 0; k < 4; k++) {
+            const h = (10 + 14 * Math.abs(Math.sin(now / 140 + k * 1.3))) * u;
+            ctx.fillStyle = '#ff6b9d'; ctx.fillRect(bx + bw - 70 * u + k * 12 * u, by + bh / 2 - h / 2, 6 * u, h);
         }
     }
 
-    // texte de la scène, mot courant surligné
+    // texte de narration, mot courant surligné
     const txt = narrationOf(sc);
     if (txt) {
-        ctx.font = '40px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        const words = txt.split(/\s+/).filter(Boolean);
+        const fs = Math.round((L.landscape ? 46 : 42) * u), lh = fs * 1.35;
+        ctx.font = fs + 'px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        const words = txt.split(/\s+/).filter(Boolean), space = ctx.measureText(' ').width;
         const lines = []; let line = [], lw = 0;
-        const maxW = W - 140, space = ctx.measureText(' ').width;
         words.forEach((w, k) => {
             const ww = ctx.measureText(w).width;
-            if (lw + ww > maxW && line.length) { lines.push({ line, lw }); line = []; lw = 0; }
+            if (lw + ww > L.textW && line.length) { lines.push({ line, lw }); line = []; lw = 0; }
             line.push({ w, k, ww }); lw += ww + space;
         });
         if (line.length) lines.push({ line, lw });
-        const top = y0 + side + 50;
-        lines.slice(0, 4).forEach((L, li) => {
-            let x = (W - (L.lw - space)) / 2;
-            L.line.forEach(o => {
+        const shown = lines.slice(0, L.landscape ? 9 : 4);
+        const top = L.landscape ? (H - shown.length * lh) / 2 : L.textY;
+        shown.forEach((ln, li) => {
+            let x = L.landscape ? L.textX : L.textX + (L.textW - (ln.lw - space)) / 2;
+            ln.line.forEach(o => {
                 ctx.fillStyle = o.k === anim.wordIdx ? '#ff6b9d' : o.k < anim.wordIdx ? '#ffffff' : 'rgba(255,255,255,0.72)';
-                ctx.fillText(o.w, x, top + li * 54);
+                ctx.fillText(o.w, x, top + li * lh);
                 x += o.ww + space;
             });
         });
@@ -2723,41 +2771,75 @@ function drawRecFrame() {
 
     // barre de progression fine
     const prog = (i + 1) / Math.max(1, list.length);
-    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(60, H - 30, W - 120, 6);
-    ctx.fillStyle = '#ff6b9d'; ctx.fillRect(60, H - 30, (W - 120) * prog, 6);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(60 * u, H - 34 * u, W - 120 * u, 6 * u);
+    ctx.fillStyle = '#ff6b9d'; ctx.fillRect(60 * u, H - 34 * u, (W - 120 * u) * prog, 6 * u);
 
     rec.raf = requestAnimationFrame(drawRecFrame);
 }
 
-async function recordVideo() {
+// ── Fenêtres de l'enregistrement (dans la visionneuse : visibles même en plein écran) ──
+function openRecSetup() {
     if (rec.active) { stopReading(); return; }
     if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
-        showToast('Enregistrement vidéo non pris en charge par ce navigateur', 'error', 4000); return;
+        showToast('Enregistrement vidéo non pris en charge par ce navigateur (essayez Chrome, Edge ou Safari récent)', 'error', 5000); return;
     }
-    if (voiceCfg.engine === 'browser' && document.getElementById('vw-voice').checked) {
-        const ok = confirm('La voix de l\'appareil ne peut pas être enregistrée dans une vidéo (limite des navigateurs).\n\n' +
-            'Pour avoir la narration dans la vidéo, choisissez une voix IA (Puter) dans « 🎙️ Voix de la lecture ».\n\n' +
-            'Continuer quand même ? La vidéo aura la musique, l\'animation et le texte, sans la voix.');
-        if (!ok) return;
-    }
-    setStatus('Préparation de l\'enregistrement…');
+    const m = document.getElementById('vw-recmodal');
+    const voiceWarn = voiceCfg.engine === 'browser' && document.getElementById('vw-voice').checked;
+    const mime = pickRecorderMime();
+    m.innerHTML = '<div class="vw-modal-box">' +
+        '<h3>⏺ Enregistrer la lecture en vidéo</h3>' +
+        '<div class="vw-formats">' + Object.entries(VIDEO_FORMATS).map(([k, f]) =>
+            '<label class="vw-format' + (k === rec.format ? ' sel' : '') + '"><input type="radio" name="vfmt" value="' + k + '"' + (k === rec.format ? ' checked' : '') + '>' +
+            '<span class="vw-fshape" style="aspect-ratio:' + f.w + '/' + f.h + '"></span><b>' + f.ratio + '</b><small>' + f.label + '</small></label>').join('') + '</div>' +
+        '<div class="vw-modal-row"><label>Qualité <select id="vw-recq"><option value="1">Full HD 1080p</option><option value="0.6667">HD 720p (plus léger)</option></select></label></div>' +
+        '<div class="vw-modal-note">📼 Fichier : <b>MP4</b>' + (isH264Mp4(mime) ? ' (direct)' : ' — enregistré puis converti automatiquement (un peu plus long)') + '</div>' +
+        (voiceWarn ? '<div class="vw-modal-warn">⚠️ La voix de l\'appareil ne peut pas être enregistrée (limite des navigateurs). La vidéo aura la musique, l\'animation et le texte. Pour la narration dans la vidéo, choisissez une <b>voix IA (Puter)</b> dans « 🎙️ Voix de la lecture ».</div>' : '') +
+        '<div class="vw-modal-note">La lecture complète va être rejouée et filmée. Gardez cet onglet ouvert jusqu\'à la fin.</div>' +
+        '<div class="vw-modal-actions"><button type="button" class="vw-ghost" data-act="cancel">Annuler</button><button type="button" class="vw-play" data-act="go">⏺ Démarrer l\'enregistrement</button></div></div>';
+    m.classList.remove('hidden');
+    m.querySelectorAll('input[name=vfmt]').forEach(r => r.addEventListener('change', () => {
+        rec.format = r.value;
+        m.querySelectorAll('.vw-format').forEach(l => l.classList.toggle('sel', l.querySelector('input').checked));
+    }));
+    m.querySelector('[data-act=cancel]').onclick = () => m.classList.add('hidden');
+    m.querySelector('[data-act=go]').onclick = () => {
+        const q = parseFloat(document.getElementById('vw-recq').value);
+        m.classList.add('hidden');
+        recordVideo(rec.format, q);
+    };
+}
+
+function showRecBar(on, text) {
+    const bar = document.getElementById('vw-recbar');
+    bar.classList.toggle('hidden', !on);
+    if (text) bar.querySelector('.vw-recbar-txt').textContent = text;
+}
+const fmtTime = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+
+async function recordVideo(formatKey, quality) {
+    const F = VIDEO_FORMATS[formatKey] || VIDEO_FORMATS.tiktok;
+    showToast('Préparation de l\'enregistrement…', 'success', 2000);
     stopReading();
     if (viewer.mode !== 'story') await setViewerMode('story');
     const loaded = await loadBoardImages(sortedImages());
-    setStatus(null);
     if (loaded.some(im => im && im._tainted)) {
-        showToast('Le serveur d\'images bloque l\'enregistrement. Enregistrez le projet 💾 puis rouvrez-le depuis la bibliothèque.', 'error', 6000);
+        showResultModal({ error: 'Le serveur d\'images bloque l\'enregistrement vidéo. Enregistrez le projet 💾 puis rouvrez-le depuis la bibliothèque (les images seront alors locales), et recommencez.' });
         return;
     }
     rec.imgs = loaded;
     rec.canvas = document.createElement('canvas');
-    rec.canvas.width = 1080; rec.canvas.height = 1350;   // format 4:5 (réseaux sociaux, téléphone)
+    rec.canvas.width = Math.round(F.w * quality / 2) * 2;
+    rec.canvas.height = Math.round(F.h * quality / 2) * 2;
 
     const stream = rec.canvas.captureStream(30);
     audioHub.startRecording().getAudioTracks().forEach(t => stream.addTrack(t));
     const mime = pickRecorderMime();
-    try { rec.recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 5e6 } : undefined); }
-    catch (e) { audioHub.stopRecording(); showToast('Enregistrement impossible : ' + e.message, 'error'); return; }
+    try {
+        rec.recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: Math.round(8e6 * quality), audioBitsPerSecond: 128000 } : undefined);
+    } catch (e) {
+        audioHub.stopRecording();
+        showResultModal({ error: 'Impossible de démarrer l\'enregistrement : ' + e.message }); return;
+    }
     rec.chunks = [];
     rec.recorder.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
     const stopped = new Promise(r => { rec.recorder.onstop = r; });
@@ -2765,34 +2847,127 @@ async function recordVideo() {
     rec.active = true;
     viewer.index = 0; renderViewer();
     document.getElementById('viewer').classList.add('recording');
-    document.getElementById('vw-rec').textContent = '⏹ Arrêter l\'enregistrement';
+    document.getElementById('vw-rec').textContent = '⏹ Arrêter';
+    rec.t0 = Date.now();
+    const total = sortedImages().length;
+    const tickBar = () => showRecBar(true, 'Enregistrement · ' + fmtTime((Date.now() - rec.t0) / 1000) + ' · scène ' + (viewer.index + 1) + '/' + total + ' · ' + F.ratio);
+    tickBar(); rec.timer = setInterval(tickBar, 500);
     drawRecFrame();
     rec.recorder.start(1000);
-    logConsole('Enregistrement vidéo démarré (' + (mime || 'format par défaut') + ')', 'info');
+    logConsole('Enregistrement vidéo démarré : ' + F.label + ' ' + F.ratio + ', ' + rec.canvas.width + '×' + rec.canvas.height + ' (' + (mime || 'format par défaut') + ')', 'info');
 
-    await startReading();                     // lit toute l'histoire (ou jusqu'à l'arrêt)
-    await sleep(2500);                        // laisse la musique s'éteindre
+    await startReading();                     // rejoue toute l'histoire (ou jusqu'à « Arrêter »)
+    showRecBar(true, 'Finalisation de la vidéo…');
+    await sleep(2200);                        // laisse la musique s'éteindre
     rec.recorder.stop();
     await stopped;
+    clearInterval(rec.timer);
     cancelAnimationFrame(rec.raf);
     audioHub.stopRecording();
     stream.getTracks().forEach(t => t.stop());
     rec.active = false;
     document.getElementById('viewer').classList.remove('recording');
     document.getElementById('vw-rec').textContent = '⏺ Enregistrer en vidéo';
+    const duration = (Date.now() - rec.t0) / 1000;
 
     const type = (rec.recorder.mimeType || mime || 'video/webm').split(';')[0];
-    const blob = new Blob(rec.chunks, { type });
-    if (!blob.size) { showToast('Vidéo vide : enregistrement interrompu', 'warn'); return; }
-    const ext = type.includes('mp4') ? 'mp4' : 'webm';
-    const name = ((state.scenario && state.scenario.title) || 'histoire').replace(/[^\w\-]+/g, '_') + '_lecture.' + ext;
+    let blob = new Blob(rec.chunks, { type });
+    if (!blob.size) { showRecBar(false); showResultModal({ error: 'La vidéo est vide : l\'enregistrement a été interrompu trop tôt.' }); return; }
+
+    // MP4 H.264 + son AAC : format accepté par TikTok, YouTube, Instagram et l'iPhone
+    const used = rec.recorder.mimeType || mime;
+    if (!isH264Mp4(used) || !isAacAudio(used)) {
+        const videoOk = isH264Mp4(used);   // image déjà en H.264 : on ne convertit que le son (rapide)
+        try { blob = await convertToMp4(blob, videoOk, p => showRecBar(true, (videoOk ? 'Finalisation du son… ' : 'Conversion en MP4… ') + Math.round(p * 100) + ' %')); }
+        catch (e) {
+            logConsole('Conversion MP4 impossible (' + e.message + ') : vidéo gardée en ' + type.split('/')[1].toUpperCase(), 'warn');
+        }
+    }
+    showRecBar(false);
+    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+    const base = ((state.scenario && state.scenario.title) || 'histoire').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\-]+/g, '_');
+    rec.lastBlob = blob;
+    rec.lastName = base + '_' + formatKey + '.' + ext;
+    logConsole('Vidéo prête : ' + rec.lastName + ' (' + (blob.size / 1048576).toFixed(1) + ' Mo, ' + fmtTime(duration) + ')', 'success');
+    showResultModal({ blob, name: rec.lastName, format: F, duration, w: rec.canvas.width, h: rec.canvas.height });
+}
+
+// ffmpeg.wasm hébergé avec l'application (chargé uniquement si une conversion est nécessaire)
+let _ffmpeg = null;
+async function convertToMp4(blob, copyVideo, onProgress) {
+    if (!window.FFmpegWASM) await new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = new URL('vendor/ffmpeg/ffmpeg.js', location.href).href;
+        sc.onload = res; sc.onerror = () => rej(new Error('module de conversion introuvable'));
+        document.head.appendChild(sc);
+    });
+    onProgress(0);
+    if (!_ffmpeg) {
+        const ff = new FFmpegWASM.FFmpeg();
+        await ff.load({
+            coreURL: new URL('vendor/ffmpeg/ffmpeg-core.js', location.href).href,
+            wasmURL: new URL('vendor/ffmpeg/ffmpeg-core.wasm', location.href).href
+        });
+        _ffmpeg = ff;
+    }
+    const ff = _ffmpeg;
+    const onProg = ({ progress }) => onProgress(Math.max(0, Math.min(1, progress || 0)));
+    ff.on('progress', onProg);
+    try {
+        await ff.writeFile('in.webm', new Uint8Array(await blob.arrayBuffer()));
+        const v = copyVideo ? ['-c:v', 'copy'] : ['-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-r', '30'];
+        const code = await ff.exec(['-i', 'in.webm', ...v, '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.mp4']);
+        if (code !== 0) throw new Error('code ' + code);
+        const data = await ff.readFile('out.mp4');
+        return new Blob([data.buffer], { type: 'video/mp4' });
+    } finally {
+        ff.off('progress', onProg);
+        try { await ff.deleteFile('in.webm'); } catch (e) {}
+        try { await ff.deleteFile('out.mp4'); } catch (e) {}
+    }
+}
+
+function downloadBlob(blob, name) {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 20000);
-    const mb = (blob.size / 1048576).toFixed(1);
-    logConsole('Vidéo enregistrée : ' + name + ' (' + mb + ' Mo)', 'success');
-    showToast('Vidéo enregistrée (' + mb + ' Mo)', 'success', 3500);
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+
+function showResultModal(r) {
+    const m = document.getElementById('vw-recmodal');
+    if (r.error) {
+        m.innerHTML = '<div class="vw-modal-box"><h3>❌ Vidéo non enregistrée</h3><div class="vw-modal-warn">' + esc(r.error) + '</div>' +
+            '<div class="vw-modal-actions"><button type="button" class="vw-play" data-act="close">Fermer</button></div></div>';
+        m.classList.remove('hidden');
+        m.querySelector('[data-act=close]').onclick = () => m.classList.add('hidden');
+        logConsole('Vidéo non enregistrée : ' + r.error, 'error');
+        return;
+    }
+    const url = URL.createObjectURL(r.blob);
+    const isMp4 = r.blob.type.includes('mp4');
+    const canShare = navigator.canShare && navigator.canShare({ files: [new File([r.blob], r.name, { type: r.blob.type })] });
+    m.innerHTML = '<div class="vw-modal-box vw-result">' +
+        '<h3>✅ Vidéo prête</h3>' +
+        '<video src="' + url + '" controls playsinline style="aspect-ratio:' + r.w + '/' + r.h + '"></video>' +
+        '<div class="vw-result-info"><b>' + esc(r.name) + '</b><br>' + r.format.label + ' · ' + r.format.ratio + ' · ' + r.w + '×' + r.h +
+        ' · ' + fmtTime(r.duration) + ' · ' + (r.blob.size / 1048576).toFixed(1) + ' Mo · ' + (isMp4 ? 'MP4' : 'WebM (conversion MP4 impossible ici)') + '</div>' +
+        '<div class="vw-modal-actions">' +
+            '<button type="button" class="vw-ghost" data-act="close">Fermer</button>' +
+            (canShare ? '<button type="button" class="vw-ghost" data-act="share">📤 Partager</button>' : '') +
+            '<button type="button" class="vw-play" data-act="dl">⬇ Télécharger ' + (isMp4 ? 'le MP4' : 'la vidéo') + '</button>' +
+        '</div></div>';
+    m.classList.remove('hidden');
+    m.querySelector('[data-act=close]').onclick = () => { m.classList.add('hidden'); URL.revokeObjectURL(url); };
+    m.querySelector('[data-act=dl]').onclick = () => { downloadBlob(r.blob, r.name); showToast('Téléchargement lancé : ' + r.name, 'success', 3500); };
+    const sh = m.querySelector('[data-act=share]');
+    if (sh) sh.onclick = async () => {
+        try { await navigator.share({ files: [new File([r.blob], r.name, { type: r.blob.type })], title: (state.scenario && state.scenario.title) || 'Mon histoire' }); }
+        catch (e) { if (e.name !== 'AbortError') showToast('Partage impossible : ' + e.message, 'error'); }
+    };
+    // téléchargement automatique (peut être bloqué : le bouton reste disponible)
+    downloadBlob(r.blob, r.name);
+    showToast('Vidéo enregistrée', 'success', 3000);
 }
 
 // Impression page par page avec la même mise en page que le PDF (marche même si CORS bloque l'export)
@@ -3083,7 +3258,8 @@ function stopAllVideos() {
     document.getElementById('vw-music-style').innerHTML = Object.entries(MUSIC_STYLES)
         .map(([k, v]) => '<option value="' + k + '"' + (k === 'happy' ? ' selected' : '') + '>' + v.name + '</option>').join('');
     document.getElementById('vw-music-test').addEventListener('click', () => music.preview(document.getElementById('vw-music-style').value));
-    document.getElementById('vw-rec').addEventListener('click', recordVideo);
+    document.getElementById('vw-rec').addEventListener('click', openRecSetup);
+    document.getElementById('vw-recbar-stop').addEventListener('click', () => stopReading());
     document.getElementById('vw-settings-btn').addEventListener('click', e => {
         const panel = document.getElementById('vw-settings');
         const open = panel.classList.toggle('hidden') === false;

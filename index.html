@@ -488,6 +488,23 @@
     .ch-meta { font-size: 0.66rem; color: var(--ink-faint); }
     .ch-actions { display: flex; gap: 0.25rem; } .ch-actions button { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel); cursor: pointer; font-size: 0.78rem; }
     .ch-new { margin: 0.3rem 0 0; padding: 0.55rem; }
+    .ch-thumb { position: relative; width: 60px; height: 60px; border-radius: 14px; }
+    .ch-3d { position: absolute; right: 2px; bottom: 2px; font-size: 0.55rem; font-weight: 900; background: linear-gradient(135deg, #ff6b9d, #4a6cf7); color: #fff; padding: 0 4px; border-radius: 4px; }
+    .ch-name small { font-weight: 600; color: var(--ink-faint); font-size: 0.66rem; }
+    .ch-host { margin-top: 0.6rem; font-size: 0.68rem; color: var(--ink-dim); line-height: 1.5; }
+    .ch-edit { width: min(900px, 100%); }
+    .ce-grid { display: grid; grid-template-columns: 250px 1fr; gap: 1rem; }
+    .ce-portrait { display: flex; flex-direction: column; gap: 0.6rem; }
+    .ce-img { aspect-ratio: 1/1; border-radius: 14px; overflow: hidden; background: var(--panel-2); border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; color: var(--ink-faint); font-size: 0.78rem; text-align: center; }
+    .ce-img img { width: 100%; height: 100%; object-fit: cover; }
+    .ce-hint { font-size: 0.68rem; color: var(--ink-dim); line-height: 1.45; }
+    .ce-fields label { margin-bottom: 0.55rem; }
+    .ce-fields textarea { min-height: 58px; }
+    .ce-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; }
+    .ce-sub { font-size: 0.74rem; font-weight: 800; color: var(--ink); margin: 0.4rem 0 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    .ce-sub small { font-weight: 500; color: var(--ink-faint); }
+    .sameface { display: block; margin: 0; line-height: 1.45; font-size: 0.8rem; color: var(--ink); } .sameface input { margin-right: 0.35rem; vertical-align: -2px; } .sameface small { display: block; margin: 0.2rem 0 0 1.5rem; color: var(--ink-faint); font-size: 0.68rem; }
+    @media (max-width: 760px) { .ce-grid { grid-template-columns: 1fr; } .ce-img { max-width: 240px; } }
     .ch-edit label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.76rem; color: var(--ink-dim); margin-bottom: 0.7rem; }
     .ch-edit label small { color: var(--ink-faint); font-size: 0.66rem; } .ch-edit textarea { min-height: 80px; }
     .picked-chars { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; margin-top: 0.6rem; }
@@ -592,6 +609,9 @@
         <span class="chevron">▼</span>
     </div>
     <div class="section-body"><div class="section-content">
+        <div class="control-row">
+            <label class="board-check sameface"><input type="checkbox" id="opt-sameface" checked> 🧬 Même visage et même tenue dans toutes les images <small>(crée d'abord une fiche 3D par personnage, envoyée en référence à chaque illustration)</small></label>
+        </div>
         <div class="control-row">
             <label class="control-label">Type de création</label>
             <select id="mode-select">
@@ -928,9 +948,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.11.0';
+const APP_VERSION = '3.12.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.12.0', 'Fiches personnages complètes (histoire, visage, tenue) avec portrait 3D de référence envoyé à chaque illustration : même visage et même tenue dans toutes les BD'],
     ['3.11.0', 'Voix premium Supertonic 3 gratuites et illimitées : 10 voix adultes + voix d\'enfants, grands-parents, géant ; préparation des phrases en avance'],
     ['3.10.0', 'Voix neuronales Piper gratuites et illimitées (dans le navigateur) ; bascule automatique si les crédits Puter sont épuisés'],
     ['3.9.0', 'Catalogue des voix (Gemini, ElevenLabs, xAI, favoris, clés personnelles), catalogue de personnages réutilisables, notes'],
@@ -1345,13 +1366,22 @@ async function callTextAPI(messages, options = {}) {
     return content;
 }
 
-async function callImageAPI(prompt, size = '1K', ratio = '1:1') {
-    logConsole('Requête image → ' + MODEL_IMAGE, 'info');
+async function callImageAPI(prompt, size = '1K', ratio = '1:1', refs) {
+    const withRefs = Array.isArray(refs) && refs.length > 0;
+    const model = withRefs ? MODEL_IMAGE_REF : MODEL_IMAGE;
+    logConsole('Requête image → ' + model + (withRefs ? ' avec ' + refs.length + ' portrait(s) de référence' : ''), 'info');
     const res = await fetchWithRetry(API_BASE + '/images/generations', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + getApiKey(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: MODEL_IMAGE, prompt, size, ratio, extra_body: { response_format: 'url' } })
+        body: JSON.stringify(withRefs
+            ? { model, prompt, size, ratio, extra_body: { image: refs, response_format: 'url' } }
+            : { model, prompt, size, ratio, extra_body: { response_format: 'url' } })
     }, 3, 'Image');
+    if (!res.ok && withRefs) {
+        let msg = ''; try { msg = (await res.text()).slice(0, 120); } catch (e) {}
+        logConsole('Références refusées (HTTP ' + res.status + ' ' + msg + ') → image sans référence.', 'warn');
+        return callImageAPI(prompt, size, ratio);
+    }
     if (!res.ok) throw new Error('Image API HTTP ' + res.status);
     const data = await res.json();
     const url = data.data?.[0]?.url;
@@ -1548,17 +1578,18 @@ Réponds UNIQUEMENT en JSON valide, sans markdown.` + pickedCharsPrompt();
         saveProject();
 
         // ═══ ÉTAPE 2 : IMAGES ═══
+        await ensureCharacterSheets(scenario);
         logConsole('ÉTAPE 2/' + (state.mode === 'video' ? 3 : 2) + ' — Images (image par image)', 'success');
 
         for (let i = 0; i < scenario.scenes.length; i++) {
             if (state.stopRequested) break;
             const scene = scenario.scenes[i];
             setStatus('Image ' + (i + 1) + '/' + scenario.scenes.length + '…');
-            const imagePrompt = buildImagePrompt(scene);
+            const req = sceneImageRequest(scene);
             let ok = false;
             for (let tryN = 1; tryN <= 2 && !ok && !state.stopRequested; tryN++) {
                 try {
-                    const imageUrl = await callImageAPI(imagePrompt, '1K', '1:1');
+                    const imageUrl = await callImageAPI(req.prompt, '1K', '1:1', req.refs);
                     const entry = { sceneIndex: i, url: imageUrl, scene };
                     state.images.push(entry);
                     keepLocalCopy(entry);
@@ -1714,13 +1745,21 @@ function displayGeneratedImage(url, label, sceneIndex) {
 // ══════════════════════════════════════════════════════════════════
 // IMAGE PAR IMAGE : prompt partagé + régénération individuelle
 // ══════════════════════════════════════════════════════════════════
-function buildImagePrompt(scene) {
+function buildImagePrompt(scene, refChars) {
     const sc = state.scenario;
     const stylePrompt = STYLES[state.selectedStyle] || STYLES['cartoon-cute'];
     const characterDesc = sc && sc.characters.length
-        ? 'Recurring characters (keep EXACTLY the same look in every image): ' + sc.characters.map(c => c.name + ' = ' + c.appearance).join('; ') + '. '
+        ? 'Recurring characters (keep EXACTLY the same face, hairstyle, outfit and colors in every image): ' + sc.characters.map(c => c.name + ' = ' + c.appearance).join('; ') + '. '
         : '';
-    return characterDesc + 'Scene: ' + scene.image_prompt + '. ' + stylePrompt + '. Square 1:1 format, children friendly, no text, no speech bubbles, no watermark.';
+    const refNote = refChars && refChars.length
+        ? 'The reference image' + (refChars.length > 1 ? 's show ' : ' shows ') + refChars.map(c => c.name).join(', ') + ': reproduce ' + (refChars.length > 1 ? 'these characters' : 'this character') +
+          ' with the identical face, hairstyle, body proportions and the exact same clothes and colors; only the pose, expression and background change. '
+        : '';
+    return refNote + characterDesc + 'Scene: ' + scene.image_prompt + '. ' + stylePrompt + '. Square 1:1 format, children friendly, no text, no speech bubbles, no watermark.';
+}
+function sceneImageRequest(scene) {
+    const refChars = sceneRefs(scene);
+    return { prompt: buildImagePrompt(scene, refChars), refs: refChars.map(c => c.refUrl) };
 }
 
 async function regenerateImage(sceneIndex) {
@@ -1733,7 +1772,8 @@ async function regenerateImage(sceneIndex) {
     state.stopRequested = false;
     logConsole('Régénération de l\'image de la scène ' + (sceneIndex + 1) + '…', 'info');
     try {
-        const url = await callImageAPI(buildImagePrompt(scene), '1K', '1:1');
+        const req = sceneImageRequest(scene);
+        const url = await callImageAPI(req.prompt, '1K', '1:1', req.refs);
         const existing = state.images.find(im => im.sceneIndex === sceneIndex);
         if (existing) { existing.url = url; existing.localUrl = null; keepLocalCopy(existing); }
         else { state.images.push({ sceneIndex, url, scene }); state.images.sort((a, b) => a.sceneIndex - b.sceneIndex); }
@@ -3692,8 +3732,8 @@ function stopReadMode(keepPosition) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// MES PERSONNAGES : catalogue réutilisable d'une histoire à l'autre
-// (même nom, même apparence pour les images, même voix et même ton)
+// MES PERSONNAGES : fiche détaillée + portrait 3D de référence
+// Le portrait est envoyé à Agnes avec chaque illustration : même visage, même tenue d'une BD à l'autre.
 // ══════════════════════════════════════════════════════════════════
 const dbAllChars = () => dbOp('readonly', st => st.getAll(), 'characters');
 const dbPutChar = c => dbOp('readwrite', st => st.put(c), 'characters');
@@ -3702,33 +3742,96 @@ const CHAR_PICK_KEY = 'da_chars_selected';
 const pickedChars = () => { try { return new Set(JSON.parse(localStorage.getItem(CHAR_PICK_KEY) || '[]')); } catch (e) { return new Set(); } };
 const savePicked = s => { try { localStorage.setItem(CHAR_PICK_KEY, JSON.stringify([...s])); } catch (e) {} };
 let _charsCache = [];
+const MODEL_IMAGE_REF = 'agnes-image-2.1-flash';   // modèle Agnes qui accepte des images de référence
+const AGES = { enfant: 'Enfant', ado: 'Adolescent', adulte: 'Adulte', age: 'Personne âgée', bebe: 'Bébé / tout-petit', animal: 'Animal', creature: 'Créature / magique' };
+const AGE_EN = { enfant: 'young child', ado: 'teenager', adulte: 'adult', age: 'elderly', bebe: 'toddler', animal: 'animal character', creature: 'magical creature' };
 
-// Miniature du personnage : l'image d'une scène où il parle (sinon la première)
-async function charThumb(name) {
-    const imgs = sortedImages();
-    const im = imgs.find(x => { const sc = sceneOf(x); return sc.dialogue && sc.dialogue.character === name; }) || imgs[0];
-    if (!im) return '';
+// Description complète et figée du personnage (reprise mot pour mot dans chaque prompt d'image)
+function charDescriptor(c) {
+    const parts = [
+        c.species || AGE_EN[c.age] || '',
+        c.gender === 'femme' ? 'female' : c.gender === 'homme' ? 'male' : '',
+        c.face && 'face: ' + c.face, c.hair && 'hair: ' + c.hair, c.eyes && 'eyes: ' + c.eyes,
+        c.outfit && 'always wearing: ' + c.outfit, c.accessory && 'accessory: ' + c.accessory, c.colors && 'colors: ' + c.colors
+    ].filter(Boolean);
+    return parts.length > 2 ? parts.join(', ') : (c.appearance || parts.join(', '));
+}
+
+// Hébergement permanent des portraits (ImgBB, clé gratuite) : sans lui, les liens Agnes finissent par expirer
+const IMGBB_KEY = 'da_imgbb_key';
+const imgbbKey = () => { try { return localStorage.getItem(IMGBB_KEY) || ''; } catch (e) { return ''; } };
+async function hostPermanently(blob) {
+    const key = imgbbKey(); if (!key || !blob) return '';
+    const b64 = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(String(fr.result).split(',')[1]); fr.readAsDataURL(blob); });
+    const f = new FormData(); f.append('image', b64);
+    const res = await fetch('https://api.imgbb.com/1/upload?key=' + encodeURIComponent(key), { method: 'POST', body: f });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.data) throw new Error((j.error && j.error.message) || 'HTTP ' + res.status);
+    return j.data.url;
+}
+// Un lien d'image fonctionne-t-il encore ?
+function urlAlive(url, ms = 9000) {
+    return new Promise(r => { if (!url) return r(false); const im = new Image(); const t = setTimeout(() => r(false), ms); im.onload = () => { clearTimeout(t); r(true); }; im.onerror = () => { clearTimeout(t); r(false); }; im.src = url; });
+}
+async function blobToThumb(blob, size = 160) {
+    const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(blob); });
+    const c = document.createElement('canvas'); c.width = c.height = size;
+    const s = Math.min(img.naturalWidth, img.naturalHeight);
+    c.getContext('2d').drawImage(img, (img.naturalWidth - s) / 2, 0, s, s, 0, 0, size, size);   // cadré sur le haut (visage)
+    return c.toDataURL('image/jpeg', 0.8);
+}
+
+// Génère le portrait 3D de référence : personnage entier, de face, tenue visible, fond neutre
+async function generateCharSheet(c, quiet) {
+    if (!getApiKey()) { showToast('Ajoutez votre clé API Agnes', 'error'); return false; }
+    const prompt = 'Character reference sheet of ' + c.name + ': ' + charDescriptor(c) + '. ' +
+        'Full body, standing, facing the viewer, friendly expression, the whole outfit clearly visible from head to shoes. ' +
+        '3D animated movie style (Pixar-like), soft studio lighting, smooth shading, high detail on the face, plain light pastel background, centered, children friendly, no text, no watermark.';
+    if (!quiet) setStatus('Création de la fiche 3D de ' + c.name + '…');
     try {
-        const img = await loadImageForCanvas(im.localUrl || im.url);
-        if (img._tainted) return '';
-        const c = document.createElement('canvas'); c.width = c.height = 120;
-        const s = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
-        c.getContext('2d').drawImage(img, ((img.naturalWidth || img.width) - s) / 2, ((img.naturalHeight || img.height) - s) / 2, s, s, 0, 0, 120, 120);
-        return c.toDataURL('image/jpeg', 0.75);
-    } catch (e) { return ''; }
+        const url = await callImageAPI(prompt, '1K', '1:1');
+        const blob = await getImageBlob(url);
+        c.portrait = { url, at: Date.now(), hosted: '' };
+        if (blob) {
+            c.portraitBlob = blob;
+            c.thumb = await blobToThumb(blob).catch(() => c.thumb || '');
+            try { c.portrait.hosted = await hostPermanently(blob); } catch (e) { logConsole('Hébergement permanent du portrait impossible : ' + e.message, 'warn'); }
+        }
+        c.updatedAt = Date.now();
+        logConsole('Fiche 3D créée pour ' + c.name + (c.portrait.hosted ? ' (hébergée de façon permanente)' : ''), 'success');
+        return true;
+    } catch (e) {
+        logConsole('Fiche 3D de ' + c.name + ' impossible : ' + e.message, 'error');
+        if (!quiet) showToast('Fiche 3D impossible : ' + e.message.slice(0, 60), 'error');
+        return false;
+    } finally { if (!quiet) setStatus(null); }
+}
+// Adresse de référence utilisable (permanente, sinon lien Agnes s'il n'a pas expiré, sinon nouvelle fiche)
+async function charRefUrl(c, allowRegen) {
+    if (c.portrait && c.portrait.hosted) return c.portrait.hosted;
+    if (c.portrait && c.portrait.url && await urlAlive(c.portrait.url)) return c.portrait.url;
+    if (c.portraitBlob && imgbbKey()) {
+        try { c.portrait.hosted = await hostPermanently(c.portraitBlob); if (c.id) dbPutChar(c).catch(() => {}); return c.portrait.hosted; } catch (e) {}
+    }
+    if (allowRegen) {
+        logConsole('Le portrait de ' + c.name + ' a expiré : nouvelle fiche 3D à partir de sa description.', 'warn');
+        if (await generateCharSheet(c, true)) { if (c.id) dbPutChar(c).catch(() => {}); return c.portrait.url; }
+    }
+    return '';
 }
 
 async function addCharToCatalog(name) {
     const ch = state.scenario && state.scenario.characters.find(c => c.name === name);
     if (!ch) return;
     const existing = _charsCache.find(c => c.name.toLowerCase() === name.toLowerCase());
-    const rec = Object.assign(existing || { id: 'c' + Date.now().toString(36), createdAt: Date.now(), uses: 0 }, {
-        name: ch.name, gender: ch.gender || (characterGender(ch.name) === 'f' ? 'femme' : 'homme'), appearance: ch.appearance || '',
-        tone: (voiceCfg.chars[ch.name] || {}).tone || guessTone(ch),
+    const rec = Object.assign(existing || { id: 'c' + Date.now().toString(36), createdAt: Date.now(), uses: 0, age: 'enfant' }, {
+        name: ch.name, gender: /femme|fille|female/i.test(ch.gender || '') || characterGender(ch.name) === 'f' ? 'femme' : 'homme',
+        appearance: ch.appearance || '', tone: (voiceCfg.chars[ch.name] || {}).tone || guessTone(ch),
         voices: Object.assign({}, voiceCfg.chars[ch.name] || {}), updatedAt: Date.now()
     });
     delete rec.voices.tone;
-    const th = await charThumb(ch.name); if (th) rec.thumb = th;
+    if (ch.portrait && !rec.portrait) { rec.portrait = ch.portrait; rec.portraitBlob = ch.portraitBlob; rec.thumb = ch.thumb; }
+    if (!rec.outfit && !rec.face) rec.outfit = '';   // la fiche détaillée peut être complétée ensuite (✏️)
     await dbPutChar(rec);
     showToast((existing ? 'Personnage mis à jour : ' : 'Ajouté à « Mes personnages » : ') + ch.name, 'success');
     renderCharCatalog();
@@ -3742,74 +3845,131 @@ async function renderCharCatalog() {
     _charsCache.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     const picked = pickedChars();
     document.getElementById('char-count').textContent = _charsCache.length ? '(' + _charsCache.length + ')' : '';
-    box.innerHTML = (_charsCache.length ? '' : '<div class="lib-empty">Aucun personnage. Après une histoire, cliquez sur « ⭐ » à côté d\'un personnage dans le scénario, ou créez-en un.</div>') +
+    const hosted = !!imgbbKey();
+    box.innerHTML = (_charsCache.length ? '' : '<div class="lib-empty">Aucun personnage. Créez-en un, ou cliquez sur ☆ à côté d\'un personnage dans le scénario.</div>') +
         _charsCache.map(c => '<div class="ch-card' + (picked.has(c.id) ? ' picked' : '') + '" data-id="' + c.id + '">' +
-            '<div class="ch-thumb">' + (c.thumb ? '<img src="' + c.thumb + '" alt="">' : (/femme|fille|f$/i.test(c.gender) ? '👧' : '👦')) + '</div>' +
-            '<div class="ch-info"><div class="ch-name">' + esc(c.name) + '</div><div class="ch-app" title="' + esc(c.appearance) + '">' + esc(c.appearance || 'Apparence non décrite') + '</div>' +
-            '<div class="ch-meta">' + ((TONES[c.tone] || {}).label || '') + (c.uses ? ' · utilisé ' + c.uses + ' fois' : '') + '</div></div>' +
+            '<div class="ch-thumb">' + (c.thumb ? '<img src="' + c.thumb + '" alt="">' : (c.gender === 'femme' ? '👧' : '👦')) +
+                (c.portrait ? '<span class="ch-3d" title="Fiche 3D de référence">3D</span>' : '') + '</div>' +
+            '<div class="ch-info"><div class="ch-name">' + esc(c.name) + ' <small>' + esc(AGES[c.age] || '') + '</small></div>' +
+            '<div class="ch-app" title="' + esc(charDescriptor(c)) + '">' + esc(c.outfit ? '👕 ' + c.outfit : charDescriptor(c) || 'Fiche à compléter') + '</div>' +
+            '<div class="ch-meta">' + (c.bio ? '📖 ' + esc(c.bio.slice(0, 60)) + (c.bio.length > 60 ? '…' : '') + ' · ' : '') + ((TONES[c.tone] || {}).label || '') + (c.uses ? ' · ' + c.uses + ' histoire' + (c.uses > 1 ? 's' : '') : '') + '</div></div>' +
             '<div class="ch-actions"><button type="button" data-pick title="Utiliser dans la prochaine histoire">' + (picked.has(c.id) ? '✅' : '➕') + '</button>' +
-            '<button type="button" data-edit title="Modifier">✏️</button><button type="button" data-del title="Supprimer">🗑</button></div></div>').join('') +
-        '<button type="button" class="btn-secondary ch-new" id="char-new">＋ Nouveau personnage</button>';
+            '<button type="button" data-edit title="Fiche du personnage">✏️</button><button type="button" data-del title="Supprimer">🗑</button></div></div>').join('') +
+        '<button type="button" class="btn-secondary ch-new" id="char-new">＋ Nouveau personnage</button>' +
+        '<div class="ch-host">' + (hosted ? '☁️ Portraits hébergés de façon permanente (ImgBB) · <button type="button" class="link-btn" id="imgbb-set">changer la clé</button>'
+            : '☁️ <button type="button" class="link-btn" id="imgbb-set">Héberger les portraits de façon permanente (ImgBB, gratuit)</button> — sinon les portraits sont recréés quand le lien Agnes expire.') + '</div>';
     renderPickedChips();
 }
 
 function renderPickedChips() {
     const box = document.getElementById('picked-chars');
     if (!box) return;
-    const picked = pickedChars();
-    const list = _charsCache.filter(c => picked.has(c.id));
+    const list = _charsCache.filter(c => pickedChars().has(c.id));
     box.classList.toggle('hidden', !list.length);
-    box.innerHTML = list.length ? '<span class="pc-lbl">🧸 Personnages imposés :</span>' + list.map(c => '<button type="button" class="fx-chip" data-unpick="' + c.id + '" title="Retirer">' + esc(c.name) + ' ✕</button>').join('') : '';
+    box.innerHTML = list.length ? '<span class="pc-lbl">🧸 Personnages imposés :</span>' + list.map(c => '<button type="button" class="fx-chip" data-unpick="' + c.id + '" title="Retirer">' + (c.portrait ? '🧬 ' : '') + esc(c.name) + ' ✕</button>').join('') : '';
 }
 
 function editCharDialog(c) {
     const m = document.getElementById('voice-catalog');
     const isNew = !c;
-    c = c || { id: 'c' + Date.now().toString(36), name: '', gender: 'homme', appearance: '', tone: 'joyeux', voices: {}, createdAt: Date.now(), uses: 0 };
-    m.innerHTML = '<div class="vc-box ch-edit"><div class="vc-head"><b>' + (isNew ? '＋ Nouveau personnage' : '✏️ ' + esc(c.name)) + '</b><button type="button" class="vc-x" data-x>✕</button></div>' +
-        '<label>Nom<input type="text" id="ce-name" value="' + esc(c.name) + '" placeholder="Ex. : Pilou"></label>' +
-        '<label>Genre<select id="ce-gender"><option value="homme">Garçon / masculin</option><option value="femme">Fille / féminin</option></select></label>' +
-        '<label>Apparence <small>(précise et en anglais de préférence : elle est reprise telle quelle dans chaque image pour garder le même personnage)</small>' +
-        '<textarea id="ce-app" placeholder="Ex. : small white rabbit with long pink ears, blue scarf, big round eyes">' + esc(c.appearance) + '</textarea></label>' +
-        '<label>Ton de la voix<select id="ce-tone">' + Object.entries(TONES).map(([k, t]) => '<option value="' + k + '">' + t.label + '</option>').join('') + '</select></label>' +
+    c = c || { id: 'c' + Date.now().toString(36), name: '', gender: 'femme', age: 'enfant', appearance: '', tone: 'joyeux', voices: {}, createdAt: Date.now(), uses: 0 };
+    const f = (id, label, val, ph, area) => '<label>' + label + (area ? '<textarea id="' + id + '" placeholder="' + esc(ph) + '">' + esc(val || '') + '</textarea>'
+        : '<input type="text" id="' + id + '" value="' + esc(val || '') + '" placeholder="' + esc(ph) + '">') + '</label>';
+    m.innerHTML = '<div class="vc-box ch-edit"><div class="vc-head"><b>' + (isNew ? '＋ Nouveau personnage' : '🧸 Fiche de ' + esc(c.name)) + '</b><button type="button" class="vc-x" data-x>✕</button></div>' +
+        '<div class="ce-grid"><div class="ce-portrait">' +
+            '<div class="ce-img" id="ce-img">' + (c.portraitBlob ? '<img src="' + URL.createObjectURL(c.portraitBlob) + '" alt="">' : c.portrait ? '<img src="' + esc(c.portrait.hosted || c.portrait.url) + '" alt="">' : '<span>Pas encore de fiche 3D</span>') + '</div>' +
+            '<button type="button" class="vw-play" id="ce-gen">🎨 ' + (c.portrait ? 'Recréer la fiche 3D' : 'Créer la fiche 3D') + '</button>' +
+            '<div class="ce-hint">Le portrait sert de modèle : il est envoyé à Agnes avec chaque illustration pour garder le même visage et la même tenue.</div></div>' +
+        '<div class="ce-fields">' +
+            '<div class="ce-row">' + f('ce-name', 'Nom', c.name, 'Ex. : Pilou') +
+            '<label>Genre<select id="ce-gender"><option value="femme">Féminin</option><option value="homme">Masculin</option></select></label>' +
+            '<label>Âge<select id="ce-age">' + Object.entries(AGES).map(([k, l]) => '<option value="' + k + '">' + l + '</option>').join('') + '</select></label></div>' +
+            f('ce-bio', 'Son histoire, son caractère <small>(en français ; l\'IA s\'en sert pour écrire ses répliques)</small>', c.bio, 'Ex. : Petit lapin curieux et un peu peureux, il vit au bord de la forêt avec sa grand-mère et adore les carottes.', true) +
+            '<div class="ce-sub">Apparence figée <small>(en anglais de préférence, reprise mot pour mot dans chaque image)</small></div>' +
+            f('ce-species', 'Espèce / type', c.species, 'Ex. : small white rabbit / little girl, 6 years old') +
+            f('ce-face', 'Visage', c.face, 'Ex. : round face, pink nose, freckles, big smile') +
+            '<div class="ce-row">' + f('ce-hair', 'Cheveux / pelage', c.hair, 'Ex. : long floppy ears, white fluffy fur') + f('ce-eyes', 'Yeux', c.eyes, 'Ex. : big round blue eyes') + '</div>' +
+            f('ce-outfit', '👕 Tenue (toujours la même)', c.outfit, 'Ex. : red hooded jacket, yellow t-shirt, blue shorts, green rubber boots', true) +
+            '<div class="ce-row">' + f('ce-acc', 'Accessoire', c.accessory, 'Ex. : small brown backpack') + f('ce-colors', 'Couleurs principales', c.colors, 'Ex. : red, yellow, blue') + '</div>' +
+            '<label>Ton de la voix<select id="ce-tone">' + Object.entries(TONES).map(([k, t]) => '<option value="' + k + '">' + t.label + '</option>').join('') + '</select></label>' +
+        '</div></div>' +
         '<div class="vw-modal-actions"><button type="button" class="vw-ghost" data-x>Annuler</button><button type="button" class="vw-play" id="ce-save">💾 Enregistrer</button></div></div>';
     m.querySelector('#ce-gender').value = /femme|fille|f$/i.test(c.gender) ? 'femme' : 'homme';
+    m.querySelector('#ce-age').value = c.age || 'enfant';
     m.querySelector('#ce-tone').value = c.tone || 'joyeux';
     m.classList.remove('hidden');
     m.onclick = e => { if (e.target === m || e.target.closest('[data-x]')) m.classList.add('hidden'); };
+    const read = () => Object.assign(c, {
+        name: m.querySelector('#ce-name').value.trim(), gender: m.querySelector('#ce-gender').value, age: m.querySelector('#ce-age').value,
+        bio: m.querySelector('#ce-bio').value.trim(), species: m.querySelector('#ce-species').value.trim(), face: m.querySelector('#ce-face').value.trim(),
+        hair: m.querySelector('#ce-hair').value.trim(), eyes: m.querySelector('#ce-eyes').value.trim(), outfit: m.querySelector('#ce-outfit').value.trim(),
+        accessory: m.querySelector('#ce-acc').value.trim(), colors: m.querySelector('#ce-colors').value.trim(), tone: m.querySelector('#ce-tone').value, updatedAt: Date.now()
+    });
+    m.querySelector('#ce-gen').onclick = async e => {
+        read();
+        if (!c.name) { showToast('Donnez d\'abord un nom au personnage', 'warn'); return; }
+        e.target.disabled = true; e.target.textContent = '⏳ Création de la fiche 3D…';
+        const ok = await generateCharSheet(c);
+        e.target.disabled = false; e.target.textContent = '🎨 Recréer la fiche 3D';
+        if (ok) {
+            const box = m.querySelector('#ce-img');
+            box.innerHTML = '<img src="' + esc(c.portraitBlob ? URL.createObjectURL(c.portraitBlob) : c.portrait.url) + '" alt="">';
+            await dbPutChar(c); renderCharCatalog();
+        }
+    };
     m.querySelector('#ce-save').onclick = async () => {
-        const name = m.querySelector('#ce-name').value.trim();
-        if (!name) { showToast('Donnez un nom au personnage', 'warn'); return; }
-        Object.assign(c, { name, gender: m.querySelector('#ce-gender').value, appearance: m.querySelector('#ce-app').value.trim(), tone: m.querySelector('#ce-tone').value, updatedAt: Date.now() });
+        read();
+        if (!c.name) { showToast('Donnez un nom au personnage', 'warn'); return; }
+        c.appearance = charDescriptor(c);
         await dbPutChar(c);
         m.classList.add('hidden');
-        showToast('Personnage enregistré', 'success');
+        showToast('Fiche enregistrée' + (c.portrait ? '' : ' — pensez à créer sa fiche 3D 🎨'), 'success', 3500);
         renderCharCatalog();
     };
 }
 
-// Avant d'écrire une histoire : consigne pour l'IA avec les personnages imposés
+// Avant d'écrire une histoire : consigne pour l'IA avec les personnages imposés (apparence et caractère)
 function pickedCharsPrompt() {
-    const picked = pickedChars();
-    const list = _charsCache.filter(c => picked.has(c.id));
+    const list = _charsCache.filter(c => pickedChars().has(c.id));
     if (!list.length) return '';
-    return '\n\nPersonnages imposés (garde EXACTEMENT ces noms, genres et apparences, tu peux en ajouter d\'autres si l\'histoire le demande) :\n' +
-        list.map(c => '- ' + c.name + ' (' + c.gender + ') : ' + (c.appearance || 'apparence libre')).join('\n');
+    return '\n\nPersonnages imposés (garde EXACTEMENT ces noms, genres et apparences ; respecte leur caractère ; tu peux en ajouter d\'autres si l\'histoire le demande) :\n' +
+        list.map(c => '- ' + c.name + ' (' + c.gender + ', ' + (AGES[c.age] || '').toLowerCase() + ') : apparence = ' + (charDescriptor(c) || 'libre') + (c.bio ? ' ; histoire et caractère = ' + c.bio : '')).join('\n');
 }
-// Après : on remet l'apparence, la voix et le ton enregistrés (cohérence des images et des voix)
+// Après : apparence, portrait, voix et ton du catalogue (cohérence des images et des voix)
 async function applyPickedChars(scenario) {
-    const picked = pickedChars();
-    const list = _charsCache.filter(c => picked.has(c.id));
+    const list = _charsCache.filter(c => pickedChars().has(c.id));
     for (const c of list) {
         let ch = scenario.characters.find(x => (x.name || '').toLowerCase() === c.name.toLowerCase());
         if (!ch) { ch = { name: c.name }; scenario.characters.push(ch); }
-        ch.name = c.name; ch.gender = c.gender;
-        if (c.appearance) ch.appearance = c.appearance;
+        Object.assign(ch, { name: c.name, gender: c.gender, appearance: charDescriptor(c) || ch.appearance, catalogId: c.id });
+        if (c.portrait) { ch.portrait = c.portrait; ch.portraitBlob = c.portraitBlob; ch.thumb = c.thumb; }
         voiceCfg.chars[c.name] = Object.assign({}, voiceCfg.chars[c.name] || {}, c.voices || {}, { tone: c.tone || 'joyeux' });
         c.uses = (c.uses || 0) + 1; c.updatedAt = Date.now();
         dbPutChar(c).catch(() => {});
     }
     if (list.length) { saveVoiceCfg(); logConsole('Personnages du catalogue repris : ' + list.map(c => c.name).join(', '), 'success'); }
+}
+
+// Avant les illustrations : chaque personnage reçoit une fiche 3D (catalogue, ou créée pour cette histoire)
+async function ensureCharacterSheets(scenario) {
+    if (!document.getElementById('opt-sameface') || !document.getElementById('opt-sameface').checked) return;
+    logConsole('Fiches 3D des personnages (même visage et même tenue dans toutes les images)…', 'info');
+    for (const ch of scenario.characters.slice(0, 6)) {
+        if (state.stopRequested) return;
+        const cat = ch.catalogId && _charsCache.find(c => c.id === ch.catalogId);
+        const holder = cat || ch;
+        setStatus('Fiche 3D : ' + ch.name + '…');
+        const url = holder.portrait ? await charRefUrl(holder, true) : (await generateCharSheet(holder, true) ? (holder.portrait.hosted || holder.portrait.url) : '');
+        if (cat) { Object.assign(ch, { portrait: cat.portrait, portraitBlob: cat.portraitBlob, thumb: cat.thumb }); dbPutChar(cat).catch(() => {}); }
+        ch.refUrl = url || '';
+    }
+    setStatus(null);
+}
+// Personnages présents dans une scène (nommés dans le texte ou qui parlent)
+function sceneRefs(scene) {
+    const sc = state.scenario; if (!sc) return [];
+    const txt = [scene.image_prompt, scene.description, narrationOf(scene), scene.dialogue && scene.dialogue.character].filter(Boolean).join(' ').toLowerCase();
+    return sc.characters.filter(c => c.refUrl && c.name && txt.includes(c.name.toLowerCase())).slice(0, 3);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -4895,6 +5055,13 @@ function stopAllVideos() {
     document.getElementById('voice-catalog-btn').addEventListener('click', openVoiceCatalog);
     document.getElementById('char-list').addEventListener('click', async e => {
         if (e.target.closest('#char-new')) return editCharDialog(null);
+        if (e.target.closest('#imgbb-set')) {
+            const k = prompt('Clé API ImgBB (gratuite : créez un compte sur imgbb.com, puis « API » dans le menu). Laissez vide pour retirer la clé.', imgbbKey());
+            if (k === null) return;
+            try { k.trim() ? localStorage.setItem(IMGBB_KEY, k.trim()) : localStorage.removeItem(IMGBB_KEY); } catch (er) {}
+            showToast(k.trim() ? 'Clé ImgBB enregistrée sur cet appareil' : 'Clé ImgBB retirée', 'success');
+            renderCharCatalog(); return;
+        }
         const card = e.target.closest('.ch-card'); if (!card) return;
         const c = _charsCache.find(x => x.id === card.dataset.id); if (!c) return;
         if (e.target.closest('[data-pick]')) { const p = pickedChars(); p.has(c.id) ? p.delete(c.id) : p.add(c.id); savePicked(p); renderCharCatalog(); }

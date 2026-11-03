@@ -348,7 +348,7 @@
     .puter-status .ok { color: var(--success); font-weight: 700; } .puter-status .warn { color: var(--warn); }
     .btn-mini { margin-top: 0.3rem; padding: 0.45rem 0.8rem; border-radius: 8px; border: 1px solid var(--info); background: transparent; color: var(--info); font: inherit; font-size: 0.74rem; font-weight: 700; cursor: pointer; }
     .link-btn { border: none; background: none; color: var(--info); font: inherit; font-size: 0.72rem; text-decoration: underline; cursor: pointer; padding: 0; }
-    .version-badge { position: fixed; right: 12px; bottom: 10px; z-index: 90; padding: 0.3rem 0.65rem; border-radius: 20px; border: 1px solid var(--border); background: rgba(26,26,34,0.9); backdrop-filter: blur(6px); color: var(--ink-dim); font: inherit; font-size: 0.66rem; font-weight: 700; cursor: pointer; }
+    .version-badge-old { position: fixed; right: 12px; bottom: 10px; z-index: 90; padding: 0.3rem 0.65rem; border-radius: 20px; border: 1px solid var(--border); background: rgba(26,26,34,0.9); backdrop-filter: blur(6px); color: var(--ink-dim); font: inherit; font-size: 0.66rem; font-weight: 700; cursor: pointer; }
     .version-badge:hover { color: var(--ink); border-color: var(--accent-child); }
     .version-pop { position: fixed; right: 12px; bottom: 42px; z-index: 95; width: min(340px, calc(100vw - 24px)); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 0.74rem; }
     .vp-head { display: flex; justify-content: space-between; margin-bottom: 0.5rem; } .vp-head span { color: var(--accent-child); font-weight: 700; }
@@ -405,6 +405,57 @@
         .rd-dots { max-width: 100%; }
         .viewer.read-mode .vw-nav { display: none; }
     }
+    /* ── Barre du bas ── */
+    .app-footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; height: 34px; display: flex; align-items: center; gap: 1rem; padding: 0 0.9rem; background: #121218; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--ink-dim); }
+    .af-status { display: flex; align-items: center; gap: 0.45rem; min-width: 0; max-width: 34%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); font-weight: 600; }
+    .af-status .spinner { display: none; width: 12px; height: 12px; }
+    .af-status.busy .spinner { display: inline-block; } .af-status.busy .af-dot { display: none; }
+    .af-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+    .af-info { flex: 1; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .af-info b { color: var(--ink); }
+    .af-right { display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0; }
+    .af-api { color: var(--error); font-weight: 700; } .af-api.ok { color: var(--success); }
+    .af-btn { border: 1px solid var(--border); background: var(--panel-2); color: var(--ink); font: inherit; font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.7rem; border-radius: 12px; cursor: pointer; }
+    .af-btn:hover { border-color: var(--accent-child); }
+    .version-pop { bottom: 42px !important; }
+    @media (max-width: 640px) { #app-fs { display: none; } }
+    @media (max-width: 760px) { .af-last, .af-api { display: none; } .af-status { max-width: 45%; } .app-footer { gap: 0.6rem; } }
+    @media print { .app-footer { display: none !important; } }
+
+    /* ── Accueil (aucune création) ── */
+    .results-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 3rem 1.5rem; margin-top: 1rem; border: 2px dashed var(--border); border-radius: 18px; color: var(--ink-dim); }
+    .results-col:has(> .section:not(.hidden)) .results-empty { display: none; }
+    .re-icon { font-size: 3.2rem; margin-bottom: 0.6rem; }
+    .results-empty h2 { color: var(--ink); font-size: 1.35rem; margin-bottom: 0.4rem; }
+    .re-steps { list-style: none; margin-top: 1.4rem; display: grid; gap: 0.6rem; text-align: left; max-width: 560px; width: 100%; }
+    .re-steps li { display: flex; gap: 0.8rem; align-items: center; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 0.7rem 0.9rem; font-size: 0.86rem; color: var(--ink); }
+    .re-steps b { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #ff6b9d, #4a6cf7); color: #fff; }
+
+    /* ── Version ordinateur : l'application occupe tout l'écran ── */
+    body { padding-bottom: 46px; }
+    .side-col { display: none; }
+    @media (min-width: 1100px) {
+        html, body { height: 100%; }
+        body { overflow: hidden; display: flex; flex-direction: column; padding: 0 0 34px; }
+        .appbar { flex: none; position: relative; }
+        .layout { flex: 1; min-height: 0; max-width: none; width: 100%; margin: 0; padding: 14px 16px; gap: 16px; grid-template-columns: 400px minmax(0, 1fr); align-items: stretch; }
+        .controls-col, .results-col, .side-col { height: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; position: static; top: auto; max-height: none; padding-right: 6px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+        .results-col { padding: 0 6px 0 2px; }
+        .console-panel { max-height: 190px; }
+        .generated-images { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem; }
+        .generated-videos { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+        .board-wrap { max-height: 70vh; overflow: auto; }
+        .page-previews canvas { height: 190px; }
+        .results-empty { min-height: calc(100% - 240px); }
+    }
+    @media (min-width: 1600px) {
+        .layout { grid-template-columns: 400px minmax(0, 1fr) 380px; }
+        body.wide .side-col { display: block; }
+    }
+    @media (min-width: 2200px) {
+        .layout { grid-template-columns: 440px minmax(0, 1fr) 420px; }
+        body { font-size: 16px; }
+    }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -443,6 +494,7 @@
     </div>
     <div class="appbar-right">
         <button type="button" class="icon-btn hidden" id="install-btn" title="Installer l'application">⬇ Installer</button>
+        <button type="button" class="icon-btn" id="app-fs" title="Afficher l'application sur tout l'écran (F11)">⛶ Plein écran</button>
         <button type="button" class="api-dot" id="api-dot" title="Clé API"></button>
     </div>
 </header>
@@ -604,6 +656,17 @@
 </aside>
 
 <main class="results-col" id="results-col">
+<div class="results-empty" id="results-empty">
+    <div class="re-icon">🎨</div>
+    <h2>Créez votre histoire illustrée</h2>
+    <p>Tout se règle dans la colonne de gauche, et vos créations apparaissent ici.</p>
+    <ol class="re-steps">
+        <li><b>1</b><span>Collez votre clé API Agnes, puis écrivez l'idée de l'histoire</span></li>
+        <li><b>2</b><span>Choisissez le style, le type (dessin animé, BD ou planche) et le nombre de scènes</span></li>
+        <li><b>3</b><span>Cliquez sur <em>Générer</em> en haut de l'écran</span></li>
+        <li><b>4</b><span>Lisez-la en plein écran, exportez en PDF ou enregistrez la vidéo</span></li>
+    </ol>
+</div>
 
 <div class="console-panel" id="console-panel">
     <div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">[Système]</span> <span class="log-text">En attente de votre histoire…</span></div>
@@ -723,12 +786,19 @@
 </div>
 
 </main>
+<aside class="side-col" id="side-col"></aside>
 </div>
 
-<div class="status-bar" id="status-bar"><div class="spinner"></div><span id="status-text">Préparation…</span></div>
+<footer class="app-footer" id="app-footer">
+    <div class="af-status" id="status-bar"><span class="spinner"></span><span class="af-dot"></span><span id="status-text">Prêt</span></div>
+    <div class="af-info" id="af-info"></div>
+    <div class="af-right">
+        <span class="af-api" id="af-api"></span>
+        <button type="button" class="af-btn" id="version-badge" title="Historique des mises à jour">Nouveautés ▴</button>
+    </div>
+</footer>
 <div class="toast" id="toast"><span class="toast-icon" id="toast-icon">✓</span><span id="toast-text">Message</span></div>
 
-<button type="button" class="version-badge" id="version-badge" title="Nouveautés de cette version"></button>
 <div class="version-pop hidden" id="version-pop"></div>
 <div id="print-pages"></div>
 <div class="video-modal hidden" id="video-modal"></div>
@@ -789,9 +859,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.7.0';
+const APP_VERSION = '3.8.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.8.0', 'Version ordinateur : l\'application occupe tout l\'écran (2 ou 3 colonnes), barre d\'information en bas, bouton plein écran'],
     ['3.7.0', 'Mode « 🔤 Lire » : lecture mot par mot pour les enfants (écoute, lecture guidée, lecture seul), grand texte, suivi des scènes lues'],
     ['3.6.0', 'Ambiances fiables (plus d\'eau ou de pluie inventées), ambiances modifiables par scène, lecture qui ne s\'arrête plus, animations plus fluides'],
     ['3.5.0', 'Lecture et enregistrement fiables : plus aucun blocage, connexion Puter dans « Voix », son déverrouillé sur iPhone'],
@@ -1060,8 +1131,8 @@ function unlockAudio() {
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function setStatus(text) {
     const bar = document.getElementById('status-bar');
-    if (text) { bar.classList.add('visible'); document.getElementById('status-text').textContent = text; }
-    else bar.classList.remove('visible');
+    bar.classList.toggle('busy', !!text);
+    document.getElementById('status-text').textContent = text || 'Prêt';
 }
 
 // Extraction JSON robuste : tolère texte parasite, ```json, virgules finales
@@ -1136,6 +1207,8 @@ function updateApiPanel() {
     else { line.classList.remove('ok'); txt.textContent = 'Aucune clé API enregistrée'; input.value = ''; }
     const dot = document.getElementById('api-dot');
     dot.classList.toggle('ok', !!key);
+    const afApi = document.getElementById('af-api');
+    if (afApi) { afApi.textContent = key ? '● Clé API active' : '● Clé API manquante'; afApi.classList.toggle('ok', !!key); }
     dot.title = key ? 'Clé API active' : 'Aucune clé API — cliquez pour la saisir';
     updateGenerateBtn();
 }
@@ -4207,12 +4280,36 @@ function stopAllVideos() {
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
     const vb = document.getElementById('version-badge'), vp = document.getElementById('version-pop');
-    vb.textContent = 'v' + APP_VERSION + ' · ' + APP_DATE;
+    document.getElementById('af-info').innerHTML = '<b>Dessin Animé Studio</b> · version <b>' + APP_VERSION + '</b> · mise à jour du ' + APP_DATE +
+        '<span class="af-last"> · ' + esc(CHANGELOG[0][1]) + '</span>';
     vp.innerHTML = '<div class="vp-head"><b>Dessin Animé Studio</b><span>version ' + APP_VERSION + '</span></div>' +
         CHANGELOG.map(([v, t]) => '<div class="vp-row"><span class="vp-v">' + v + '</span>' + esc(t) + '</div>').join('');
     vb.addEventListener('click', e => { e.stopPropagation(); vp.classList.toggle('hidden'); });
     document.addEventListener('click', e => { if (!vp.contains(e.target)) vp.classList.add('hidden'); });
     logConsole('Studio prêt — version ' + APP_VERSION + ' du ' + APP_DATE + '.', 'info');
+
+    // ── Plein écran de l'application ──
+    const fsBtn = document.getElementById('app-fs');
+    const fsSync = () => { fsBtn.textContent = document.fullscreenElement && !viewer.open ? '🗗 Quitter le plein écran' : '⛶ Plein écran'; };
+    fsBtn.addEventListener('click', async () => {
+        try { if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen(); }
+        catch (e) { showToast('Plein écran indisponible : utilisez F11', 'warn'); }
+        fsSync();
+    });
+    document.addEventListener('fullscreenchange', fsSync);
+    if (!document.documentElement.requestFullscreen) fsBtn.classList.add('hidden');
+
+    // ── Disposition ordinateur : 3e colonne (bibliothèque, vidéos) sur grand écran ──
+    const sideIds = ['restore-btn', 'section-videos-lib', 'section-library'];
+    const placeSide = () => {
+        const wide = window.innerWidth >= 1600;
+        const target = document.getElementById(wide ? 'side-col' : 'controls-col');
+        sideIds.forEach(id => { const el = document.getElementById(id); if (el && el.parentNode !== target) target.appendChild(el); });
+        document.body.classList.toggle('wide', wide);
+        if (wide) ['section-videos-lib', 'section-library'].forEach(id => document.getElementById(id).classList.add('open'));
+    };
+    placeSide();
+    let _rz; window.addEventListener('resize', () => { clearTimeout(_rz); _rz = setTimeout(placeSide, 150); });
 })();
 </script>
 </body>

@@ -477,6 +477,7 @@
     .vc-voice button[data-fav] { filter: grayscale(1); opacity: 0.5; } .vc-voice button[data-fav].on { filter: none; opacity: 1; border-color: #ffd84d; }
     .voice-note .vc-tier { margin-right: 0.2rem; }
     .vc-ok { color: var(--success); font-size: 0.68rem; font-weight: 700; }
+    .st-q { display: inline-flex; align-items: center; gap: 0.35rem; margin-left: 0.4rem; font-size: 0.72rem; } .st-q select { width: auto; padding: 0.2rem 1.6rem 0.2rem 0.5rem; font-size: 0.72rem; }
     /* ── Mes personnages ── */
     .ch-card { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: 10px; background: var(--panel-2); margin-bottom: 0.45rem; border: 1px solid transparent; }
     .ch-card.picked { border-color: var(--success); background: rgba(45,138,78,0.1); }
@@ -927,9 +928,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.10.0';
+const APP_VERSION = '3.11.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.11.0', 'Voix premium Supertonic 3 gratuites et illimitées : 10 voix adultes + voix d\'enfants, grands-parents, géant ; préparation des phrases en avance'],
     ['3.10.0', 'Voix neuronales Piper gratuites et illimitées (dans le navigateur) ; bascule automatique si les crédits Puter sont épuisés'],
     ['3.9.0', 'Catalogue des voix (Gemini, ElevenLabs, xAI, favoris, clés personnelles), catalogue de personnages réutilisables, notes'],
     ['3.8.0', 'Version ordinateur : l\'application occupe tout l\'écran (2 ou 3 colonnes), barre d\'information en bas, bouton plein écran'],
@@ -2331,6 +2333,138 @@ const ELEVEN_PREMADE = [
     { id: 'pNInz6obpgDQGcFmaJgB', g: 'h', label: 'Adam — grave' }, { id: 'VR6AewLTigWG4xSOukaG', g: 'h', label: 'Arnold — rocailleux' },
     { id: 'N2lVS1w4EtoT3dr4eOWO', g: 'h', label: 'Callum — rauque' }, { id: 'onwK4e9ZLuTAKqWW03F9', g: 'h', label: 'Daniel — conteur britannique' }
 ];
+// ══════════════════════════════════════════════════════════════════
+// VOIX PREMIUM INTÉGRÉES — Supertonic 3 (Supertone, code MIT, modèle OpenRAIL-M)
+// Calculées dans le navigateur : gratuites et illimitées. Modèle téléchargé une seule fois (≈ 390 Mo).
+// ══════════════════════════════════════════════════════════════════
+const ORT_URL = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.webgpu.min.js';
+const ORT_WASM = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
+let _ortLoading = null;
+function loadOrt() {   // un seul moteur ONNX pour Piper et Supertonic
+    if (window.ort) return Promise.resolve(window.ort);
+    if (_ortLoading) return _ortLoading;
+    _ortLoading = new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = ORT_URL;
+        sc.onload = () => { ort.env.wasm.wasmPaths = ORT_WASM; ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(8, navigator.hardwareConcurrency || 4) : 1; res(window.ort); };
+        sc.onerror = () => { _ortLoading = null; rej(new Error('moteur ONNX introuvable (connexion ?)')); };
+        document.head.appendChild(sc);
+    });
+    return _ortLoading;
+}
+
+const ST_BASE = 'https://huggingface.co/supertone-oss-archive/supertonic-3/resolve/main';
+const ST_CACHE = 'supertonic3-v1';
+const ST_FILES = [['duration_predictor', 3.6], ['text_encoder', 35.6], ['vector_estimator', 250.5], ['vocoder', 99]];
+// 10 voix adultes + voix dérivées (enfants, personnes âgées) obtenues en changeant la hauteur et le débit
+const ST_VOICES = [
+    { id: 'F1', g: 'f', label: 'Femme 1 — douce, conteuse' }, { id: 'F2', g: 'f', label: 'Femme 2 — claire' },
+    { id: 'F3', g: 'f', label: 'Femme 3 — jeune, vive' }, { id: 'F4', g: 'f', label: 'Femme 4 — chaleureuse' }, { id: 'F5', g: 'f', label: 'Femme 5 — posée' },
+    { id: 'M1', g: 'h', label: 'Homme 1 — grave, conteur' }, { id: 'M2', g: 'h', label: 'Homme 2 — clair' },
+    { id: 'M3', g: 'h', label: 'Homme 3 — jeune, vif' }, { id: 'M4', g: 'h', label: 'Homme 4 — chaleureux' }, { id: 'M5', g: 'h', label: 'Homme 5 — posé' },
+    { id: 'F3@fille', g: 'f', label: '👧 Petite fille', base: 'F3', pitch: 1.22, speed: 1.0 },
+    { id: 'F2@fille', g: 'f', label: '👧 Fillette malicieuse', base: 'F2', pitch: 1.18, speed: 1.05 },
+    { id: 'M3@garcon', g: 'h', label: '👦 Petit garçon', base: 'M3', pitch: 1.32, speed: 1.0 },
+    { id: 'M2@garcon', g: 'h', label: '👦 Garçonnet espiègle', base: 'M2', pitch: 1.28, speed: 1.05 },
+    { id: 'F1@bebe', g: 'f', label: '🐣 Tout-petit (bébé animal)', base: 'F1', pitch: 1.42, speed: 0.95 },
+    { id: 'F5@mamie', g: 'f', label: '👵 Grand-mère', base: 'F5', pitch: 0.92, speed: 0.88 },
+    { id: 'M1@papi', g: 'h', label: '👴 Grand-père', base: 'M1', pitch: 0.9, speed: 0.86 },
+    { id: 'M4@geant', g: 'h', label: '🐻 Géant / gros animal', base: 'M4', pitch: 0.8, speed: 0.9 }
+];
+const stVoice = id => ST_VOICES.find(v => v.id === id) || ST_VOICES[0];
+const st = { tts: null, H: null, loading: null, styles: new Map(), queue: Promise.resolve(), provider: '', ready: false };
+
+async function stCachedBuffer(url, onProgress) {
+    let cache = null;
+    try { cache = await caches.open(ST_CACHE); const hit = await cache.match(url); if (hit) return new Uint8Array(await hit.arrayBuffer()); } catch (e) {}
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('téléchargement impossible (HTTP ' + res.status + ')');
+    const total = +res.headers.get('content-length') || 0;
+    const reader = res.body.getReader(); const parts = []; let got = 0;
+    for (;;) { const { done, value } = await reader.read(); if (done) break; parts.push(value); got += value.length; if (onProgress) onProgress(got, total); }
+    const buf = new Uint8Array(got); let off = 0; parts.forEach(p => { buf.set(p, off); off += p.length; });
+    if (cache) { try { await cache.put(url, new Response(buf, { headers: { 'Content-Type': 'application/octet-stream' } })); } catch (e) {} }
+    return buf;
+}
+async function stIsDownloaded() {
+    try { const c = await caches.open(ST_CACHE); for (const [f] of ST_FILES) if (!(await c.match(ST_BASE + '/onnx/' + f + '.onnx'))) return false; return true; }
+    catch (e) { return false; }
+}
+
+function stLoad() {
+    if (st.tts) return Promise.resolve(st.tts);
+    if (st.loading) return st.loading;
+    st.loading = (async () => {
+        const ort = await loadOrt();
+        st.H = await import(new URL('vendor/supertonic/helper.js', location.href).href);
+        const totalMb = ST_FILES.reduce((a, f) => a + f[1], 0);
+        let doneMb = 0;
+        const cfgs = await (await fetch(ST_BASE + '/onnx/tts.json')).json();
+        const indexer = await (await fetch(ST_BASE + '/onnx/unicode_indexer.json')).json();
+        const cached = await stIsDownloaded();
+        if (!cached) logConsole('Téléchargement des voix premium (≈ 390 Mo, une seule fois)…', 'info');
+        const buffers = [];
+        for (const [f, mb] of ST_FILES) {
+            buffers.push(await stCachedBuffer(ST_BASE + '/onnx/' + f + '.onnx', (got, tot) => {
+                const pct = Math.round((doneMb + (tot ? got / tot * mb : 0)) / totalMb * 100);
+                setStatus('Téléchargement des voix premium : ' + pct + ' %');
+                const b = document.getElementById('st-dl'); if (b) b.textContent = 'Téléchargement… ' + pct + ' %';
+            }));
+            doneMb += mb;
+        }
+        setStatus('Préparation des voix premium…');
+        // carte graphique (WebGPU) si possible : bien plus rapide ; sinon le processeur
+        let sessions = null;
+        for (const ep of (navigator.gpu ? ['webgpu', 'wasm'] : ['wasm'])) {
+            try { sessions = []; for (const b of buffers) sessions.push(await ort.InferenceSession.create(b, { executionProviders: [ep] })); st.provider = ep; break; }
+            catch (e) { sessions = null; logConsole(ep === 'webgpu' ? 'Voix premium : carte graphique non disponible, utilisation du processeur.' : 'Voix premium : ' + (e.message || e).slice(0, 80), ep === 'webgpu' ? 'info' : 'warn'); }
+        }
+        if (!sessions) throw new Error('impossible de démarrer le modèle');
+        st.tts = new st.H.TextToSpeech(cfgs, new st.H.UnicodeProcessor(indexer), ...sessions);
+        st.ready = true;
+        setStatus(null);
+        logConsole('Voix premium prêtes (' + (st.provider === 'webgpu' ? 'carte graphique' : 'processeur') + ').', 'success');
+        updateCloudStatus();
+        return st.tts;
+    })();
+    st.loading.catch(() => { st.loading = null; setStatus(null); });
+    return st.loading;
+}
+
+async function stStyle(base) {
+    if (st.styles.has(base)) return st.styles.get(base);
+    const j = JSON.parse(new TextDecoder().decode(await stCachedBuffer(ST_BASE + '/voice_styles/' + base + '.json')));
+    const t = j.style_ttl, d = j.style_dp;
+    const style = new st.H.Style(new ort.Tensor('float32', Float32Array.from(t.data.flat(Infinity)), t.dims),
+                                 new ort.Tensor('float32', Float32Array.from(d.data.flat(Infinity)), d.dims));
+    st.styles.set(base, style);
+    return style;
+}
+
+// Les phrases sont calculées l'une après l'autre (un seul modèle) ; la file permet de préparer les suivantes à l'avance
+function stSynth(o) {
+    const job = st.queue.then(async () => {
+        const tts = await stLoad();
+        const v = stVoice(o.voice);
+        const style = await stStyle(v.base || v.id);
+        const steps = voiceCfg.stSteps || (st.provider === 'webgpu' ? 10 : 6);
+        // débit : style du narrateur ou ton du personnage ; compensé pour les voix dérivées (la hauteur accélère la lecture)
+        const base = (o.isNarr ? (o.rate || 0.85) / 0.85 : (o.rate || 1)) * (v.speed || 1) / (v.pitch || 1);
+        const speed = Math.max(0.7, Math.min(1.6, base * 1.02));
+        const { wav } = await tts.call(o.text.replace(/[«»]/g, '"'), 'fr', style, steps, speed, 0.25);
+        return URL.createObjectURL(new Blob([st.H.writeWavFile(wav, tts.sampleRate)], { type: 'audio/wav' }));
+    });
+    st.queue = job.catch(() => {});
+    return job;
+}
+// Hauteur appliquée à la lecture (voix d'enfant, de grand-père…)
+function stPlayback(voiceId, role) {
+    const v = stVoice(voiceId);
+    let pitch = v.pitch || 1;
+    if (role !== '__narrator__') { const tone = TONES[charCfg(role).tone] || TONES.normal; pitch *= 1 + (tone.pitch - 1) * 0.15; }
+    return { rate: Math.max(0.6, Math.min(1.6, pitch)), preservesPitch: Math.abs(pitch - 1) < 0.01 };
+}
+
 // Piper : synthèse neuronale exécutée dans le navigateur (aucun serveur, aucun compte, aucun quota)
 const PIPER_VOICES = [
     { id: 'fr_FR-siwis-medium', g: 'f', label: 'Siwis — féminine, claire (≈ 60 Mo)' },
@@ -2344,12 +2478,7 @@ const _piperStored = new Set();
 let _piperMod = null;
 async function loadPiper() {
     if (_piperMod) return _piperMod;
-    if (!window.ort) await new Promise((res, rej) => {
-        const sc = document.createElement('script');
-        sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.wasm.min.js';
-        sc.onload = res; sc.onerror = () => rej(new Error('moteur ONNX introuvable (connexion ?)'));
-        document.head.appendChild(sc);
-    });
+    await loadOrt();
     _piperMod = await import(new URL('vendor/piper/piper-tts-web.js', location.href).href);
     try { (await _piperMod.stored()).forEach(v => _piperStored.add(v)); } catch (e) {}
     return _piperMod;
@@ -2379,6 +2508,8 @@ const viaPuter = async (text, opts) => { const puter = await loadPuter(); const 
 
 const ENGINES = {
     browser: { label: 'Voix de l\'appareil', tier: 'free', note: 'Gratuit, hors ligne, aucune inscription.', instr: false },
+    supertonic: { label: '💎 Voix premium intégrées (Supertonic 3)', tier: 'free', note: 'Gratuit, ILLIMITÉ et de qualité premium : 10 voix adultes et 8 voix de personnages (petite fille, petit garçon, tout-petit, grand-mère, grand-père, géant), calculées dans votre navigateur. Téléchargement unique d\'environ 390 Mo, puis fonctionne hors ligne. Recommandé sur ordinateur ; très rapide avec une carte graphique récente.', instr: false,
+        voices: () => ST_VOICES, synth: o => stSynth(o) },
     piper: { label: '🧠 Voix neuronales intégrées (Piper)', tier: 'free', note: 'Gratuit et ILLIMITÉ : la voix est calculée dans votre navigateur, sans compte ni crédits. Au premier usage, chaque voix se télécharge une seule fois, puis fonctionne même hors ligne.', instr: false,
         voices: () => PIPER_VOICES, synth: o => piperSynth(o) },
     openai: { label: '✨ OpenAI « conteur »', tier: 'puter', note: 'Joue le ton demandé (conte de fées, personnage). Très expressif.', instr: true,
@@ -2409,7 +2540,7 @@ const ENGINES = {
 };
 const TIER_LABEL = { free: 'Gratuit', puter: 'Gratuit · compte Puter', key: 'Payant · votre clé' };
 const isPuterEngine = e => ENGINES[e] && ENGINES[e].tier === 'puter';
-const isLocalNeural = e => e === 'piper';
+const isLocalNeural = e => e === 'piper' || e === 'supertonic';
 const isKeyEngine = e => ENGINES[e] && ENGINES[e].tier === 'key';
 function engineVoices(e) { return e === 'browser' ? frBrowserVoices().map(v => ({ id: v.name, label: v.name.replace(/Microsoft |Google /, ''), g: guessGender(v) })) : (ENGINES[e] && ENGINES[e].voices ? ENGINES[e].voices() : []); }
 
@@ -2457,9 +2588,11 @@ async function synthSample(eng, voice, text, isNarr) {
     if (isPuterEngine(eng) && !(await ensureCloudReady())) { showToast('Connectez-vous d\'abord à Puter (bouton dans « 🎙️ Voix »)', 'warn', 4000); return; }
     if (isKeyEngine(eng) && !ttsKeys[ENGINES[eng].keyName]) { showToast('Ajoutez d\'abord votre clé ' + ENGINES[eng].label.replace('🔑 ', ''), 'warn', 4000); return; }
     const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
-    const url = await withTimeout(ENGINES[eng].synth({ text, voice, instr: style.instr, isNarr: true, rate: style.rate, pitch: style.pitch }), isLocalNeural(eng) && !_piperStored.has(voice) ? 240000 : 20000, 'Voix');
+    const url = await withTimeout(ENGINES[eng].synth({ text, voice, instr: style.instr, isNarr: true, rate: style.rate, pitch: style.pitch }),
+        eng === 'supertonic' ? 900000 : isLocalNeural(eng) && !_piperStored.has(voice) ? 240000 : 20000, 'Voix');
     stopAllSpeech();
     const a = new Audio(url); _currentAudio = a;
+    if (eng === 'supertonic') { const pb = stPlayback(voice, '__narrator__'); a.preservesPitch = pb.preservesPitch; a.playbackRate = pb.rate; }
     await new Promise(r => { a.onended = a.onerror = r; a.play().catch(r); setTimeout(r, 30000); });
 }
 
@@ -2503,7 +2636,7 @@ function openVoiceCatalog() {
         if (t.dataset.play) {
             unlockAudio();
             const [eng, id] = t.dataset.play.split('|');
-            t.textContent = eng === 'piper' && !_piperStored.has(id) ? '⬇' : '…';
+            t.textContent = (eng === 'piper' && !_piperStored.has(id)) || (eng === 'supertonic' && !st.ready) ? '⬇' : '…';
             if (eng === 'piper') { try { await loadPiper(); } catch (e) {} }
             try { await synthSample(eng, id, sample, true); }
             catch (err) { showToast(isBalanceError(err) ? 'Crédits Puter épuisés : essayez les voix Piper, gratuites et illimitées' : 'Écoute impossible : ' + String(err.message || err).slice(0, 80), 'error', 5000); }
@@ -2656,6 +2789,19 @@ function updateCloudStatus() {
     const on = voiceCfg.engine !== 'browser';
     box.classList.toggle('hidden', !on);
     if (!on) return;
+    if (voiceCfg.engine === 'supertonic') {
+        const q = voiceCfg.stSteps || 0;
+        const qSel = '<label class="st-q">Qualité <select id="st-steps"><option value="0">Automatique</option><option value="5">Rapide</option><option value="8">Standard</option><option value="12">Maximale</option></select></label>';
+        if (st.ready) box.innerHTML = '<span class="ok">✓ Voix premium prêtes · ' + (st.provider === 'webgpu' ? 'carte graphique ⚡' : 'processeur') + ' · illimité, même hors ligne</span>' + qSel;
+        else {
+            box.innerHTML = '<span class="warn" id="st-state">Vérification…</span> <button type="button" class="btn-mini" id="st-dl">⬇ Préparer les voix premium (≈ 390 Mo, une seule fois)</button>' + qSel;
+            stIsDownloaded().then(ok => { const el = document.getElementById('st-state'); if (el) el.textContent = ok ? 'Voix téléchargées : chargement au premier usage.' : 'Non téléchargées.'; const b = document.getElementById('st-dl'); if (b && ok) b.textContent = '⚡ Charger maintenant'; });
+            document.getElementById('st-dl').onclick = e => { e.target.disabled = true; stLoad().catch(err => { showToast('Voix premium : ' + (err.message || err), 'error', 6000); e.target.disabled = false; updateCloudStatus(); }); };
+        }
+        const sel = document.getElementById('st-steps'); sel.value = String(q);
+        sel.onchange = () => { voiceCfg.stSteps = +sel.value || 0; saveVoiceCfg(); _ttsCache.clear(); };
+        return;
+    }
     if (isLocalNeural(voiceCfg.engine)) {
         const need = [...new Set([piperVoiceFor('__narrator__')].concat(state.scenario ? state.scenario.characters.map(c => piperVoiceFor(c.name)) : []))];
         const missing = need.filter(v => !_piperStored.has(v));
@@ -2709,7 +2855,11 @@ function cloudAudioUrl(text, role, engOverride) {
     _ttsCache.set(key, p);
     return p;
 }
-function prefetchLine(text, role) { if (text && voiceCfg.engine !== 'browser' && cloud.state === 'ok') withTimeout(cloudAudioUrl(text, role), 25000).catch(() => {}); }
+function prefetchLine(text, role) {
+    if (!text || voiceCfg.engine === 'browser') return;
+    if (voiceCfg.engine === 'supertonic') { cloudAudioUrl(text, role).catch(() => {}); return; }   // préparé en avance, dans l'ordre de la file
+    if (cloud.state === 'ok') withTimeout(cloudAudioUrl(text, role), 25000).catch(() => {});
+}
 
 let _currentAudio = null, _cloudWarned = false;
 let _lastCancelAt = 0;
@@ -2818,7 +2968,8 @@ let _speakToken = 0;
 async function speakCloud(text, role, hooks = {}, engOverride) {
     const eng = engOverride || voiceCfg.engine;
     // Piper : le premier usage d'une voix la télécharge (jusqu'à quelques minutes sur une connexion lente)
-    const limit = isLocalNeural(eng) ? (piperNeedsDownload(role) ? 240000 : 45000) : 15000;
+    const limit = eng === 'supertonic' ? (st.ready ? 90000 + text.length * 300 : 900000)
+                : isLocalNeural(eng) ? (piperNeedsDownload(role) ? 240000 : 45000) : 15000;
     const url = await withTimeout(cloudAudioUrl(text, role, eng), limit, 'Voix IA');
     return new Promise(resolve => {
         const a = new Audio();
@@ -2827,7 +2978,10 @@ async function speakCloud(text, role, hooks = {}, engOverride) {
             try { audioHub.get().createMediaElementSource(a).connect(audioHub.out); } catch (e) {}
         }
         a.src = url;
-        if (isLocalNeural(eng)) {
+        if (eng === 'supertonic') {
+            const pb = stPlayback(role === '__narrator__' ? (voiceCfg.narrator.supertonic || 'F1') : ensureCharVoice(role, 'supertonic'), role);
+            a.preservesPitch = pb.preservesPitch; a.playbackRate = pb.rate;
+        } else if (isLocalNeural(eng)) {
             // Piper ne règle pas lui-même le ton : vitesse pour le narrateur, vitesse + hauteur pour les personnages
             const isNarr = role === '__narrator__';
             const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
@@ -2849,7 +3003,7 @@ async function speakCloud(text, role, hooks = {}, engOverride) {
 // Point d'entrée unique : role = '__narrator__' ou le nom du personnage
 const isBalanceError = e => /insufficient|funding|balance|credit|crédit|payment|upgrade|402|quota/i.test(String(e && (e.message || '')) + ' ' + (() => { try { return JSON.stringify(e); } catch (x) { return ''; } })());
 function switchToPiper(reason) {
-    voiceCfg.engine = 'piper'; saveVoiceCfg(); _cloudWarned = false; cloud.state = 'unknown';
+    voiceCfg.engine = st.ready ? 'supertonic' : 'piper'; saveVoiceCfg(); _cloudWarned = false; cloud.state = 'unknown';
     renderVoicePanel();
     logConsole(reason + ' → passage aux voix Piper, gratuites et illimitées.', 'warn');
     showToast(reason + ' : passage automatique aux voix Piper (gratuites et illimitées)', 'warn', 6000);
@@ -2859,8 +3013,8 @@ async function speakLine(text, role, onWord, hooks = {}) {
     if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} _currentAudio = null; }
     const eng = voiceCfg.engine;
     if (isLocalNeural(eng)) {
-        try { await speakCloud(text, role, hooks, 'piper'); return; }
-        catch (e) { logConsole('Voix Piper : ' + (e.message || e) + ' → voix de l\'appareil pour cette phrase.', 'warn'); }
+        try { await speakCloud(text, role, hooks, eng); return; }
+        catch (e) { logConsole('Voix ' + (eng === 'supertonic' ? 'premium' : 'Piper') + ' : ' + (e.message || e) + ' → voix de l\'appareil pour cette phrase.', 'warn'); }
     } else if (eng !== 'browser') {
         const ready = await ensureCloudReady();
         if (ready) {
@@ -3836,7 +3990,8 @@ function narrate(text, character, narrator, onWord) {
         if (tl) tl.start(d);
         return sleep(d * 1000).then(done);
     }
-    const maxMs = 40000 + text.length * 200 + (isLocalNeural(voiceCfg.engine) && piperNeedsDownload(narrator ? '__narrator__' : character) ? 240000 : 0);   // toujours au-delà du délai des voix IA (15 s) + lecture de secours
+    const maxMs = 40000 + text.length * 200 + (voiceCfg.engine === 'supertonic' ? (st.ready ? 90000 + text.length * 300 : 900000)
+                : isLocalNeural(voiceCfg.engine) && piperNeedsDownload(narrator ? '__narrator__' : character) ? 240000 : 0);   // toujours au-delà du délai des voix IA (15 s) + lecture de secours
     return withTimeout(speakLine(text, narrator ? '__narrator__' : character, tl ? ci => tl.boundary(ci) : null, { onStart: d => tl && tl.start(d) }), maxMs, 'Lecture de la phrase')
         .catch(e => { logConsole('Voix : ' + e.message + ', on continue.', 'warn'); _speakToken++; stopAllSpeech(); })
         .then(done);
@@ -3900,8 +4055,12 @@ async function startReading() {
         } else {
             await sleep(400);
             if (token !== viewer.token) return;
-            const nextIm = sortedImages()[viewer.index + 1];
-            if (nextIm) prefetchLine(narrationOf(sceneOf(nextIm)), '__narrator__');
+            // préparation dans l'ordre de lecture : intro, scène en cours (narration puis réplique), puis scène suivante
+            const queueScene = im => { if (!im) return; const sc = sceneOf(im); prefetchLine(narrationOf(sc), '__narrator__'); if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') prefetchLine(sc.dialogue.text, sc.dialogue.character); };
+            const introNeeded = viewer.index === 0 && voiceCfg.intro && !/^\s*il était une fois/i.test(narrationOf(sceneOf(sortedImages()[0])));
+            if (introNeeded) prefetchLine('Il était une fois…', '__narrator__');
+            queueScene(sortedImages()[viewer.index]);
+            queueScene(sortedImages()[viewer.index + 1]);
             if (viewer.index === 0 && voiceCfg.intro && !/^\s*il était une fois/i.test(narrationOf(sceneOf(sortedImages()[0])))) { music.duck(true); await narrate('Il était une fois…', null, true); if (token !== viewer.token) return; await sleep(300); }
             await readScene(sceneOf(sortedImages()[viewer.index]), token, true);
         }

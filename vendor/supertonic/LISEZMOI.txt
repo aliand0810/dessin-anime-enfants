@@ -1,0 +1,4 @@
+Supertonic 3 (Supertone Inc.) — synthèse vocale exécutée dans le navigateur.
+helper.js : code d'exemple web officiel (licence MIT), adapté pour utiliser le moteur ONNX de la page (window.ort).
+Modèle et styles de voix : Hugging Face supertone-oss-archive/supertonic-3 (licence OpenRAIL-M), téléchargés
+au premier usage puis gardés dans le stockage du navigateur (Cache Storage « supertonic3-v1 »).

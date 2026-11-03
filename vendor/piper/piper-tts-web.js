@@ -11,7 +11,7 @@ var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 var _createPiperPhonemize, _modelConfig, _ort, _ortSession, _progressCallback, _wasmPaths, _logger, _TtsSession_instances, predictChunk_fn;
 const HF_BASE = "https://huggingface.co/diffusionstudio/piper-voices/resolve/main";
-const ONNX_BASE = "https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/";
+const ONNX_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/";  // adapté : même moteur ONNX que les voix premium
 const WASM_BASE = "https://cdn.jsdelivr.net/npm/@diffusionstudio/piper-wasm@1.0.0/build/piper_phonemize";
 const PATH_MAP = {
   "ar_JO-kareem-low": "ar/ar_JO/kareem/low/ar_JO-kareem-low.onnx",

@@ -790,10 +790,7 @@ function loadProject() {
 }
 
 // Copie locale d'une image (évite l'expiration des liens Agnes et les blocages CORS)
-async function fetchImageBlob(url) {
-    try { const r = await fetch(url); if (!r.ok) return null; const b = await r.blob(); return b.type.startsWith('image') ? b : null; }
-    catch (e) { return null; }
-}
+async function fetchImageBlob(url) { return getImageBlob(url); }
 
 // Enregistre le projet courant dans la bibliothèque (avec les images en local quand le serveur l'autorise)
 async function saveToLibrary(silent) {
@@ -1321,7 +1318,9 @@ Réponds UNIQUEMENT en JSON valide, sans markdown.`;
             for (let tryN = 1; tryN <= 2 && !ok && !state.stopRequested; tryN++) {
                 try {
                     const imageUrl = await callImageAPI(imagePrompt, '1K', '1:1');
-                    state.images.push({ sceneIndex: i, url: imageUrl, scene });
+                    const entry = { sceneIndex: i, url: imageUrl, scene };
+                    state.images.push(entry);
+                    keepLocalCopy(entry);
                     displayGeneratedImage(imageUrl, 'Scène ' + scene.scene_number, i);
                     logConsole('Image ' + (i + 1) + ' ✓', 'success');
                     ok = true;
@@ -1482,7 +1481,7 @@ async function regenerateImage(sceneIndex) {
     try {
         const url = await callImageAPI(buildImagePrompt(scene), '1K', '1:1');
         const existing = state.images.find(im => im.sceneIndex === sceneIndex);
-        if (existing) { existing.url = url; existing.localUrl = null; }
+        if (existing) { existing.url = url; existing.localUrl = null; keepLocalCopy(existing); }
         else { state.images.push({ sceneIndex, url, scene }); state.images.sort((a, b) => a.sceneIndex - b.sceneIndex); }
         displayGeneratedImage(url, 'Scène ' + (sceneIndex + 1), sceneIndex);
         saveProject();
@@ -1501,8 +1500,50 @@ async function regenerateImage(sceneIndex) {
 const _imgCache = {};
 // Charge l'image en blob pour éviter un canvas "tainted" (export PNG impossible sinon)
 let _boardTainted = false;
+// Le serveur d'images d'Agnes n'autorise pas la lecture par d'autres sites (CORS) : l'image s'affiche,
+// mais ne peut pas être redessinée dans un PDF ou une vidéo. On passe alors par un relais d'images public
+// (wsrv.nl, gratuit) qui renvoie l'image avec l'autorisation. Seule l'adresse de l'image lui est transmise.
+const IMG_RELAYS = [
+    { name: 'wsrv.nl', url: u => 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&n=-1' },
+    { name: 'images.weserv.nl', url: u => 'https://images.weserv.nl/?url=' + encodeURIComponent(u) + '&n=-1' }
+];
+const _blobCache = new Map();
+let _relayNoticeShown = false;
+function getImageBlob(url) {
+    if (!url) return Promise.resolve(null);
+    if (_blobCache.has(url)) return _blobCache.get(url);
+    const p = (async () => {
+        const grab = async (u, ms) => {
+            const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), ms);
+            try { const r = await fetch(u, { signal: ctl.signal }); if (!r.ok) return null; const b = await r.blob(); return b.size && /^image\//.test(b.type) ? b : null; }
+            catch (e) { return null; } finally { clearTimeout(t); }
+        };
+        if (/^(data|blob):/.test(url)) return grab(url, 10000);
+        const direct = await grab(url, 15000);
+        if (direct) return direct;
+        for (const r of IMG_RELAYS) {
+            const b = await grab(r.url(url), 25000);
+            if (b) {
+                if (!_relayNoticeShown) { _relayNoticeShown = true; logConsole('Images récupérées via le relais ' + r.name + ' (le serveur Agnes bloque la lecture directe).', 'info'); }
+                return b;
+            }
+        }
+        return null;
+    })();
+    p.then(b => { if (!b) _blobCache.delete(url); });
+    _blobCache.set(url, p);
+    return p;
+}
+
+// Copie locale immédiate d'une image générée (PDF, vidéo et bibliothèque fonctionnent ensuite sans relais)
+async function keepLocalCopy(entry) {
+    if (!entry || entry.localUrl) return;
+    const b = await getImageBlob(entry.url);
+    if (b) { entry.localUrl = URL.createObjectURL(b); entry._blob = b; }
+}
+
 async function loadImageForCanvas(url) {
-    if (_imgCache[url]) return _imgCache[url];
+    if (_imgCache[url] && !_imgCache[url]._tainted) return _imgCache[url];
     const make = (src, cors) => new Promise((res, rej) => {
         const im = new Image();
         if (cors) im.crossOrigin = 'anonymous';
@@ -1511,15 +1552,12 @@ async function loadImageForCanvas(url) {
         im.src = src;
     });
     let img = null;
-    // 1) fetch en blob (export PNG possible)
-    try {
-        const r = await fetch(url);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        img = await make(URL.createObjectURL(await r.blob()), false);
-    } catch (e) { logConsole('Téléchargement direct de l\'image bloqué (' + e.message + '), autre méthode…', 'warn'); }
-    // 2) image CORS
-    if (!img) { try { img = await make(url, true); } catch (e) {} }
-    // 3) image simple : s'affiche toujours, mais l'export PNG sera bloqué
+    // 1) image récupérée en fichier (directement ou via le relais) : PDF et vidéo possibles
+    const blob = await getImageBlob(url);
+    if (blob) { try { img = await make(URL.createObjectURL(blob), false); } catch (e) {} }
+    // 2) image avec autorisation CORS
+    if (!img && !/^(data|blob):/.test(url)) { try { img = await make(url, true); } catch (e) {} }
+    // 3) dernier recours : s'affiche, mais le PDF direct et la vidéo seront bloqués
     if (!img) { img = await make(url, false); img._tainted = true; }
     _imgCache[url] = img;
     return img;
@@ -3198,7 +3236,9 @@ async function recordVideo(formatKey, quality) {
     if (viewer.mode !== 'story') await setViewerMode('story');
     const loaded = await loadBoardImages(sortedImages());
     if (loaded.some(im => im && im._tainted)) {
-        showResultModal({ error: 'Le serveur d\'images bloque l\'enregistrement vidéo. Enregistrez le projet 💾 puis rouvrez-le depuis la bibliothèque (les images seront alors locales), et recommencez.' });
+        const bad = loaded.map((im, k) => im && im._tainted ? k + 1 : 0).filter(Boolean);
+        showResultModal({ error: 'Les images de la scène ' + bad.join(', ') + ' n\'ont pas pu être récupérées (serveur Agnes et relais d\'images inaccessibles, ou lien expiré). ' +
+            'Vérifiez la connexion, puis réessayez. Si le problème continue, régénérez ces images (bouton ↻ sur chaque vignette).' });
         return;
     }
     rec.imgs = loaded;
@@ -3268,7 +3308,7 @@ async function recordVideo(formatKey, quality) {
     const base = ((state.scenario && state.scenario.title) || 'histoire').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\-]+/g, '_');
     rec.lastBlob = blob;
     rec.lastName = base + '_' + formatKey + '.' + ext;
-    if (state.scenario && !state.projectId) await saveToLibrary(true);   // relie la vidéo à son projet
+    if (state.scenario) await saveToLibrary(true);   // relie la vidéo à son projet et garde les images en local
     logConsole('Vidéo prête : ' + rec.lastName + ' (' + (blob.size / 1048576).toFixed(1) + ' Mo, ' + fmtTime(duration) + ')', 'success');
     showResultModal({ blob, name: rec.lastName, format: F, duration, w: rec.canvas.width, h: rec.canvas.height });
 }

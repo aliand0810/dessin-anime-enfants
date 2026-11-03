@@ -8,6 +8,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Dessin Animé">
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
@@ -359,6 +361,50 @@
     .fx-chip { border: 1px solid var(--border); background: var(--panel-2); color: var(--ink); border-radius: 12px; padding: 0.15rem 0.55rem; font: inherit; font-size: 0.68rem; cursor: pointer; }
     .fx-chip:hover { border-color: var(--error); color: #ff9a9a; }
     .fx-add { width: auto; padding: 0.15rem 1.6rem 0.15rem 0.5rem; font-size: 0.68rem; border-radius: 12px; background-position: right 0.45rem center; }
+    /* ── Mode Lire ── */
+    .viewer.read-mode #vw-play, .viewer.read-mode #vw-rec { display: none; }
+    .rd { position: relative; width: min(1100px, 100%); height: 100%; display: flex; flex-direction: column; gap: 0.8rem; }
+    .rd-top { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; justify-content: space-between; align-items: center; }
+    .rd-seg { display: flex; background: rgba(255,255,255,0.08); border-radius: 12px; padding: 3px; }
+    .rd-seg button { border: none; background: none; color: #ccc; font: inherit; font-size: 0.82rem; font-weight: 700; padding: 0.5rem 0.8rem; border-radius: 9px; cursor: pointer; }
+    .rd-seg button.on { background: #ffd84d; color: #222; }
+    .rd-tools { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+    .rd-tools button { min-width: 38px; height: 34px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.18); background: transparent; color: #eee; font: inherit; font-weight: 800; cursor: pointer; }
+    .rd-tools button.on { background: rgba(255,216,77,0.2); border-color: #ffd84d; color: #ffd84d; }
+    .rd-tools select { width: auto; height: 34px; padding: 0 1.8rem 0 0.6rem; font-size: 0.78rem; background-color: #15151c; }
+    .rd-speed { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.9rem; } .rd-speed input { width: 90px; accent-color: #ffd84d; }
+    .rd-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr); gap: 1.2rem; align-items: center; }
+    .rd-img img { width: 100%; max-height: 62vh; object-fit: contain; border-radius: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+    .rd-text { background: #fffdf4; color: #2b2b2b; border-radius: 18px; padding: 1.3rem 1.5rem; max-height: 62vh; overflow-y: auto; line-height: 1.9; letter-spacing: 0.02em; word-spacing: 0.18em; box-shadow: 0 8px 30px rgba(0,0,0,0.4); }
+    .rd-text.caps { text-transform: uppercase; letter-spacing: 0.06em; }
+    .rd-p { margin: 0 0 0.6em; } .rd-p:last-child { margin-bottom: 0; }
+    .rd-nw { white-space: nowrap; }
+    .rd-dialog { color: #b0285a; } .rd-who { font-weight: 700; color: #7a3df0; }
+    .rw { display: inline-block; padding: 0 0.14em; border-radius: 0.3em; color: #8a8a8a; cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.15s; }
+    .rd-dialog .rw { color: #c97a98; }
+    .rw.done { color: #2b2b2b; } .rd-dialog .rw.done { color: #b0285a; }
+    .rw.now { background: #ffd84d; color: #111 !important; transform: scale(1.12); box-shadow: 0 3px 0 #e5b800; font-weight: 700; }
+    .rw:hover { background: rgba(255,216,77,0.35); }
+    .rd-text.ruler .rw:not(.insent):not(.now) { opacity: 0.35; }
+    .rd-text.ruler:not(:has(.rw.now)) .rw { opacity: 1; }
+    .rd-foot { display: flex; align-items: center; gap: 1rem; justify-content: space-between; flex-wrap: wrap; }
+    .rd-dots { display: flex; gap: 5px; flex-wrap: wrap; max-width: 50%; }
+    .rd-dots span { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.15); }
+    .rd-dots span.ok { background: #4ccb7a; } .rd-dots span.cur { outline: 2px solid #ffd84d; outline-offset: 2px; }
+    .rd-count { color: #bbb; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+    .rd-go { padding: 0.85rem 1.6rem; border-radius: 26px; border: none; background: #ffd84d; color: #222; font: inherit; font-size: 1.05rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #d1a700; }
+    .rd-go:active { transform: translateY(2px); box-shadow: 0 2px 0 #d1a700; }
+    .rd-bravo { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); font-size: 3rem; font-weight: 900; color: #ffd84d; text-shadow: 0 4px 20px rgba(0,0,0,0.6); pointer-events: none; }
+    .rd-bravo.pop { animation: bravo 1.5s ease-out forwards; }
+    @keyframes bravo { 0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; } 20% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(-50%, -70%) scale(1); opacity: 0; } }
+    @media (max-width: 760px) {
+        .rd-body { grid-template-columns: 1fr; align-items: start; overflow-y: auto; }
+        .rd-img img { max-height: 28vh; }
+        .rd-text { max-height: none; padding: 1rem 1.1rem; }
+        .rd-seg button { padding: 0.45rem 0.55rem; font-size: 0.74rem; }
+        .rd-dots { max-width: 100%; }
+        .viewer.read-mode .vw-nav { display: none; }
+    }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -694,6 +740,7 @@
         <div class="vw-tabs">
             <button type="button" data-vmode="story" class="active">📖 Histoire</button>
             <button type="button" data-vmode="pages">📄 Pages</button>
+            <button type="button" data-vmode="read">🔤 Lire</button>
         </div>
         <button type="button" class="vw-close" id="vw-close" title="Fermer (Échap)">✕</button>
     </div>
@@ -742,9 +789,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.6.0';
+const APP_VERSION = '3.7.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.7.0', 'Mode « 🔤 Lire » : lecture mot par mot pour les enfants (écoute, lecture guidée, lecture seul), grand texte, suivi des scènes lues'],
     ['3.6.0', 'Ambiances fiables (plus d\'eau ou de pluie inventées), ambiances modifiables par scène, lecture qui ne s\'arrête plus, animations plus fluides'],
     ['3.5.0', 'Lecture et enregistrement fiables : plus aucun blocage, connexion Puter dans « Voix », son déverrouillé sur iPhone'],
     ['3.4.0', 'Images Agnes récupérées via un relais : vidéo et PDF de nouveau possibles'],
@@ -2271,9 +2319,10 @@ function cloudAudioUrl(text, role) {
 function prefetchLine(text, role) { if (text && voiceCfg.engine !== 'browser' && cloud.state === 'ok') withTimeout(cloudAudioUrl(text, role), 25000).catch(() => {}); }
 
 let _currentAudio = null, _cloudWarned = false;
+let _lastCancelAt = 0;
 function stopAllSpeech() {
     ttsKeepAlive(false);
-    if (speechSynth) speechSynth.cancel();
+    if (speechSynth) { speechSynth.cancel(); _lastCancelAt = performance.now(); }
     if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} _currentAudio = null; }
 }
 
@@ -2293,7 +2342,9 @@ function ttsKeepAlive(on, voice) {
 }
 async function quietSpeech() {
     // ne coupe que si quelque chose parle vraiment, puis laisse le moteur se remettre
-    if (speechSynth && (speechSynth.speaking || speechSynth.pending)) { speechSynth.cancel(); await sleep(120); }
+    if (speechSynth && (speechSynth.speaking || speechSynth.pending)) { speechSynth.cancel(); _lastCancelAt = performance.now(); }
+    const wait = 150 - (performance.now() - _lastCancelAt);
+    if (wait > 0) await sleep(wait);
 }
 
 // Prononce une phrase. Si le moteur l'ignore (bug connu après une coupure), on réessaie une fois.
@@ -2840,6 +2891,226 @@ function playStoredVideo(v) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// MODE « LIRE » : lecture mot par mot pour un enfant qui apprend à lire
+// ══════════════════════════════════════════════════════════════════
+const READ_KEY = 'da_read_cfg';
+const readCfg = (() => {
+    let c = {};
+    try { c = JSON.parse(localStorage.getItem(READ_KEY) || '{}'); } catch (e) {}
+    return Object.assign({ how: 'listen', wpm: 60, size: 2, font: 'andika', caps: false, ruler: true, auto: true }, c);
+})();
+const saveReadCfg = () => { try { localStorage.setItem(READ_KEY, JSON.stringify(readCfg)); } catch (e) {} };
+const READ_SIZES = [1.25, 1.55, 1.9, 2.35, 2.9];          // rem
+const READ_FONTS = { andika: "'Andika', 'Comic Sans MS', sans-serif", lexend: "'Lexend', sans-serif", classic: "Georgia, 'Times New Roman', serif" };
+const rd = { words: [], cur: -1, token: 0, running: false, sceneIdx: -1 };
+
+// Suivi : scènes déjà lues, par histoire
+function readProgressKey() { return 'da_read_done_' + (state.projectId || (state.scenario && state.scenario.title) || 'x'); }
+function readDone() { try { return new Set(JSON.parse(localStorage.getItem(readProgressKey()) || '[]')); } catch (e) { return new Set(); } }
+function markSceneRead(i) { const d = readDone(); d.add(i); try { localStorage.setItem(readProgressKey(), JSON.stringify([...d])); } catch (e) {} }
+
+// Texte de la scène découpé en segments (narrateur, puis réplique du personnage) et en mots
+function readSegments(sc) {
+    const segs = [];
+    if (narrationOf(sc)) segs.push({ role: '__narrator__', text: narrationOf(sc) });
+    if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') segs.push({ role: sc.dialogue.character, label: sc.dialogue.character, text: sc.dialogue.text });
+    return segs;
+}
+
+function renderReadMode(box, i) {
+    stopReadMode();
+    const im = sortedImages()[i];
+    const sc = sceneOf(im);
+    rd.sceneIdx = i; rd.cur = -1; rd.words = [];
+    const segs = readSegments(sc);
+    const done = readDone();
+    const total = sortedImages().length;
+
+    let html = '<div class="rd">' +
+        '<div class="rd-top">' +
+            '<div class="rd-seg" role="group" aria-label="Façon de lire">' +
+                [['listen', '🎧 J\'écoute'], ['guided', '⏱ Lecture guidée'], ['self', '👆 Je lis tout seul']].map(([k, l]) =>
+                    '<button type="button" data-how="' + k + '"' + (readCfg.how === k ? ' class="on"' : '') + '>' + l + '</button>').join('') +
+            '</div>' +
+            '<div class="rd-tools">' +
+                '<label class="rd-speed' + (readCfg.how === 'guided' ? '' : ' hidden') + '">🐢<input type="range" id="rd-wpm" min="20" max="120" step="5" value="' + readCfg.wpm + '">🐇</label>' +
+                '<button type="button" data-size="-1" title="Texte plus petit">A−</button><button type="button" data-size="1" title="Texte plus grand">A+</button>' +
+                '<select id="rd-font" title="Police"><option value="andika">Écriture débutant</option><option value="lexend">Très lisible</option><option value="classic">Livre</option></select>' +
+                '<button type="button" id="rd-caps" class="' + (readCfg.caps ? 'on' : '') + '" title="Lettres capitales">ABC</button>' +
+                '<button type="button" id="rd-ruler" class="' + (readCfg.ruler ? 'on' : '') + '" title="Règle de lecture : met en avant la phrase en cours">📏</button>' +
+            '</div>' +
+        '</div>' +
+        '<div class="rd-body">' +
+            '<div class="rd-img"><img src="' + esc(im.localUrl || im.url) + '" alt=""></div>' +
+            '<div class="rd-text" id="rd-text" style="font-size:' + READ_SIZES[readCfg.size] + 'rem;font-family:' + READ_FONTS[readCfg.font] + '">';
+    let k = 0, sent = 0;
+    segs.forEach((seg, si) => {
+        html += '<p class="rd-p' + (seg.role === '__narrator__' ? '' : ' rd-dialog') + '">' + (seg.label ? '<span class="rd-who">' + esc(seg.label) + ' :</span> ' : '');
+        const ws = seg.text.split(/\s+/).filter(Boolean);
+        ws.forEach((w, wi) => {
+            rd.words.push({ w, seg: si, sent });
+            const open = seg.label && wi === 0 ? '«\u00a0' : '', close = seg.label && wi === ws.length - 1 ? '\u00a0»' : '';
+            html += '<span class="rd-nw">' + open + '<span class="rw" data-k="' + k + '" data-s="' + sent + '">' + esc(w) + '</span>' + close + '</span> ';
+            if (/[.!?…]["»]?$/.test(w)) sent++;
+            k++;
+        });
+        sent++;
+        html += '</p>';
+    });
+    html += '</div></div>' +
+        '<div class="rd-foot">' +
+            '<div class="rd-dots" title="Scènes lues">' + Array.from({ length: total }, (_, d) => '<span class="' + (done.has(d) ? 'ok' : '') + (d === i ? ' cur' : '') + '"></span>').join('') + '</div>' +
+            '<div class="rd-count" id="rd-count">0 / ' + rd.words.length + ' mots</div>' +
+            '<button type="button" class="rd-go" id="rd-go"></button>' +
+        '</div>' +
+        '<div class="rd-bravo hidden" id="rd-bravo">⭐ Bravo !</div>' +
+        '</div>';
+    box.innerHTML = html;
+    if (readCfg.caps) box.querySelector('.rd-text').classList.add('caps');
+    box.querySelector('#rd-font').value = readCfg.font;
+    applyRuler();
+    updateGoButton();
+
+    // événements
+    box.querySelectorAll('[data-how]').forEach(b => b.onclick = () => { readCfg.how = b.dataset.how; saveReadCfg(); renderReadMode(box, i); });
+    box.querySelectorAll('[data-size]').forEach(b => b.onclick = () => {
+        readCfg.size = Math.max(0, Math.min(READ_SIZES.length - 1, readCfg.size + +b.dataset.size)); saveReadCfg();
+        box.querySelector('#rd-text').style.fontSize = READ_SIZES[readCfg.size] + 'rem';
+    });
+    box.querySelector('#rd-font').onchange = e => { readCfg.font = e.target.value; saveReadCfg(); box.querySelector('#rd-text').style.fontFamily = READ_FONTS[readCfg.font]; };
+    box.querySelector('#rd-caps').onclick = e => { readCfg.caps = !readCfg.caps; saveReadCfg(); e.currentTarget.classList.toggle('on', readCfg.caps); box.querySelector('#rd-text').classList.toggle('caps', readCfg.caps); };
+    box.querySelector('#rd-ruler').onclick = e => { readCfg.ruler = !readCfg.ruler; saveReadCfg(); e.currentTarget.classList.toggle('on', readCfg.ruler); applyRuler(); };
+    const wpm = box.querySelector('#rd-wpm'); if (wpm) wpm.oninput = e => { readCfg.wpm = +e.target.value; saveReadCfg(); };
+    box.querySelector('#rd-go').onclick = () => { unlockAudio(); readGo(); };
+    // toucher un mot : il est prononcé, et la lecture reprend à partir de lui
+    box.querySelector('#rd-text').addEventListener('click', e => {
+        const el = e.target.closest('.rw'); if (!el) return;
+        unlockAudio();
+        const kk = +el.dataset.k;
+        stopReadMode(true);
+        setReadWord(kk);
+        speakWord(rd.words[kk]);
+        updateGoButton();
+    });
+    document.getElementById('vw-counter').textContent = (i + 1) + ' / ' + total;
+}
+
+function applyRuler() {
+    const t = document.getElementById('rd-text');
+    if (t) t.classList.toggle('ruler', !!readCfg.ruler);
+}
+
+function setReadWord(k) {
+    rd.cur = k;
+    const t = document.getElementById('rd-text');
+    if (!t) return;
+    const sent = k >= 0 && rd.words[k] ? rd.words[k].sent : -1;
+    t.querySelectorAll('.rw').forEach(el => {
+        const kk = +el.dataset.k;
+        el.classList.toggle('now', kk === k);
+        el.classList.toggle('done', kk < k);
+        el.classList.toggle('insent', +el.dataset.s === sent);
+    });
+    const now = t.querySelector('.rw.now');
+    if (now && now.scrollIntoView) now.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const c = document.getElementById('rd-count');
+    if (c) c.textContent = Math.max(0, Math.min(k + 1, rd.words.length)) + ' / ' + rd.words.length + ' mots';
+}
+
+function speakWord(o) {
+    if (!o) return;
+    const seg = readSegments(sceneOf(sortedImages()[rd.sceneIdx]))[o.seg];
+    const word = o.w.replace(/^[«"(]+|[»",.;:!?…)]+$/g, '');
+    if (word) speakLine(word, seg ? seg.role : '__narrator__');
+}
+
+function updateGoButton() {
+    const b = document.getElementById('rd-go');
+    if (!b) return;
+    const end = rd.cur >= rd.words.length - 1;
+    if (readCfg.how === 'self') b.textContent = rd.cur < 0 ? '👆 Commencer' : end ? '➡ Scène suivante' : 'Mot suivant ➡';
+    else b.textContent = rd.running ? '⏸ Pause' : end ? '🔁 Relire' : rd.cur >= 0 ? '▶ Reprendre' : (readCfg.how === 'listen' ? '▶ Écouter' : '▶ Commencer');
+}
+
+function readGo() {
+    if (readCfg.how === 'self') {
+        if (rd.cur >= rd.words.length - 1) { readSceneDone(true); return; }
+        setReadWord(rd.cur + 1);
+        if (rd.cur === rd.words.length - 1) readSceneDone(false);
+        updateGoButton();
+        return;
+    }
+    if (rd.running) { stopReadMode(true); updateGoButton(); return; }
+    if (rd.cur >= rd.words.length - 1) setReadWord(-1);
+    runReadMode();
+}
+
+async function runReadMode() {
+    const my = ++rd.token;
+    rd.running = true; updateGoButton();
+    const scIdx = rd.sceneIdx;
+    const segs = readSegments(sceneOf(sortedImages()[scIdx]));
+    const startAt = rd.cur + 1;
+    // index global du premier mot de chaque segment
+    const firstOf = []; rd.words.forEach((o, k) => { if (firstOf[o.seg] == null) firstOf[o.seg] = k; });
+    for (let si = 0; si < segs.length; si++) {
+        const segStart = firstOf[si], segEnd = si + 1 < segs.length ? firstOf[si + 1] : rd.words.length;
+        if (segEnd <= startAt) continue;
+        if (my !== rd.token) return;
+        if (readCfg.how === 'listen') {
+            // la voix lit le segment ; le surlignage suit les mots (par le moteur de voix ou par estimation)
+            const from = Math.max(segStart, startAt);
+            const text = rd.words.slice(from, segEnd).map(o => o.w).join(' ');
+            const tl = makeWordTimeline(text, k => { if (my === rd.token) setReadWord(from + k); });
+            setReadWord(from);
+            await withTimeout(speakLine(text, segs[si].role, ci => tl.boundary(ci), { onStart: d => tl.start(d) }), 40000 + text.length * 200, 'Lecture')
+                .catch(() => { _speakToken++; stopAllSpeech(); });
+            tl.stop();
+            if (my !== rd.token) return;
+            setReadWord(segEnd - 1);
+            await sleep(350);
+        } else {
+            // lecture guidée : le surlignage avance seul (mots longs et ponctuation = un peu plus de temps)
+            for (let k = Math.max(segStart, startAt); k < segEnd; k++) {
+                if (my !== rd.token) return;
+                setReadWord(k);
+                const w = rd.words[k].w;
+                const base = 60000 / readCfg.wpm;
+                await sleep(base * (0.55 + Math.min(w.length, 12) / 8) + (/[.!?…]["»]?$/.test(w) ? base * 0.8 : /[,;:]$/.test(w) ? base * 0.35 : 0));
+            }
+            await sleep(300);
+        }
+    }
+    if (my !== rd.token) return;
+    rd.running = false;
+    readSceneDone(false);
+    updateGoButton();
+    if (readCfg.auto && readCfg.how !== 'self' && rd.sceneIdx === scIdx) {
+        await sleep(1800);
+        if (my === rd.token && viewer.mode === 'read' && viewerGo(1, true)) { await sleep(400); if (my === rd.token) runReadModeNext(); }
+    }
+}
+function runReadModeNext() { setReadWord(-1); runReadMode(); }
+
+function readSceneDone(goNext) {
+    markSceneRead(rd.sceneIdx);
+    const dot = document.querySelectorAll('.rd-dots span')[rd.sceneIdx];
+    if (dot) dot.classList.add('ok');
+    const b = document.getElementById('rd-bravo');
+    if (b && !goNext) { b.classList.remove('hidden'); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); setTimeout(() => b.classList.add('hidden'), 1600); }
+    if (fxEnabled()) try { fx.trigger('party'); } catch (e) {}
+    if (goNext) viewerGo(1);
+}
+
+function stopReadMode(keepPosition) {
+    rd.token++;
+    rd.running = false;
+    _speakToken++;
+    stopAllSpeech();
+    if (!keepPosition) rd.cur = -1;
+}
+
+// ══════════════════════════════════════════════════════════════════
 // APERÇU PLEIN ÉCRAN + LECTURE AUDIO (narration + musique de fond)
 // ══════════════════════════════════════════════════════════════════
 const viewer = { open: false, mode: 'story', index: 0, pages: [], pageScenes: [], playing: false, token: 0 };
@@ -2861,6 +3132,7 @@ async function openViewer(mode) {
 
 async function setViewerMode(mode) {
     stopReading();
+    stopReadMode();
     if (viewer.mode !== mode) viewer.index = 0;
     viewer.mode = mode;
     document.querySelectorAll('[data-vmode]').forEach(b => b.classList.toggle('active', b.dataset.vmode === mode));
@@ -2885,7 +3157,10 @@ function renderViewer() {
     const i = Math.max(0, Math.min(viewer.index, n - 1));
     viewer.index = i;
     box.innerHTML = '';
-    if (viewer.mode === 'pages') {
+    document.getElementById('viewer').classList.toggle('read-mode', viewer.mode === 'read');
+    if (viewer.mode === 'read') {
+        renderReadMode(box, i);
+    } else if (viewer.mode === 'pages') {
         if (viewer.pages[i]) box.appendChild(viewer.pages[i]);
     } else {
         const im = sortedImages()[i];
@@ -2917,7 +3192,7 @@ function renderViewer() {
 function viewerGo(delta, keepReading) {
     const ni = viewer.index + delta;
     if (ni < 0 || ni >= viewerCount()) return false;
-    if (!keepReading) stopReading();
+    if (!keepReading) { stopReading(); stopReadMode(); }
     viewer.index = ni;
     renderViewer();
     return true;
@@ -2925,6 +3200,7 @@ function viewerGo(delta, keepReading) {
 
 function closeViewer() {
     stopReading();
+    stopReadMode();
     viewer.open = false;
     document.body.appendChild(document.getElementById('toast'));
     document.getElementById('viewer').classList.add('hidden');
@@ -3898,7 +4174,11 @@ function stopAllVideos() {
         if (e.key === 'Escape') closeViewer();
         else if (e.key === 'ArrowRight') viewerGo(1);
         else if (e.key === 'ArrowLeft') viewerGo(-1);
-        else if (e.key === ' ') { e.preventDefault(); unlockAudio(); startReading(); }
+        else if (e.key === ' ' || (e.key === 'Enter' && viewer.mode === 'read')) {
+            if (e.target.closest && e.target.closest('select, input')) return;
+            e.preventDefault(); unlockAudio();
+            if (viewer.mode === 'read') readGo(); else startReading();
+        }
     });
     let touchX = null;
     const stage = document.getElementById('vw-stage');

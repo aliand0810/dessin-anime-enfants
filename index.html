@@ -321,6 +321,27 @@
     .vw-result video { display: block; width: auto; max-width: 100%; max-height: 50vh; margin: 0 auto 0.8rem; border-radius: 10px; background: #000; }
     .vw-result-info { font-size: 0.76rem; color: #bbb; text-align: center; margin-bottom: 0.7rem; line-height: 1.5; word-break: break-all; }
     @media (max-width: 520px) { .vw-formats { grid-template-columns: repeat(2, 1fr); } }
+    .vw-fx { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 14px; pointer-events: none; }
+    .vw-saved { margin-top: 0.4rem; color: #7ee2a0; font-weight: 700; } .vw-saved.warn { color: #ffd27a; }
+    .vprev { margin-top: 0.6rem; padding: 0.7rem 0.8rem; border-radius: 12px; background: linear-gradient(135deg, rgba(255,107,157,0.12), rgba(74,108,247,0.12)); border: 1px solid rgba(255,107,157,0.3); }
+    .vprev-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; }
+    .vprev-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; background: var(--panel); position: relative; }
+    .vprev.speaking .vprev-avatar { animation: avatarTalk 0.35s ease-in-out infinite alternate; box-shadow: 0 0 0 0 rgba(255,107,157,0.6); }
+    .vprev.speaking .vprev-avatar::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid #ff6b9d; animation: ring 1.2s ease-out infinite; }
+    @keyframes avatarTalk { from { transform: scale(1) rotate(-3deg); } to { transform: scale(1.08) rotate(3deg); } }
+    @keyframes ring { from { transform: scale(1); opacity: 0.9; } to { transform: scale(1.5); opacity: 0; } }
+    .vprev-who { flex: 1; font-size: 0.72rem; font-weight: 700; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vprev:not(.speaking) .vw-waves i { animation: none; transform: scaleY(0.3); }
+    .vprev-stop { width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--panel); color: var(--ink); cursor: pointer; font-size: 0.65rem; }
+    .vprev.done .vprev-stop { visibility: hidden; }
+    .vprev-text { font-size: 0.86rem; line-height: 1.55; color: var(--ink-faint); }
+    .vprev-text .w { transition: color 0.15s; } .vprev-text .w.read { color: var(--ink); } .vprev-text .w.on { color: #ff6b9d; font-weight: 700; }
+    .vthumb { position: relative; } .vthumb span { position: absolute; bottom: 1px; right: 1px; font-size: 0.55rem; background: rgba(0,0,0,0.7); color: #fff; padding: 0 3px; border-radius: 3px; }
+    .video-modal { position: fixed; inset: 0; z-index: 2500; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .vm-box { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 0.9rem; max-width: min(900px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 0.6rem; }
+    .vm-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; } .vm-head button { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--panel-2); color: var(--ink); cursor: pointer; }
+    .vm-box video { max-width: 100%; max-height: 75vh; border-radius: 8px; background: #000; margin: 0 auto; }
+    .vm-info { font-size: 0.72rem; color: var(--ink-dim); text-align: center; }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -482,6 +503,11 @@
                 </select>
                 <button type="button" class="vc-test" id="voice-narrator-test" title="Écouter">▶</button>
             </div>
+            <div class="vprev hidden" id="vprev">
+                <div class="vprev-head"><span class="vprev-avatar" id="vprev-avatar">🧚</span><span class="vprev-who" id="vprev-who"></span>
+                    <span class="vw-waves"><i></i><i></i><i></i><i></i></span><button type="button" class="vprev-stop" id="vprev-stop" title="Arrêter">⏹</button></div>
+                <div class="vprev-text" id="vprev-text"></div>
+            </div>
             <label class="board-check" style="margin-top:0.5rem"><input type="checkbox" id="voice-intro" checked> Commencer par « Il était une fois… »</label>
         </div>
         <div class="control-row">
@@ -489,6 +515,16 @@
             <div id="voice-chars"></div>
             <button type="button" class="btn-secondary" id="voice-auto-btn" style="margin:0.5rem 0 0;padding:0.55rem">🎲 Réattribuer les voix automatiquement</button>
         </div>
+    </div></div>
+</div>
+
+<div class="section" id="section-videos-lib">
+    <div class="section-header" data-toggle="section-videos-lib">
+        <span class="section-title">🎞️ Mes vidéos <span id="video-count"></span></span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div id="video-list"><div class="lib-empty">Chargement…</div></div>
     </div></div>
 </div>
 
@@ -629,6 +665,7 @@
 <div class="toast" id="toast"><span class="toast-icon" id="toast-icon">✓</span><span id="toast-text">Message</span></div>
 
 <div id="print-pages"></div>
+<div class="video-modal hidden" id="video-modal"></div>
 
 <div class="viewer hidden" id="viewer" role="dialog" aria-label="Aperçu plein écran">
     <div class="vw-top">
@@ -659,6 +696,8 @@
             <button type="button" class="vw-mini" id="vw-music-test" title="Écouter la mélodie">♪</button>
             <input type="range" id="vw-music-vol" min="0" max="100" value="40" title="Volume de la musique">
             <label class="vw-opt"><input type="checkbox" id="vw-anim" checked> 🎞 Animation</label>
+            <label class="vw-opt"><input type="checkbox" id="vw-sfx" checked> 🌬 Bruitages</label>
+            <input type="range" id="vw-sfx-vol" min="0" max="100" value="55" title="Volume des bruitages">
             <label class="vw-opt"><input type="checkbox" id="vw-auto" checked> ⏭ Suivant auto</label>
         </div>
         <div class="vw-controls">
@@ -710,17 +749,21 @@ const state = {
 const DB_NAME = 'dessin_anime_db', DB_STORE = 'projects';
 function openDB() {
     return new Promise((res, rej) => {
-        const r = indexedDB.open(DB_NAME, 1);
-        r.onupgradeneeded = () => r.result.createObjectStore(DB_STORE, { keyPath: 'id' });
+        const r = indexedDB.open(DB_NAME, 2);
+        r.onupgradeneeded = () => {
+            const db = r.result;
+            if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE, { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('videos')) db.createObjectStore('videos', { keyPath: 'id' });
+        };
         r.onsuccess = () => res(r.result);
         r.onerror = () => rej(r.error);
     });
 }
-async function dbOp(mode, fn) {
+async function dbOp(mode, fn, store = DB_STORE) {
     const db = await openDB();
     return new Promise((res, rej) => {
-        const tx = db.transaction(DB_STORE, mode);
-        const req = fn(tx.objectStore(DB_STORE));
+        const tx = db.transaction(store, mode);
+        const req = fn(tx.objectStore(store));
         tx.oncomplete = () => res(req && req.result);
         tx.onerror = () => rej(tx.error);
     });
@@ -1143,7 +1186,7 @@ ${recap}
 Écris les scènes ${done + 1} à ${done + n} (exactement ${n} scènes), joyeuses, mêmes personnages, dialogues de 8 mots max. « description » et « dialogue » en français correct, sans faute ; « image_prompt » en anglais.${isEnd ? ' La dernière scène doit conclure l\'histoire avec une fin heureuse.' : ' Ne termine pas encore l\'histoire.'}
 
 JSON valide uniquement :
-{ "scenes": [ { "scene_number": ${done + 1}, "description": "...", "narration": "1 ou 2 phrases de conte pour le narrateur", "image_prompt": "prompt en anglais (action + décor)", "dialogue": { "character": "Nom", "text": "..." } } ] }`;
+{ "scenes": [ { "scene_number": ${done + 1}, "description": "...", "narration": "1 ou 2 phrases de conte pour le narrateur", "image_prompt": "prompt en anglais (action + décor)", "dialogue": { "character": "Nom", "text": "..." }, "ambiance": ["vent | explosion | eau | pluie | orage | feu | oiseaux | magie | neige | nuit | fete"] } ] }`;
         let added = null;
         for (let tryN = 1; tryN <= 2 && !added; tryN++) {
             try {
@@ -1235,7 +1278,8 @@ Génère un JSON valide :
       "description": "Description visuelle simple et joyeuse",
       "narration": "1 ou 2 phrases de conte lues par le narrateur (style conte de fées, au passé, avec émotion)",
       "image_prompt": "Prompt en anglais décrivant l'action et le décor de la scène, carré 1:1",
-      "dialogue": { "character": "Nom", "text": "Phrase très courte" }
+      "dialogue": { "character": "Nom", "text": "Phrase très courte" },
+      "ambiance": ["0 à 3 mots parmi : vent, explosion, eau, pluie, orage, feu, oiseaux, magie, neige, nuit, fete"]
     }
   ]
 }
@@ -1971,6 +2015,28 @@ function charCfg(name) {
     return voiceCfg.chars[name];
 }
 
+// ── Test animé d'une voix : carte avec avatar, ondes et mots surlignés au fil de la lecture ──
+let _testToken = 0;
+async function testVoice(text, role) {
+    const my = ++_testToken;
+    const card = document.getElementById('vprev'), box = document.getElementById('vprev-text');
+    const isNarr = role === '__narrator__';
+    document.getElementById('vprev-avatar').textContent = isNarr ? narratorLabel().split(' ')[0] : (characterGender(role) === 'f' ? '👧' : '👦');
+    document.getElementById('vprev-who').textContent = isNarr ? narratorLabel().replace(/^\S+\s/, '') + ' · ' + (NARRATOR_STYLES[voiceCfg.narratorStyle] || {}).label : role + ' · ' + ((TONES[charCfg(role).tone] || {}).label || '');
+    const words = text.split(/\s+/).filter(Boolean);
+    box.innerHTML = words.map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
+    card.classList.remove('hidden', 'done');
+    card.classList.add('speaking');
+    if (card.scrollIntoView) card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    const spans = box.querySelectorAll('.w');
+    const tl = makeWordTimeline(text, k => spans.forEach((sp, i) => { sp.classList.toggle('on', i === k); sp.classList.toggle('read', i < k); }));
+    await speakLine(text, role, ci => tl.boundary(ci), { onStart: d => tl.start(d) });
+    tl.stop();
+    if (my !== _testToken) return;
+    spans.forEach(sp => { sp.classList.remove('on'); sp.classList.add('read'); });
+    card.classList.remove('speaking'); card.classList.add('done');
+}
+
 // ── Panneau Voix ──
 function voiceOptionsHtml(engine, selected, role) {
     if (engine === 'browser') {
@@ -2012,7 +2078,7 @@ function renderVoicePanel() {
         row.querySelector('[data-k=tone]').addEventListener('change', e => { voiceCfg.chars[ch.name].tone = e.target.value; saveVoiceCfg(); });
         row.querySelector('.vc-test').addEventListener('click', () => {
             const sc = state.scenario.scenes.find(s => s.dialogue && s.dialogue.character === ch.name);
-            speakLine(sc ? sc.dialogue.text : 'Bonjour, je m\'appelle ' + ch.name + ' !', ch.name);
+            testVoice(sc ? sc.dialogue.text : 'Bonjour, je m\'appelle ' + ch.name + ' !', ch.name);
         });
         box.appendChild(row);
     });
@@ -2231,9 +2297,11 @@ function narratorLabel() {
 }
 
 // Surlignage mot à mot : par les événements du moteur de voix quand ils existent, sinon par une estimation
+let _lastFxWord = -1;
 function setWord(k) {
     anim.wordIdx = k;
     const cap = document.getElementById('vw-caption');
+    if (cap && k !== _lastFxWord && cap.querySelectorAll('.w')[k]) { _lastFxWord = k; fxOnWord(cap.querySelectorAll('.w')[k].textContent); }
     if (cap) cap.querySelectorAll('.w').forEach((w, i) => { w.classList.toggle('on', i === k); w.classList.toggle('read', i < k); });
 }
 function makeWordTimeline(text, onWordIdx) {
@@ -2264,6 +2332,306 @@ function makeWordTimeline(text, onWordIdx) {
         },
         stop() { timers.forEach(clearTimeout); timers = []; }
     };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BRUITAGES ET EFFETS D'AMBIANCE selon ce que raconte la scène
+// (sons générés en direct + animations par-dessus l'image, aussi dans la vidéo enregistrée)
+// ══════════════════════════════════════════════════════════════════
+const FX_TYPES = {
+    wind:      { label: '🌬 Vent',       re: /\b(vent|venteu|souffl|brise|bourrasque|rafale|tempête|tornade|wind|breez|gust|storm)/i },
+    explosion: { label: '💥 Explosion',  re: /(explos|\bboum|badaboum|patatras|pétard|feux? d'artifice|kaboom|\bbang\b|firework|blast)/i, oneShot: true },
+    water:     { label: '🌊 Eau',        re: /\b(eau|rivière|ruisseau|lac|mer|océan|plage|vague|nag|baign|piscine|bateau|cascade|fontaine|mare|flaque|sable|water|river|lake|\bsea\b|ocean|beach|wave|swim|boat|pond)/i },
+    rain:      { label: '🌧 Pluie',      re: /\b(pluie|pleu|pleuv|averse|goutte|parapluie|rain|drizzl|umbrella)/i },
+    thunder:   { label: '⛈ Orage',      re: /\b(orage|tonnerre|éclair|foudre|thunder|lightning)/i, oneShot: true },
+    fire:      { label: '🔥 Feu',        re: /\b(flamme|cheminée|bûche|braise|feu de camp|incendie|dragon crach|campfire|fireplace|flame)|\bfeu\b(?! d'artifice)/i },
+    birds:     { label: '🐦 Oiseaux',    re: /\b(oiseau|piaf|gazouill|pépie|chant des|forêt|prairie|jardin|printemps|nid|bird|forest|meadow|garden|spring)/i },
+    magic:     { label: '✨ Magie',       re: /\b(magi|fée|baguette|étincel|scintill|sortilège|enchant|paillette|licorne|sparkl|magic|fairy|wand|glitter|unicorn)/i },
+    snow:      { label: '❄ Neige',       re: /\b(neige|flocon|hiver|bonhomme de neige|glace|glacé|snow|winter|frost|ice)/i },
+    night:     { label: '🌙 Nuit',       re: /\b(nuit|étoile|lune|dodo|endormi|dormir|ciel noir|hibou|night|star|moon|sleep)/i },
+    party:     { label: '🎉 Fête',       re: /\b(fête|applaudi|bravo|hourra|anniversaire|youpi|célébr|danse|party|cheer|celebrat|birthday)/i, oneShot: true }
+};
+const FX_FR = { vent: 'wind', explosion: 'explosion', eau: 'water', mer: 'water', plage: 'water', pluie: 'rain', orage: 'thunder',
+                feu: 'fire', oiseaux: 'birds', magie: 'magic', neige: 'snow', nuit: 'night', fete: 'party', 'fête': 'party' };
+
+// Ambiances d'une scène : celles proposées par l'IA + celles détectées dans le texte
+function sceneFx(sc) {
+    if (!sc) return [];
+    const keys = new Set();
+    (Array.isArray(sc.ambiance) ? sc.ambiance : []).forEach(a => {
+        const k = FX_FR[String(a).toLowerCase().normalize('NFC').trim()] || (FX_TYPES[a] ? a : null);
+        if (k) keys.add(k);
+    });
+    const txt = [narrationOf(sc), sc.description, sc.image_prompt, sc.dialogue && sc.dialogue.text].filter(Boolean).join(' ');
+    Object.entries(FX_TYPES).forEach(([k, t]) => { if (t.re.test(txt)) keys.add(k); });
+    if (keys.has('thunder')) keys.add('rain');
+    return [...keys].slice(0, 4);   // 4 ambiances maximum pour rester lisible
+}
+const fxEnabled = () => { const c = document.getElementById('vw-sfx'); return !c || c.checked; };
+
+const fx = (() => {
+    let bus = null, nodes = [], timers = [], keys = [], flashes = [], parts = [], sceneStart = 0, playing = false;
+    const ctx = () => audioHub.get();
+    const vol = () => { const r = document.getElementById('vw-sfx-vol'); return (r ? parseInt(r.value) : 50) / 100; };
+    let nb = null;
+    function noise() {
+        if (nb) return nb;
+        const c = ctx(), b = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), d = b.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        return (nb = b);
+    }
+    function src(loop) { const s = ctx().createBufferSource(); s.buffer = noise(); s.loop = !!loop; return s; }
+    function lfo(target, freq, depth, base) {
+        const c = ctx(), o = c.createOscillator(), g = c.createGain();
+        o.frequency.value = freq; g.gain.value = depth; target.value = base;
+        o.connect(g); g.connect(target); o.start(); nodes.push(o);
+    }
+    function loopNoise(type, f, q, gain) {
+        const c = ctx(), s = src(true), fl = c.createBiquadFilter(), g = c.createGain();
+        fl.type = type; fl.frequency.value = f; fl.Q.value = q || 0.7; g.gain.value = gain;
+        s.connect(fl); fl.connect(g); g.connect(bus); s.start(); nodes.push(s);
+        return { s, fl, g };
+    }
+    function burst(t, type, f, peak, dur) {
+        const c = ctx(), s = src(), fl = c.createBiquadFilter(), g = c.createGain();
+        fl.type = type; fl.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        s.connect(fl); fl.connect(g); g.connect(bus); s.start(t, Math.random()); s.stop(t + dur + 0.1);
+    }
+    function blip(t, f0, f1, peak, dur, type) {
+        const c = ctx(), o = c.createOscillator(), g = c.createGain();
+        o.type = type || 'sine'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 0.05);
+    }
+    const every = (ms, jitter, fn) => { const run = () => { if (!playing) return; fn(ctx().currentTime + 0.02); timers.push(setTimeout(run, ms + Math.random() * jitter)); }; timers.push(setTimeout(run, Math.random() * ms * 0.5)); };
+
+    const SOUNDS = {
+        wind() { const n = loopNoise('bandpass', 500, 0.8, 0.0); lfo(n.fl.frequency, 0.13, 350, 600); lfo(n.g.gain, 0.09, 0.1, 0.16); },
+        water() { const n = loopNoise('lowpass', 520, 0.7, 0); lfo(n.g.gain, 0.14, 0.11, 0.14); every(1800, 2500, t => burst(t, 'bandpass', 1800 + Math.random() * 1500, 0.05, 0.25)); },
+        rain() { loopNoise('highpass', 2600, 0.6, 0.06); every(90, 160, t => blip(t, 3000 + Math.random() * 3000, 1500, 0.015, 0.04)); },
+        fire() { loopNoise('lowpass', 800, 0.5, 0.05); every(120, 380, t => burst(t, 'highpass', 3000, 0.08 + Math.random() * 0.06, 0.03 + Math.random() * 0.04)); },
+        birds() { every(1300, 2600, t => { const f = 2400 + Math.random() * 1800; blip(t, f, f * 1.35, 0.035, 0.09); blip(t + 0.12, f * 1.1, f * 0.85, 0.03, 0.1); if (Math.random() < 0.5) blip(t + 0.27, f, f * 1.4, 0.03, 0.08); }); },
+        magic() { every(700, 1400, t => { for (let k = 0; k < 3; k++) blip(t + k * 0.07, 2000 + Math.random() * 2500, 4000, 0.025, 0.5); }); },
+        snow() { const n = loopNoise('bandpass', 900, 1.2, 0); lfo(n.g.gain, 0.07, 0.03, 0.045); every(1600, 2200, t => blip(t, 3500 + Math.random() * 1500, 3400, 0.018, 0.9)); },
+        night() { every(380, 500, t => { for (let k = 0; k < 4; k++) blip(t + k * 0.045, 4300, 4250, 0.012, 0.03, 'triangle'); }); },
+        thunder() { every(7000, 6000, t => { rumble(t); triggerFlash('thunder'); }); },
+        explosion() { /* déclenchée au bon mot de la narration (voir trigger) */ },
+        party() { }
+    };
+    function rumble(t) { burst(t, 'lowpass', 160, 0.5, 2.6); burst(t, 'lowpass', 900, 0.25, 0.35); blip(t, 70, 32, 0.35, 1.6); }
+    function boom(t) { blip(t, 110, 28, 0.7, 1.4); burst(t, 'lowpass', 700, 0.6, 1.6); burst(t + 0.02, 'highpass', 1500, 0.25, 0.5); }
+    function cheer(t) { for (let k = 0; k < 45; k++) burst(t + Math.random() * 2.2, 'bandpass', 1500 + Math.random() * 1500, 0.06 + Math.random() * 0.05, 0.05); burst(t, 'bandpass', 900, 0.08, 2.5); }
+
+    function triggerFlash(kind) { flashes.push({ kind, t: performance.now() }); }
+
+    return {
+        // démarre les sons d'une scène (pendant la lecture)
+        start(sceneKeys) {
+            this.stop();
+            keys = sceneKeys || []; sceneStart = performance.now();
+            if (!fxEnabled() || !keys.length) return;
+            try {
+                bus = ctx().createGain(); bus.gain.value = vol(); bus.connect(audioHub.out);
+                playing = true;
+                keys.forEach(k => SOUNDS[k] && SOUNDS[k]());
+            } catch (e) { logConsole('Bruitages indisponibles : ' + e.message, 'warn'); }
+        },
+        // événements ponctuels (explosion, coup de tonnerre, fête) déclenchés au mot correspondant
+        trigger(kind) {
+            if (!fxEnabled()) return;
+            if (playing && bus) {
+                const t = ctx().currentTime + 0.02;
+                if (kind === 'explosion') boom(t);
+                if (kind === 'thunder') rumble(t);
+                if (kind === 'party') cheer(t);
+            }
+            triggerFlash(kind);
+        },
+        stop() {
+            playing = false;
+            timers.forEach(clearTimeout); timers = [];
+            nodes.forEach(n => { try { n.stop(); } catch (e) {} }); nodes = [];
+            if (bus) { const b = bus; try { b.gain.setTargetAtTime(0.0001, ctx().currentTime, 0.3); } catch (e) {} setTimeout(() => { try { b.disconnect(); } catch (e) {} }, 1200); bus = null; }
+        },
+        setVolume() { if (bus) bus.gain.setTargetAtTime(vol(), ctx().currentTime, 0.2); },
+        setVisual(sceneKeys) { keys = sceneKeys || []; sceneStart = performance.now(); flashes = []; parts = []; },
+        // secousse (px) pour l'image, selon les explosions récentes
+        shake(now) {
+            let a = 0;
+            flashes.forEach(f => { const dt = (now - f.t) / 1000; if (f.kind === 'explosion' && dt < 0.8) a = Math.max(a, (1 - dt / 0.8) * 14); });
+            return a ? { x: (Math.random() - 0.5) * a, y: (Math.random() - 0.5) * a } : { x: 0, y: 0 };
+        },
+        // dessine les effets visuels dans le rectangle de l'image
+        draw(c2, x, y, w, h, now) {
+            if (!fxEnabled() || (!keys.length && !flashes.length)) return;
+            const t = now / 1000, age = (now - sceneStart) / 1000, k = w / 1000;
+            const rand = (i, s) => { const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return v - Math.floor(v); };
+            c2.save(); c2.beginPath(); c2.rect(x, y, w, h); c2.clip();
+            const fadeIn = Math.min(1, age / 1.2);
+            if (keys.includes('night')) {
+                c2.fillStyle = 'rgba(10,15,60,' + 0.4 * fadeIn + ')'; c2.fillRect(x, y, w, h);
+                for (let i = 0; i < 40; i++) { const a = 0.4 + 0.6 * Math.abs(Math.sin(t * (1 + rand(i, 1) * 2) + i)); c2.fillStyle = 'rgba(255,255,220,' + a * fadeIn + ')'; c2.beginPath(); c2.arc(x + rand(i, 2) * w, y + rand(i, 3) * h * 0.45, (1 + rand(i, 4) * 2) * k * 1.5, 0, 7); c2.fill(); }
+            }
+            if (keys.includes('water')) {
+                for (let b = 0; b < 4; b++) {
+                    const base = y + h * (0.78 + b * 0.06), amp = (8 + b * 4) * k, sp = 1.1 + b * 0.35;
+                    c2.fillStyle = 'rgba(' + (60 + b * 20) + ',' + (150 + b * 15) + ',255,' + (0.16 + b * 0.05) * fadeIn + ')';
+                    c2.beginPath(); c2.moveTo(x, y + h);
+                    for (let px = 0; px <= w; px += 12 * k) c2.lineTo(x + px, base + Math.sin(px / (70 * k) + t * sp + b) * amp);
+                    c2.lineTo(x + w, y + h); c2.closePath(); c2.fill();
+                }
+                for (let i = 0; i < 14; i++) { const a = Math.max(0, Math.sin(t * 2 + i * 1.7)); c2.fillStyle = 'rgba(255,255,255,' + 0.55 * a * fadeIn + ')'; c2.fillRect(x + rand(i, 5) * w, y + h * (0.78 + rand(i, 6) * 0.2), 14 * k, 3 * k); }
+            }
+            if (keys.includes('wind')) {
+                c2.strokeStyle = 'rgba(255,255,255,' + 0.7 * fadeIn + ')'; c2.lineWidth = 4.5 * k; c2.lineCap = 'round';
+                for (let i = 0; i < 9; i++) {
+                    const sp = 0.35 + rand(i, 7) * 0.4, p = ((t * sp + rand(i, 8)) % 1), xx = x - 0.3 * w + p * w * 1.6, yy = y + h * (0.1 + rand(i, 9) * 0.75), len = (80 + rand(i, 10) * 120) * k;
+                    c2.beginPath(); c2.moveTo(xx, yy); c2.bezierCurveTo(xx + len * 0.3, yy - 10 * k, xx + len * 0.6, yy + 10 * k, xx + len, yy - 6 * k * Math.sin(t * 3 + i)); c2.stroke();
+                }
+                for (let i = 0; i < 6; i++) { const p = ((t * 0.5 + rand(i, 11)) % 1); c2.save(); c2.translate(x - 0.1 * w + p * w * 1.2, y + h * (0.2 + rand(i, 12) * 0.6) + Math.sin(t * 4 + i) * 20 * k); c2.rotate(t * 3 + i); c2.fillStyle = 'rgba(' + (120 + i * 15) + ',170,60,' + 0.8 * fadeIn + ')'; c2.beginPath(); c2.ellipse(0, 0, 10 * k, 5 * k, 0, 0, 7); c2.fill(); c2.restore(); }
+            }
+            if (keys.includes('rain')) {
+                c2.fillStyle = 'rgba(30,40,70,' + 0.15 * fadeIn + ')'; c2.fillRect(x, y, w, h);
+                c2.strokeStyle = 'rgba(200,220,255,' + 0.55 * fadeIn + ')'; c2.lineWidth = 2 * k;
+                for (let i = 0; i < 70; i++) { const p = ((t * (1.2 + rand(i, 13)) + rand(i, 14)) % 1), xx = x + rand(i, 15) * w * 1.1 - p * 60 * k, yy = y - 40 * k + p * (h + 80 * k); c2.beginPath(); c2.moveTo(xx, yy); c2.lineTo(xx - 8 * k, yy + 28 * k); c2.stroke(); }
+            }
+            if (keys.includes('snow')) {
+                for (let i = 0; i < 60; i++) { const p = ((t * (0.08 + rand(i, 16) * 0.1) + rand(i, 17)) % 1), xx = x + rand(i, 18) * w + Math.sin(t + i) * 18 * k, yy = y - 10 + p * (h + 20); c2.fillStyle = 'rgba(255,255,255,' + 0.85 * fadeIn + ')'; c2.beginPath(); c2.arc(xx, yy, (2 + rand(i, 19) * 4) * k, 0, 7); c2.fill(); }
+            }
+            if (keys.includes('fire')) {
+                const gl = c2.createLinearGradient(0, y + h, 0, y + h * 0.4);
+                gl.addColorStop(0, 'rgba(255,120,20,' + (0.32 + 0.1 * Math.sin(t * 9)) * fadeIn + ')'); gl.addColorStop(1, 'rgba(255,120,20,0)');
+                c2.fillStyle = gl; c2.fillRect(x, y + h * 0.4, w, h * 0.6);
+                for (let i = 0; i < 26; i++) { const p = ((t * (0.25 + rand(i, 20) * 0.3) + rand(i, 21)) % 1); c2.fillStyle = 'rgba(255,' + (150 + Math.round(rand(i, 22) * 90)) + ',60,' + (1 - p) * fadeIn + ')'; c2.beginPath(); c2.arc(x + rand(i, 23) * w + Math.sin(t * 3 + i) * 15 * k, y + h - p * h * 0.7, (2 + rand(i, 24) * 3) * k, 0, 7); c2.fill(); }
+            }
+            if (keys.includes('birds')) {
+                c2.strokeStyle = 'rgba(40,40,60,' + 0.7 * fadeIn + ')'; c2.lineWidth = 3 * k;
+                for (let i = 0; i < 4; i++) { const p = ((t * (0.06 + rand(i, 25) * 0.05) + rand(i, 26)) % 1), xx = x + p * w * 1.2 - 0.1 * w, yy = y + h * (0.08 + rand(i, 27) * 0.25) + Math.sin(t * 1.5 + i) * 12 * k, fl = Math.sin(t * 9 + i * 2) * 8 * k, s = (12 + rand(i, 28) * 8) * k; c2.beginPath(); c2.moveTo(xx - s, yy - fl); c2.quadraticCurveTo(xx - s / 2, yy - s / 3, xx, yy); c2.quadraticCurveTo(xx + s / 2, yy - s / 3, xx + s, yy - fl); c2.stroke(); }
+            }
+            if (keys.includes('magic')) {
+                for (let i = 0; i < 24; i++) { const a = Math.max(0, Math.sin(t * (1.5 + rand(i, 29) * 2) + i * 2.3)); if (a < 0.2) continue; const xx = x + rand(i, 30) * w, yy = y + rand(i, 31) * h, s = (6 + rand(i, 32) * 10) * k * a; c2.fillStyle = 'rgba(255,' + (210 + Math.round(rand(i, 33) * 45)) + ',' + (120 + Math.round(rand(i, 34) * 135)) + ',' + a * fadeIn + ')'; c2.beginPath(); c2.moveTo(xx, yy - s); c2.lineTo(xx + s * 0.25, yy - s * 0.25); c2.lineTo(xx + s, yy); c2.lineTo(xx + s * 0.25, yy + s * 0.25); c2.lineTo(xx, yy + s); c2.lineTo(xx - s * 0.25, yy + s * 0.25); c2.lineTo(xx - s, yy); c2.lineTo(xx - s * 0.25, yy - s * 0.25); c2.closePath(); c2.fill(); }
+            }
+            // éclairs, explosions et confettis (événements ponctuels)
+            flashes = flashes.filter(f => now - f.t < 3000);
+            flashes.forEach(f => {
+                const dt = (now - f.t) / 1000;
+                if (f.kind === 'thunder' && dt < 0.5) { c2.fillStyle = 'rgba(255,255,255,' + (dt < 0.08 || (dt > 0.16 && dt < 0.22) ? 0.75 : 0.2 * (1 - dt / 0.5)) + ')'; c2.fillRect(x, y, w, h); }
+                if (f.kind === 'explosion' && dt < 1.6) {
+                    const cx = x + w * 0.5, cy = y + h * 0.55;
+                    if (dt < 0.15) { c2.fillStyle = 'rgba(255,240,200,' + (1 - dt / 0.15) * 0.9 + ')'; c2.fillRect(x, y, w, h); }
+                    const r = dt * w * 0.7;
+                    const gr = c2.createRadialGradient(cx, cy, 0, cx, cy, Math.max(1, r));
+                    gr.addColorStop(0, 'rgba(255,230,120,' + 0.8 * (1 - dt / 1.6) + ')'); gr.addColorStop(0.6, 'rgba(255,120,30,' + 0.5 * (1 - dt / 1.6) + ')'); gr.addColorStop(1, 'rgba(255,80,0,0)');
+                    c2.fillStyle = gr; c2.beginPath(); c2.arc(cx, cy, Math.max(1, r), 0, 7); c2.fill();
+                    c2.strokeStyle = 'rgba(255,255,255,' + 0.7 * (1 - dt / 1.6) + ')'; c2.lineWidth = 6 * k; c2.beginPath(); c2.arc(cx, cy, Math.max(1, r * 1.1), 0, 7); c2.stroke();
+                }
+                if (f.kind === 'party' && dt < 3) {
+                    for (let i = 0; i < 60; i++) { const xx = x + rand(i, 35) * w + Math.sin(dt * 3 + i) * 20 * k, yy = y - 20 + (dt * (0.25 + rand(i, 36) * 0.35)) * h * 1.3; c2.save(); c2.translate(xx, yy); c2.rotate(dt * 5 + i); c2.fillStyle = 'hsla(' + Math.round(rand(i, 37) * 360) + ',90%,60%,' + (1 - dt / 3) + ')'; c2.fillRect(-6 * k, -3 * k, 12 * k, 6 * k); c2.restore(); }
+                }
+            });
+            c2.restore();
+        },
+        keys: () => keys
+    };
+})();
+
+// Calque d'effets dans la visionneuse (dessiné par-dessus l'image)
+let _fxRaf = 0;
+function fxLoop() {
+    const cv = document.getElementById('vw-fx');
+    if (!cv || !viewer.open) { _fxRaf = 0; return; }
+    const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+    if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+    const c2 = cv.getContext('2d');
+    c2.clearRect(0, 0, cv.width, cv.height);
+    const now = performance.now();
+    if (document.getElementById('vw-anim').checked) fx.draw(c2, 0, 0, cv.width, cv.height, now);
+    const sh = fx.shake(now), kb = document.querySelector('.vw-scene .vw-kb');
+    if (kb) kb.style.translate = sh.x ? sh.x + 'px ' + sh.y + 'px' : '';
+    _fxRaf = requestAnimationFrame(fxLoop);
+}
+function startFxLoop() { if (!_fxRaf) _fxRaf = requestAnimationFrame(fxLoop); }
+
+// Événements ponctuels : quand la narration atteint le mot (« explosion », « tonnerre », « hourra »…)
+function fxOnWord(word) {
+    ['explosion', 'thunder', 'party'].forEach(k => { if (FX_TYPES[k].re.test(word) && fx.keys().includes(k)) fx.trigger(k); });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MES VIDÉOS : les vidéos de lecture enregistrées sont gardées sur l'appareil (IndexedDB)
+// ══════════════════════════════════════════════════════════════════
+const dbPutVideo = v => dbOp('readwrite', st => st.put(v), 'videos');
+const dbAllVideos = () => dbOp('readonly', st => st.getAll(), 'videos');
+const dbDelVideo = id => dbOp('readwrite', st => st.delete(id), 'videos');
+
+async function saveVideoToLibrary(r, thumb) {
+    try {
+        if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+        const v = {
+            id: 'v' + Date.now().toString(36), projectId: state.projectId || null,
+            title: (state.scenario && state.scenario.title) || 'Mon histoire', name: r.name,
+            formatLabel: r.format.label, ratio: r.format.ratio, w: r.w, h: r.h,
+            duration: r.duration, size: r.blob.size, type: r.blob.type, blob: r.blob, thumb: thumb || '', createdAt: Date.now()
+        };
+        await dbPutVideo(v);
+        renderVideoLibrary();
+        logConsole('Vidéo enregistrée dans « Mes vidéos » : ' + r.name, 'success');
+        return true;
+    } catch (e) {
+        logConsole('Impossible de garder la vidéo sur l\'appareil (' + e.message + ') : téléchargez-la.', 'error');
+        return false;
+    }
+}
+
+async function renderVideoLibrary() {
+    const list = document.getElementById('video-list');
+    if (!list) return;
+    let items = [];
+    try { items = await dbAllVideos(); } catch (e) { list.innerHTML = '<div class="lib-empty">Indisponible sur ce navigateur</div>'; return; }
+    items.sort((a, b) => b.createdAt - a.createdAt);
+    document.getElementById('video-count').textContent = items.length ? '(' + items.length + ')' : '';
+    let usage = '';
+    try { const e = await navigator.storage.estimate(); usage = (e.usage / 1048576).toFixed(0) + ' Mo utilisés sur ' + (e.quota / 1073741824).toFixed(1) + ' Go disponibles'; } catch (e) {}
+    if (!items.length) { list.innerHTML = '<div class="lib-empty">Aucune vidéo. Enregistrez une lecture depuis le plein écran (⏺).</div>'; return; }
+    list.innerHTML = '';
+    items.forEach(v => {
+        const row = document.createElement('div');
+        row.className = 'lib-item';
+        row.innerHTML = '<div class="lib-thumb vthumb">' + (v.thumb ? '<img src="' + v.thumb + '" alt="">' : '🎬') + '<span>' + v.ratio + '</span></div>' +
+            '<div class="lib-info"><div class="lib-title">' + esc(v.title) + '</div>' +
+            '<div class="lib-meta">' + esc(v.formatLabel) + ' · ' + fmtTime(v.duration) + ' · ' + (v.size / 1048576).toFixed(1) + ' Mo · ' +
+            new Date(v.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</div></div>' +
+            '<div class="lib-actions"><button type="button" data-a="play" title="Regarder">▶</button><button type="button" data-a="dl" title="Télécharger">⬇</button>' +
+            (navigator.canShare ? '<button type="button" data-a="share" title="Partager">📤</button>' : '') +
+            '<button type="button" data-a="del" title="Supprimer">🗑</button></div>';
+        row.querySelector('[data-a=play]').onclick = () => playStoredVideo(v);
+        row.querySelector('[data-a=dl]').onclick = () => { downloadBlob(v.blob, v.name); showToast('Téléchargement lancé : ' + v.name, 'success', 3000); };
+        const sh = row.querySelector('[data-a=share]');
+        if (sh) sh.onclick = async () => {
+            const file = new File([v.blob], v.name, { type: v.type });
+            if (!navigator.canShare({ files: [file] })) { showToast('Partage de fichiers non pris en charge ici', 'warn'); return; }
+            try { await navigator.share({ files: [file], title: v.title }); } catch (e) { if (e.name !== 'AbortError') showToast('Partage impossible', 'error'); }
+        };
+        row.querySelector('[data-a=del]').onclick = async () => {
+            if (!confirm('Supprimer la vidéo « ' + v.name + ' » ?')) return;
+            await dbDelVideo(v.id); renderVideoLibrary(); showToast('Vidéo supprimée', 'warn');
+        };
+        list.appendChild(row);
+    });
+    if (usage) { const u = document.createElement('div'); u.className = 'lib-empty'; u.textContent = '💽 ' + usage; list.appendChild(u); }
+}
+
+function playStoredVideo(v) {
+    const m = document.getElementById('video-modal');
+    const url = URL.createObjectURL(v.blob);
+    m.innerHTML = '<div class="vm-box"><div class="vm-head"><b>' + esc(v.title) + '</b><button type="button" data-x>✕</button></div>' +
+        '<video src="' + url + '" controls autoplay playsinline style="aspect-ratio:' + v.w + '/' + v.h + '"></video>' +
+        '<div class="vm-info">' + esc(v.name) + ' · ' + esc(v.formatLabel) + ' ' + v.ratio + ' · ' + v.w + '×' + v.h + '</div></div>';
+    m.classList.remove('hidden');
+    const close = () => { m.classList.add('hidden'); m.innerHTML = ''; URL.revokeObjectURL(url); };
+    m.querySelector('[data-x]').onclick = close;
+    m.onclick = e => { if (e.target === m) close(); };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2320,7 +2688,8 @@ function renderViewer() {
         const wrap = document.createElement('div');
         wrap.className = 'vw-scene kb' + (i % 4);
         anim.sceneIdx = i; anim.sceneT0 = performance.now(); anim.wordIdx = -1; anim.dialogShown = false;
-        wrap.innerHTML = '<div class="vw-kb"><img src="' + esc(im.localUrl || im.url) + '" alt=""></div>' +
+        fx.setVisual(sceneFx(sc)); _lastFxWord = -1;
+        wrap.innerHTML = '<div class="vw-kb"><img src="' + esc(im.localUrl || im.url) + '" alt=""></div><canvas class="vw-fx" id="vw-fx"></canvas>' +
             '<div class="vw-badge" id="vw-badge"><span class="vw-badge-txt"></span><span class="vw-waves"><i></i><i></i><i></i><i></i></span></div>' +
             (sc.dialogue && sc.dialogue.text && state.mode !== 'photo'
                 ? '<div class="vw-bubble' + (i % 2 ? ' right' : '') + '" id="vw-bubble"><small>' + esc(sc.dialogue.character) + '</small>' + esc(sc.dialogue.text) + '</div>' : '');
@@ -2330,6 +2699,7 @@ function renderViewer() {
         cap.innerHTML = narrationOf(sc).split(/\s+/).filter(Boolean).map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
         box.appendChild(wrap);
         box.appendChild(cap);
+        startFxLoop();
     }
     document.getElementById('vw-counter').textContent = (i + 1) + ' / ' + n;
     document.getElementById('vw-progress').style.width = ((i + 1) / n * 100) + '%';
@@ -2377,6 +2747,9 @@ function narrate(text, character, narrator, onWord) {
 
 // Lit une scène : le narrateur lit la description (image animée, mots surlignés), puis le personnage parle
 async function readScene(sc, token, withCaption) {
+    const fxKeys = sceneFx(sc);
+    fx.start(fxKeys);
+    if (!withCaption) fxKeys.filter(k => FX_TYPES[k].oneShot).forEach(k => setTimeout(() => { if (token === viewer.token) fx.trigger(k); }, 1500));
     music.duck(true);
     if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') prefetchLine(sc.dialogue.text, sc.dialogue.character);
     if (narrationOf(sc)) {
@@ -2452,6 +2825,7 @@ function stopReading() {
     _speakToken++;
     stopAllSpeech();
     music.stop();
+    fx.stop();
     setPhase('idle');
     const b = document.getElementById('vw-play');
     if (b) b.textContent = '▶ Lecture audio';
@@ -2715,11 +3089,12 @@ function drawRecFrame() {
         const dir = i % 4;
         const dx = (dir === 0 ? -1 : dir === 1 ? 1 : dir === 2 ? -0.5 : 0.5) * 40 * u * ease;
         const dy = (dir < 2 ? -1 : 1) * 25 * u * ease;
-        const s = side * z;
+        const s = side * z, sh = fx.shake(now);
         ctx.globalAlpha = Math.min(1, age / 0.6);
-        ctx.drawImage(im, x0 + (side - s) / 2 + dx, y0 + (side - s) / 2 + dy, s, s);
+        ctx.drawImage(im, x0 + (side - s) / 2 + dx + sh.x * u, y0 + (side - s) / 2 + dy + sh.y * u, s, s);
         ctx.globalAlpha = 1;
     } else { ctx.fillStyle = '#333'; ctx.fillRect(x0, y0, side, side); }
+    if (document.getElementById('vw-anim').checked) fx.draw(ctx, x0, y0, side, side, now);
     ctx.restore();
 
     // bulle : apparaît quand le personnage prend la parole
@@ -2854,6 +3229,11 @@ async function recordVideo(formatKey, quality) {
     tickBar(); rec.timer = setInterval(tickBar, 500);
     drawRecFrame();
     rec.recorder.start(1000);
+    rec.thumb = '';
+    setTimeout(() => {   // miniature pour « Mes vidéos »
+        try { const t = document.createElement('canvas'); t.width = 120; t.height = Math.round(120 * rec.canvas.height / rec.canvas.width);
+              t.getContext('2d').drawImage(rec.canvas, 0, 0, t.width, t.height); rec.thumb = t.toDataURL('image/jpeg', 0.7); } catch (e) {}
+    }, 3500);
     logConsole('Enregistrement vidéo démarré : ' + F.label + ' ' + F.ratio + ', ' + rec.canvas.width + '×' + rec.canvas.height + ' (' + (mime || 'format par défaut') + ')', 'info');
 
     await startReading();                     // rejoue toute l'histoire (ou jusqu'à « Arrêter »)
@@ -2888,6 +3268,7 @@ async function recordVideo(formatKey, quality) {
     const base = ((state.scenario && state.scenario.title) || 'histoire').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\-]+/g, '_');
     rec.lastBlob = blob;
     rec.lastName = base + '_' + formatKey + '.' + ext;
+    if (state.scenario && !state.projectId) await saveToLibrary(true);   // relie la vidéo à son projet
     logConsole('Vidéo prête : ' + rec.lastName + ' (' + (blob.size / 1048576).toFixed(1) + ' Mo, ' + fmtTime(duration) + ')', 'success');
     showResultModal({ blob, name: rec.lastName, format: F, duration, w: rec.canvas.width, h: rec.canvas.height });
 }
@@ -2965,7 +3346,12 @@ function showResultModal(r) {
         try { await navigator.share({ files: [new File([r.blob], r.name, { type: r.blob.type })], title: (state.scenario && state.scenario.title) || 'Mon histoire' }); }
         catch (e) { if (e.name !== 'AbortError') showToast('Partage impossible : ' + e.message, 'error'); }
     };
-    // téléchargement automatique (peut être bloqué : le bouton reste disponible)
+    // gardée dans « Mes vidéos » + téléchargement automatique (s'il est bloqué, les boutons restent là)
+    const info = m.querySelector('.vw-result-info');
+    saveVideoToLibrary(r, rec.thumb).then(ok => {
+        info.insertAdjacentHTML('beforeend', ok ? '<div class="vw-saved">💾 Gardée dans « Mes vidéos » (colonne de gauche)</div>'
+                                                : '<div class="vw-saved warn">⚠️ Pas assez de place sur l\'appareil : téléchargez-la</div>');
+    });
     downloadBlob(r.blob, r.name);
     showToast('Vidéo enregistrée', 'success', 3000);
 }
@@ -3240,6 +3626,13 @@ function stopAllVideos() {
         setTimeout(() => inp.focus(), 300);
     });
     renderLibrary();
+    renderVideoLibrary();
+    document.getElementById('vw-sfx-vol').addEventListener('input', () => fx.setVolume());
+    document.getElementById('vw-sfx').addEventListener('change', e => { if (!e.target.checked) fx.stop(); });
+    document.getElementById('vprev-stop').addEventListener('click', () => {
+        _testToken++; _speakToken++; stopAllSpeech();
+        const c = document.getElementById('vprev'); c.classList.remove('speaking'); c.classList.add('done');
+    });
 
     // ── Voix ──
     renderVoicePanel();
@@ -3250,7 +3643,8 @@ function stopAllVideos() {
     document.getElementById('voice-intro').addEventListener('change', e => { voiceCfg.intro = e.target.checked; saveVoiceCfg(); });
     document.getElementById('voice-narrator-test').addEventListener('click', () => {
         const sc = state.scenario && state.scenario.scenes[0];
-        speakLine(sc && narrationOf(sc) ? 'Il était une fois… ' + narrationOf(sc) : 'Il était une fois, dans une forêt enchantée, un petit lapin qui rêvait de trouver une carotte magique.', '__narrator__');
+        const n = sc && narrationOf(sc);
+        testVoice(n ? (/^\s*il était une fois/i.test(n) ? n : 'Il était une fois… ' + n) : 'Il était une fois, dans une forêt enchantée, un petit lapin qui rêvait de trouver une carotte magique.', '__narrator__');
     });
     document.getElementById('voice-auto-btn').addEventListener('click', () => { autoAssignVoices(true); renderVoicePanel(); showToast('Voix réattribuées', 'success'); });
 

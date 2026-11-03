@@ -952,7 +952,8 @@ function validateScenario(sc) {
     sc.title = sc.title || 'Mon dessin animé';
     sc.scenes.forEach((s, i) => {
         s.scene_number = i + 1;
-        s.description = s.description || '';
+        s.description = s.description || s.narration || s.texte || s.text || '';
+        s.narration = s.narration || s.description;
         s.image_prompt = s.image_prompt || s.description;
     });
     return sc;
@@ -1121,7 +1122,7 @@ ${recap}
 Écris les scènes ${done + 1} à ${done + n} (exactement ${n} scènes), joyeuses, mêmes personnages, dialogues de 8 mots max. « description » et « dialogue » en français correct, sans faute ; « image_prompt » en anglais.${isEnd ? ' La dernière scène doit conclure l\'histoire avec une fin heureuse.' : ' Ne termine pas encore l\'histoire.'}
 
 JSON valide uniquement :
-{ "scenes": [ { "scene_number": ${done + 1}, "description": "...", "image_prompt": "prompt en anglais (action + décor)", "dialogue": { "character": "Nom", "text": "..." } } ] }`;
+{ "scenes": [ { "scene_number": ${done + 1}, "description": "...", "narration": "1 ou 2 phrases de conte pour le narrateur", "image_prompt": "prompt en anglais (action + décor)", "dialogue": { "character": "Nom", "text": "..." } } ] }`;
         let added = null;
         for (let tryN = 1; tryN <= 2 && !added; tryN++) {
             try {
@@ -1198,7 +1199,7 @@ Contraintes :
 - Nombre de scènes : exactement ${firstBatch}${state.sceneCount > firstBatch ? ' (début d\'une histoire qui en comptera ' + state.sceneCount + ' au total : ne la termine pas encore)' : ''}
 - Chaque scène doit être visuellement simple et joyeuse, avec le même décor général pour garder une continuité
 - Les dialogues doivent être très courts (max 8 mots) et adaptés aux enfants
-- « title », « description » et « dialogue » sont rédigés en français correct, sans faute d'orthographe ; seuls « image_prompt » et « appearance » sont en anglais
+- « title », « description », « narration » et « dialogue » sont rédigés en français correct, sans faute d'orthographe ; seuls « image_prompt » et « appearance » sont en anglais
 - Pour chaque personnage, une apparence TRÈS précise et constante (espèce, couleurs exactes, vêtements, accessoire distinctif)
 
 Génère un JSON valide :
@@ -1211,6 +1212,7 @@ Génère un JSON valide :
     {
       "scene_number": 1,
       "description": "Description visuelle simple et joyeuse",
+      "narration": "1 ou 2 phrases de conte lues par le narrateur (style conte de fées, au passé, avec émotion)",
       "image_prompt": "Prompt en anglais décrivant l'action et le décor de la scène, carré 1:1",
       "dialogue": { "character": "Nom", "text": "Phrase très courte" }
     }
@@ -1364,7 +1366,8 @@ function displayScenario(scenario) {
     html += '<div style="font-size:0.75rem;color:var(--ink-dim);margin-bottom:0.6rem;">Personnages : ' +
         scenario.characters.map(c => esc(c.name) + ' (' + esc(c.gender) + ')').join(', ') + '</div>';
     scenario.scenes.forEach(s => {
-        html += '<div class="scene-item"><span class="scene-num">Scène ' + s.scene_number + '</span>' + esc(s.description);
+        html += '<div class="scene-item"><span class="scene-num">Scène ' + s.scene_number + '</span>' + esc(s.description) +
+            (s.narration && s.narration !== s.description ? '<div style="margin-top:0.3rem;color:var(--ink-dim);">📖 ' + esc(s.narration) + '</div>' : '');
         if (s.dialogue && s.dialogue.text) {
             html += '<div style="margin-top:0.3rem;font-style:italic;color:var(--accent-child);">💬 ' + esc(s.dialogue.character) + ' : « ' + esc(s.dialogue.text) + ' »</div>';
         }
@@ -2048,57 +2051,99 @@ function prefetchLine(text, role) { if (text && voiceCfg.engine !== 'browser') c
 
 let _currentAudio = null, _cloudWarned = false;
 function stopAllSpeech() {
+    ttsKeepAlive(false);
     if (speechSynth) speechSynth.cancel();
     if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} _currentAudio = null; }
 }
 
 // Voix du navigateur « conte de fées » : phrase par phrase, avec de vraies pauses et une intonation qui varie
-function speakBrowser(text, role, onWord, hooks = {}) {
-    return new Promise(async resolve => {
-        if (!speechSynth) return setTimeout(resolve, 600 + text.length * 45);
-        speechSynth.cancel();
-        const isNarr = role === '__narrator__';
-        const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
-        const cfg = isNarr ? null : charCfg(role);
-        const tone = isNarr ? null : TONES[cfg.tone] || TONES.normal;
-        const userRate = parseFloat((document.getElementById('vw-rate') || {}).value || 0.9) / 0.9;
-        const baseRate = (isNarr ? style.rate : 0.95 * tone.rate) * userRate;
-        let basePitch = isNarr ? style.pitch : (characterGender(role) === 'f' ? 1.2 : 1.0) * tone.pitch;
-        const wanted = isNarr ? voiceCfg.narrator.browser : cfg.browser;
-        const vs = frBrowserVoices();
-        const voice = vs.find(v => v.name === wanted) || (isNarr ? vs.find(isQualityVoice) : null) || vs[0];
-        // découpe en phrases et propositions pour respirer comme un conteur
-        const parts = isNarr ? (text.match(/[^.!?…;:,]+[.!?…;:,]*/g) || [text]) : (text.match(/[^.!?…]+[.!?…]*/g) || [text]);
-        let offset = 0, myToken = ++_speakToken;
-        if (hooks.onStart) {   // durée estimée (texte + pauses de conte) pour animer pendant la lecture
-            const pauses = parts.reduce((t, p) => t + (/[.!?…]\s*$/.test(p) ? (isNarr ? 0.42 : 0.2) : /[,;:]\s*$/.test(p) ? (isNarr ? 0.16 : 0.08) : 0), 0);
-            hooks.onStart(text.length * 0.068 / baseRate + pauses + 0.3);
-        }
-        for (let i = 0; i < parts.length; i++) {
-            if (myToken !== _speakToken) return resolve();
-            const part = parts[i].trim();
-            const start = text.indexOf(part, offset); offset = start + part.length;
-            if (!part) continue;
-            await new Promise(r => {
-                const u = new SpeechSynthesisUtterance(part);
-                u.lang = 'fr-FR';
-                if (voice) u.voice = voice;
-                // intonation : légère variation, montée sur les questions et exclamations
-                const variation = isNarr ? (i % 2 ? -0.04 : 0.04) : 0;
-                u.pitch = Math.max(0.1, Math.min(2, basePitch + variation + (/[?!]$/.test(part) ? 0.08 : 0)));
-                u.rate = Math.max(0.5, Math.min(1.6, baseRate * (/[!]$/.test(part) ? 1.05 : 1)));
-                if (onWord) u.onboundary = e => { if (e.charIndex != null) onWord(start + e.charIndex); };
-                let done = false; const fin = () => { if (!done) { done = true; r(); } };
-                u.onend = u.onerror = fin;
-                speechSynth.speak(u);
-                setTimeout(fin, 2500 + part.length * 120 / u.rate);
-            });
-            // pauses de conte : plus longues aux points, courtes aux virgules
-            const last = part.slice(-1);
-            await sleep(/[.!?…]/.test(last) ? (isNarr ? 420 : 200) : /[,;:]/.test(last) ? (isNarr ? 160 : 80) : 0);
-        }
-        resolve();
+// Les phrases en cours sont gardées en mémoire : sinon Chrome peut les supprimer et la voix s'arrête net
+const _liveUtterances = new Set();
+let _ttsKeepAlive = null;
+function ttsKeepAlive(on) {
+    // contournement Chrome : les voix « Google » s'arrêtent seules après ~15 s sans pause/reprise
+    clearInterval(_ttsKeepAlive); _ttsKeepAlive = null;
+    const isChromeDesktop = /Chrome/.test(navigator.userAgent) && !/Android|Mobile|Edg\//.test(navigator.userAgent);
+    if (on && isChromeDesktop) _ttsKeepAlive = setInterval(() => {
+        if (speechSynth.speaking && !speechSynth.paused) { speechSynth.pause(); speechSynth.resume(); }
+    }, 10000);
+}
+async function quietSpeech() {
+    // ne coupe que si quelque chose parle vraiment, puis laisse le moteur se remettre
+    if (speechSynth && (speechSynth.speaking || speechSynth.pending)) { speechSynth.cancel(); await sleep(120); }
+}
+
+// Prononce une phrase. Si le moteur l'ignore (bug connu après une coupure), on réessaie une fois.
+function sayUtterance(text, voice, pitch, rate, onBoundary) {
+    const attempt = () => new Promise(r => {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = (voice && voice.lang) || 'fr-FR';
+        if (voice) u.voice = voice;
+        u.pitch = pitch; u.rate = rate;
+        _liveUtterances.add(u);
+        let started = false, done = false;
+        const fin = res => { if (!done) { done = true; _liveUtterances.delete(u); r(res); } };
+        u.onstart = () => { started = true; };
+        if (onBoundary) u.onboundary = e => { started = true; if (e.charIndex != null) onBoundary(e.charIndex); };
+        u.onend = () => fin('ok');
+        u.onerror = e => fin(started ? 'ok' : 'erreur:' + (e.error || '?'));
+        speechSynth.speak(u);
+        // jamais démarrée après 2,5 s → phrase perdue
+        setTimeout(() => { if (!started && !speechSynth.speaking) fin('perdue'); }, 2500);
+        // sécurité : on n'abandonne que si le moteur ne parle plus (évite de couper ou de sauter)
+        const maxMs = 4000 + text.length * 160 / rate;
+        const t0 = Date.now();
+        const watch = setInterval(() => {
+            if (done) return clearInterval(watch);
+            if (Date.now() - t0 > maxMs && !speechSynth.speaking) { clearInterval(watch); fin('ok'); }
+            if (Date.now() - t0 > maxMs * 2) { clearInterval(watch); fin('ok'); }
+        }, 400);
     });
+    return attempt().then(async res => {
+        if (res === 'ok') return true;
+        logConsole('Voix : phrase non lue (' + res + '), nouvel essai…', 'warn');
+        await quietSpeech(); await sleep(150);
+        const res2 = await attempt();
+        if (res2 !== 'ok') logConsole('Voix : phrase ignorée par le moteur (' + res2 + ') : « ' + text.slice(0, 40) + '… »', 'error');
+        return res2 === 'ok';
+    });
+}
+
+// Voix de l'appareil « conte de fées » : phrase par phrase, pauses de conteur, intonation qui varie
+async function speakBrowser(text, role, onWord, hooks = {}) {
+    if (!speechSynth) { await sleep(600 + text.length * 45); return; }
+    await quietSpeech();
+    const isNarr = role === '__narrator__';
+    const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
+    const cfg = isNarr ? null : charCfg(role);
+    const tone = isNarr ? null : TONES[cfg.tone] || TONES.normal;
+    const userRate = parseFloat((document.getElementById('vw-rate') || {}).value || 0.9) / 0.9;
+    const baseRate = (isNarr ? style.rate : 0.95 * tone.rate) * userRate;
+    const basePitch = isNarr ? style.pitch : (characterGender(role) === 'f' ? 1.2 : 1.0) * tone.pitch;
+    const wanted = isNarr ? voiceCfg.narrator.browser : cfg.browser;
+    const vs = frBrowserVoices();
+    const voice = vs.find(v => v.name === wanted) || (isNarr ? vs.find(isQualityVoice) : null) || vs[0] || null;
+    // découpe en phrases seulement (les virgules restent dans la phrase : la voix y marque déjà la pause)
+    const parts = (text.match(/[^.!?…]+[.!?…]*["»]?/g) || [text]).map(x => x.trim()).filter(Boolean);
+    const myToken = ++_speakToken;
+    if (hooks.onStart) {   // durée estimée pour animer et surligner pendant la lecture
+        const pauses = parts.length * (isNarr ? 0.45 : 0.2);
+        hooks.onStart(text.length * 0.07 / baseRate + pauses + 0.3);
+    }
+    ttsKeepAlive(true);
+    let offset = 0;
+    for (let i = 0; i < parts.length; i++) {
+        if (myToken !== _speakToken) break;
+        const part = parts[i];
+        const start = Math.max(0, text.indexOf(part, offset)); offset = start + part.length;
+        const variation = isNarr ? (i % 2 ? -0.04 : 0.04) : 0;   // légère variation d'une phrase à l'autre
+        const pitch = Math.max(0.1, Math.min(2, basePitch + variation + (/[?!]["»]?$/.test(part) ? 0.08 : 0)));
+        const rate = Math.max(0.5, Math.min(1.6, baseRate * (/!["»]?$/.test(part) ? 1.05 : 1)));
+        await sayUtterance(part, voice, pitch, rate, onWord ? ci => onWord(start + ci) : null);
+        if (myToken !== _speakToken) break;
+        if (i < parts.length - 1) await sleep(isNarr ? 420 : 200);   // pause de conteur entre deux phrases
+    }
+    ttsKeepAlive(false);
 }
 let _speakToken = 0;
 
@@ -2123,16 +2168,16 @@ async function speakCloud(text, role, hooks = {}) {
 // Point d'entrée unique : role = '__narrator__' ou le nom du personnage
 async function speakLine(text, role, onWord, hooks = {}) {
     if (!text) return;
-    stopAllSpeech();
+    if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} _currentAudio = null; }
     if (voiceCfg.engine !== 'browser') {
         try { return await speakCloud(text, role, hooks); }
-        catch (e) {
+        catch (e1) { try { await sleep(400); return await speakCloud(text, role, hooks); } catch (e) {
             if (!_cloudWarned) {
                 _cloudWarned = true;
                 logConsole('Voix IA indisponibles (' + e.message + ') → voix de l\'appareil.', 'warn');
                 showToast('Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 3500);
             }
-        }
+        } }
     }
     return speakBrowser(text, role, onWord, hooks);
 }
@@ -2205,6 +2250,7 @@ function makeWordTimeline(text, onWordIdx) {
 // ══════════════════════════════════════════════════════════════════
 const viewer = { open: false, mode: 'story', index: 0, pages: [], pageScenes: [], playing: false, token: 0 };
 function sortedImages() { return state.images.slice().sort((a, b) => a.sceneIndex - b.sceneIndex); }
+function narrationOf(sc) { return (sc && (sc.narration || sc.description)) || ''; }
 function sceneOf(im) { return (state.scenario && state.scenario.scenes[im.sceneIndex]) || im.scene || {}; }
 
 async function openViewer(mode) {
@@ -2259,7 +2305,7 @@ function renderViewer() {
         const cap = document.createElement('div');
         cap.className = 'vw-caption';
         cap.id = 'vw-caption';
-        cap.innerHTML = (sc.description || '').split(/\s+/).filter(Boolean).map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
+        cap.innerHTML = narrationOf(sc).split(/\s+/).filter(Boolean).map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
         box.appendChild(wrap);
         box.appendChild(cap);
     }
@@ -2310,8 +2356,8 @@ function narrate(text, character, narrator, onWord) {
 async function readScene(sc, token, withCaption) {
     music.duck(true);
     if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') prefetchLine(sc.dialogue.text, sc.dialogue.character);
-    if (sc.description) {
-        await narrate(sc.description, null, true, withCaption ? () => {} : null);
+    if (narrationOf(sc)) {
+        await narrate(narrationOf(sc), null, true, withCaption ? () => {} : null);
         if (token !== viewer.token) return;
         markAllWordsRead();
     }
@@ -2359,8 +2405,8 @@ async function startReading() {
             await sleep(400);
             if (token !== viewer.token) return;
             const nextIm = sortedImages()[viewer.index + 1];
-            if (nextIm) prefetchLine(sceneOf(nextIm).description, '__narrator__');
-            if (viewer.index === 0 && voiceCfg.intro) { music.duck(true); await narrate('Il était une fois…', null, true); if (token !== viewer.token) return; await sleep(300); }
+            if (nextIm) prefetchLine(narrationOf(sceneOf(nextIm)), '__narrator__');
+            if (viewer.index === 0 && voiceCfg.intro && !/^\s*il était une fois/i.test(narrationOf(sceneOf(sortedImages()[0])))) { music.duck(true); await narrate('Il était une fois…', null, true); if (token !== viewer.token) return; await sleep(300); }
             await readScene(sceneOf(sortedImages()[viewer.index]), token, true);
         }
         if (token !== viewer.token) return;
@@ -2652,7 +2698,7 @@ function drawRecFrame() {
     }
 
     // texte de la scène, mot courant surligné
-    const txt = sc.description || '';
+    const txt = narrationOf(sc);
     if (txt) {
         ctx.font = '40px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
         const words = txt.split(/\s+/).filter(Boolean);
@@ -3029,7 +3075,7 @@ function stopAllVideos() {
     document.getElementById('voice-intro').addEventListener('change', e => { voiceCfg.intro = e.target.checked; saveVoiceCfg(); });
     document.getElementById('voice-narrator-test').addEventListener('click', () => {
         const sc = state.scenario && state.scenario.scenes[0];
-        speakLine(sc && sc.description ? 'Il était une fois… ' + sc.description : 'Il était une fois, dans une forêt enchantée, un petit lapin qui rêvait de trouver une carotte magique.', '__narrator__');
+        speakLine(sc && narrationOf(sc) ? 'Il était une fois… ' + narrationOf(sc) : 'Il était une fois, dans une forêt enchantée, un petit lapin qui rêvait de trouver une carotte magique.', '__narrator__');
     });
     document.getElementById('voice-auto-btn').addEventListener('click', () => { autoAssignVoices(true); renderVoicePanel(); showToast('Voix réattribuées', 'success'); });
 

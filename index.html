@@ -342,6 +342,17 @@
     .vm-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; } .vm-head button { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--panel-2); color: var(--ink); cursor: pointer; }
     .vm-box video { max-width: 100%; max-height: 75vh; border-radius: 8px; background: #000; margin: 0 auto; }
     .vm-info { font-size: 0.72rem; color: var(--ink-dim); text-align: center; }
+    .puter-status { margin-top: 0.45rem; font-size: 0.72rem; line-height: 1.6; }
+    .puter-status .ok { color: var(--success); font-weight: 700; } .puter-status .warn { color: var(--warn); }
+    .btn-mini { margin-top: 0.3rem; padding: 0.45rem 0.8rem; border-radius: 8px; border: 1px solid var(--info); background: transparent; color: var(--info); font: inherit; font-size: 0.74rem; font-weight: 700; cursor: pointer; }
+    .link-btn { border: none; background: none; color: var(--info); font: inherit; font-size: 0.72rem; text-decoration: underline; cursor: pointer; padding: 0; }
+    .version-badge { position: fixed; right: 12px; bottom: 10px; z-index: 90; padding: 0.3rem 0.65rem; border-radius: 20px; border: 1px solid var(--border); background: rgba(26,26,34,0.9); backdrop-filter: blur(6px); color: var(--ink-dim); font: inherit; font-size: 0.66rem; font-weight: 700; cursor: pointer; }
+    .version-badge:hover { color: var(--ink); border-color: var(--accent-child); }
+    .version-pop { position: fixed; right: 12px; bottom: 42px; z-index: 95; width: min(340px, calc(100vw - 24px)); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 0.74rem; }
+    .vp-head { display: flex; justify-content: space-between; margin-bottom: 0.5rem; } .vp-head span { color: var(--accent-child); font-weight: 700; }
+    .vp-row { padding: 0.35rem 0; border-top: 1px solid var(--border); color: var(--ink-dim); line-height: 1.45; }
+    .vp-v { display: inline-block; min-width: 2.8rem; color: var(--ink); font-weight: 700; }
+    @media print { .version-badge, .version-pop { display: none !important; } }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -489,6 +500,7 @@
                 <option value="polly">Voix IA Léa / Rémi — Amazon Polly via Puter (gratuit)</option>
             </select>
             <div class="voice-note" id="voice-engine-note"></div>
+            <div class="puter-status hidden" id="puter-status"></div>
         </div>
         <div class="control-row">
             <label class="control-label">Narrateur</label>
@@ -664,6 +676,8 @@
 <div class="status-bar" id="status-bar"><div class="spinner"></div><span id="status-text">Préparation…</span></div>
 <div class="toast" id="toast"><span class="toast-icon" id="toast-icon">✓</span><span id="toast-text">Message</span></div>
 
+<button type="button" class="version-badge" id="version-badge" title="Nouveautés de cette version"></button>
+<div class="version-pop hidden" id="version-pop"></div>
 <div id="print-pages"></div>
 <div class="video-modal hidden" id="video-modal"></div>
 
@@ -722,6 +736,15 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
+const APP_VERSION = '3.5.0';
+const APP_DATE = '03/11/2026';
+const CHANGELOG = [
+    ['3.5.0', 'Lecture et enregistrement fiables : plus aucun blocage, connexion Puter dans « Voix », son déverrouillé sur iPhone'],
+    ['3.4.0', 'Images Agnes récupérées via un relais : vidéo et PDF de nouveau possibles'],
+    ['3.3.0', 'Bruitages et effets selon la scène, galerie « Mes vidéos », test animé des voix'],
+    ['3.2.0', 'Vidéo MP4 aux formats TikTok, YouTube, Instagram et carré'],
+    ['3.1.0', 'Narrateur conte de fées, voix par personnage, 12 mélodies']
+];
 const BATCH_SCENES = 6;    // scènes demandées par appel texte (au-delà, l'histoire est écrite en plusieurs fois)
 
 const STYLES = {
@@ -963,6 +986,22 @@ function logConsole(message, type = 'info') {
     panel.scrollTop = panel.scrollHeight;
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+// Une promesse qui ne répond pas ne doit jamais bloquer la lecture
+function withTimeout(promise, ms, label) {
+    let t;
+    return Promise.race([promise, new Promise((_, rej) => { t = setTimeout(() => rej(new Error((label || 'Délai') + ' dépassé (' + Math.round(ms / 1000) + ' s)')), ms); })])
+        .finally(() => clearTimeout(t));
+}
+// iPhone/iPad : la voix et le son doivent être démarrés pendant le clic lui-même
+function unlockAudio() {
+    try { audioHub.get(); } catch (e) {}
+    try {
+        if (window.speechSynthesis && !speechSynthesis.speaking) {
+            const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'fr-FR';
+            speechSynthesis.speak(u);
+        }
+    } catch (e) {}
+}
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function setStatus(text) {
     const bar = document.getElementById('status-bar');
@@ -2056,6 +2095,7 @@ function charCfg(name) {
 // ── Test animé d'une voix : carte avec avatar, ondes et mots surlignés au fil de la lecture ──
 let _testToken = 0;
 async function testVoice(text, role) {
+    unlockAudio();
     const my = ++_testToken;
     const card = document.getElementById('vprev'), box = document.getElementById('vprev-text');
     const isNarr = role === '__narrator__';
@@ -2095,6 +2135,7 @@ function renderVoicePanel() {
     document.getElementById('voice-narrator').innerHTML = voiceOptionsHtml(eng, voiceCfg.narrator[eng]);
     const note = document.getElementById('voice-engine-note');
     const q = frBrowserVoices().filter(isQualityVoice).length;
+    setTimeout(updateCloudStatus, 0);
     note.innerHTML = eng === 'browser'
         ? 'Gratuit et hors ligne. ' + (q ? '⭐ = voix naturelles (' + q + ' trouvées).' : 'Pour des voix plus naturelles : ouvrez l\'app dans <b>Microsoft Edge</b> (voix « Natural ») ou installez une voix « améliorée » dans les réglages de l\'appareil.')
         : 'Voix IA neuronales via <b>Puter</b> : gratuit, sans clé API. Un compte Puter gratuit est demandé la première fois.' +
@@ -2137,6 +2178,47 @@ function loadPuter() {
     return _puterLoading;
 }
 
+// État des voix IA : on ne lance jamais une voix IA si Puter n'est pas connecté
+// (sa fenêtre de connexion serait invisible en plein écran et la lecture resterait bloquée)
+const cloud = { state: 'unknown', failures: 0, user: '' };
+async function ensureCloudReady() {
+    if (cloud.state === 'off') return false;
+    try {
+        const puter = await withTimeout(loadPuter(), 12000, 'Chargement de Puter');
+        const signed = puter.auth && typeof puter.auth.isSignedIn === 'function' ? puter.auth.isSignedIn() : true;
+        cloud.state = signed ? 'ok' : 'signin';
+        return signed;
+    } catch (e) { cloud.state = 'error'; logConsole('Voix IA : ' + e.message, 'warn'); return false; }
+}
+async function puterSignIn() {
+    const btn = document.getElementById('puter-signin');
+    try {
+        const puter = await withTimeout(loadPuter(), 12000, 'Chargement de Puter');
+        if (btn) btn.textContent = 'Connexion…';
+        await puter.auth.signIn();
+        cloud.state = 'ok'; cloud.failures = 0; _cloudWarned = false;
+        try { const u = await puter.auth.getUser(); cloud.user = (u && u.username) || ''; } catch (e) {}
+        showToast('Connecté à Puter : voix IA prêtes', 'success');
+    } catch (e) {
+        showToast('Connexion Puter annulée ou impossible', 'warn', 3500);
+    }
+    updateCloudStatus();
+}
+function updateCloudStatus() {
+    const box = document.getElementById('puter-status');
+    if (!box) return;
+    const on = voiceCfg.engine !== 'browser';
+    box.classList.toggle('hidden', !on);
+    if (!on) return;
+    const signed = window.puter && puter.auth && puter.auth.isSignedIn && puter.auth.isSignedIn();
+    if (signed) { cloud.state = cloud.state === 'off' ? 'off' : 'ok'; }
+    box.innerHTML = signed
+        ? '<span class="ok">✓ Connecté à Puter' + (cloud.user ? ' (' + esc(cloud.user) + ')' : '') + '</span>' + (cloud.state === 'off' ? ' · <span class="warn">voix IA en pause</span> <button type="button" class="link-btn" id="puter-retry">Réessayer</button>' : '')
+        : '<span class="warn">Non connecté : la voix de l\'appareil sera utilisée.</span> <button type="button" class="btn-mini" id="puter-signin">Se connecter à Puter (gratuit)</button>';
+    const b = document.getElementById('puter-signin'); if (b) b.onclick = puterSignIn;
+    const r = document.getElementById('puter-retry'); if (r) r.onclick = () => { cloud.state = 'ok'; cloud.failures = 0; _cloudWarned = false; updateCloudStatus(); };
+}
+
 const _ttsCache = new Map();   // texte + voix + ton → Promise<URL audio>
 function cloudAudioUrl(text, role) {
     const eng = voiceCfg.engine;
@@ -2172,7 +2254,7 @@ function cloudAudioUrl(text, role) {
     _ttsCache.set(key, p);
     return p;
 }
-function prefetchLine(text, role) { if (text && voiceCfg.engine !== 'browser') cloudAudioUrl(text, role).catch(() => {}); }
+function prefetchLine(text, role) { if (text && voiceCfg.engine !== 'browser' && cloud.state === 'ok') withTimeout(cloudAudioUrl(text, role), 25000).catch(() => {}); }
 
 let _currentAudio = null, _cloudWarned = false;
 function stopAllSpeech() {
@@ -2273,7 +2355,7 @@ async function speakBrowser(text, role, onWord, hooks = {}) {
 let _speakToken = 0;
 
 async function speakCloud(text, role, hooks = {}) {
-    const url = await cloudAudioUrl(text, role);
+    const url = await withTimeout(cloudAudioUrl(text, role), 15000, 'Voix IA');
     return new Promise(resolve => {
         const a = new Audio();
         if (rec.active) {      // pendant l'enregistrement, la voix passe par le bus audio pour être capturée
@@ -2286,7 +2368,8 @@ async function speakCloud(text, role, hooks = {}) {
         let done = false; const fin = () => { if (!done) { done = true; if (_currentAudio === a) _currentAudio = null; resolve(); } };
         a.onended = a.onerror = fin;
         a.play().catch(fin);
-        a.addEventListener('loadedmetadata', () => setTimeout(fin, (a.duration || 20) * 1000 + 2000));
+        a.addEventListener('loadedmetadata', () => setTimeout(fin, (isFinite(a.duration) && a.duration ? a.duration : 20) * 1000 + 2000));
+        setTimeout(() => { if (!a.duration) fin(); }, 12000);   // son jamais chargé : on continue
     });
 }
 
@@ -2295,14 +2378,23 @@ async function speakLine(text, role, onWord, hooks = {}) {
     if (!text) return;
     if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} _currentAudio = null; }
     if (voiceCfg.engine !== 'browser') {
-        try { return await speakCloud(text, role, hooks); }
-        catch (e1) { try { await sleep(400); return await speakCloud(text, role, hooks); } catch (e) {
-            if (!_cloudWarned) {
-                _cloudWarned = true;
-                logConsole('Voix IA indisponibles (' + e.message + ') → voix de l\'appareil.', 'warn');
-                showToast('Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 3500);
+        const ready = await ensureCloudReady();
+        if (ready) {
+            try { await speakCloud(text, role, hooks); cloud.failures = 0; return; }
+            catch (e) {
+                cloud.failures++;
+                logConsole('Voix IA : ' + e.message + ' → voix de l\'appareil.', 'warn');
+                if (cloud.failures >= 2 || /dépassé/.test(e.message)) {   // pas de réponse : inutile d'attendre à chaque phrase   // deux échecs de suite : on arrête d'attendre pour le reste de la lecture
+                    cloud.state = 'off';
+                    showToast('Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 4000);
+                    updateCloudStatus();
+                }
             }
-        } }
+        } else if (!_cloudWarned) {
+            _cloudWarned = true;
+            showToast(cloud.state === 'signin' ? 'Voix IA : connectez-vous à Puter dans « 🎙️ Voix ». Voix de l\'appareil utilisée.' : 'Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 5000);
+            updateCloudStatus();
+        }
     }
     return speakBrowser(text, role, onWord, hooks);
 }
@@ -2780,7 +2872,10 @@ function narrate(text, character, narrator, onWord) {
         if (tl) tl.start(d);
         return sleep(d * 1000).then(done);
     }
-    return speakLine(text, narrator ? '__narrator__' : character, tl ? ci => tl.boundary(ci) : null, { onStart: d => tl && tl.start(d) }).then(done);
+    const maxMs = 40000 + text.length * 200;   // toujours au-delà du délai des voix IA (15 s) + lecture de secours
+    return withTimeout(speakLine(text, narrator ? '__narrator__' : character, tl ? ci => tl.boundary(ci) : null, { onStart: d => tl && tl.start(d) }), maxMs, 'Lecture de la phrase')
+        .catch(e => { logConsole('Voix : ' + e.message + ', on continue.', 'warn'); _speakToken++; stopAllSpeech(); })
+        .then(done);
 }
 
 // Lit une scène : le narrateur lit la description (image animée, mots surlignés), puis le personnage parle
@@ -2813,7 +2908,9 @@ function markAllWordsRead() {
 
 async function startReading() {
     if (viewer.playing) return stopReading();
+    if (!viewerCount()) { showToast('Rien à lire : aucune image', 'warn'); return; }
     viewer.playing = true;
+    cloud.failures = 0; if (cloud.state === 'off') cloud.state = 'unknown';
     const token = ++viewer.token;
     document.getElementById('viewer').classList.add('reading');
     document.getElementById('vw-play').textContent = '⏸ Pause';
@@ -3216,6 +3313,7 @@ function openRecSetup() {
     }));
     m.querySelector('[data-act=cancel]').onclick = () => m.classList.add('hidden');
     m.querySelector('[data-act=go]').onclick = () => {
+        unlockAudio();
         const q = parseFloat(document.getElementById('vw-recq').value);
         m.classList.add('hidden');
         recordVideo(rec.format, q);
@@ -3677,7 +3775,7 @@ function stopAllVideos() {
     // ── Voix ──
     renderVoicePanel();
     if (speechSynth) speechSynth.addEventListener && speechSynth.addEventListener('voiceschanged', renderVoicePanel);
-    document.getElementById('voice-engine').addEventListener('change', e => { voiceCfg.engine = e.target.value; _cloudWarned = false; saveVoiceCfg(); renderVoicePanel(); if (e.target.value !== 'browser') loadPuter().catch(() => {}); });
+    document.getElementById('voice-engine').addEventListener('change', e => { voiceCfg.engine = e.target.value; _cloudWarned = false; saveVoiceCfg(); renderVoicePanel(); if (e.target.value !== 'browser') loadPuter().then(updateCloudStatus).catch(() => {}); });
     document.getElementById('voice-narrator').addEventListener('change', e => { voiceCfg.narrator[voiceCfg.engine] = e.target.value; saveVoiceCfg(); });
     document.getElementById('voice-style').addEventListener('change', e => { voiceCfg.narratorStyle = e.target.value; saveVoiceCfg(); });
     document.getElementById('voice-intro').addEventListener('change', e => { voiceCfg.intro = e.target.checked; saveVoiceCfg(); });
@@ -3706,7 +3804,7 @@ function stopAllVideos() {
     document.getElementById('vw-close').addEventListener('click', closeViewer);
     document.getElementById('vw-prev').addEventListener('click', () => viewerGo(-1));
     document.getElementById('vw-next').addEventListener('click', () => viewerGo(1));
-    document.getElementById('vw-play').addEventListener('click', startReading);
+    document.getElementById('vw-play').addEventListener('click', () => { unlockAudio(); startReading(); });
     document.querySelectorAll('[data-vmode]').forEach(b => b.addEventListener('click', () => setViewerMode(b.dataset.vmode)));
     document.getElementById('vw-music-vol').addEventListener('input', () => music.setVolume());
     document.getElementById('vw-music').addEventListener('change', e => {
@@ -3721,7 +3819,7 @@ function stopAllVideos() {
         if (e.key === 'Escape') closeViewer();
         else if (e.key === 'ArrowRight') viewerGo(1);
         else if (e.key === 'ArrowLeft') viewerGo(-1);
-        else if (e.key === ' ') { e.preventDefault(); startReading(); }
+        else if (e.key === ' ') { e.preventDefault(); unlockAudio(); startReading(); }
     });
     let touchX = null;
     const stage = document.getElementById('vw-stage');
@@ -3749,7 +3847,13 @@ function stopAllVideos() {
     });
     if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 
-    logConsole('Studio prêt.', 'info');
+    const vb = document.getElementById('version-badge'), vp = document.getElementById('version-pop');
+    vb.textContent = 'v' + APP_VERSION + ' · ' + APP_DATE;
+    vp.innerHTML = '<div class="vp-head"><b>Dessin Animé Studio</b><span>version ' + APP_VERSION + '</span></div>' +
+        CHANGELOG.map(([v, t]) => '<div class="vp-row"><span class="vp-v">' + v + '</span>' + esc(t) + '</div>').join('');
+    vb.addEventListener('click', e => { e.stopPropagation(); vp.classList.toggle('hidden'); });
+    document.addEventListener('click', e => { if (!vp.contains(e.target)) vp.classList.add('hidden'); });
+    logConsole('Studio prêt — version ' + APP_VERSION + ' du ' + APP_DATE + '.', 'info');
 })();
 </script>
 </body>

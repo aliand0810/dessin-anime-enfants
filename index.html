@@ -476,6 +476,7 @@
     .vc-g { width: 18px; text-align: center; color: var(--ink-dim); } .vc-vname { flex: 1; font-size: 0.8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .vc-voice button[data-fav] { filter: grayscale(1); opacity: 0.5; } .vc-voice button[data-fav].on { filter: none; opacity: 1; border-color: #ffd84d; }
     .voice-note .vc-tier { margin-right: 0.2rem; }
+    .vc-ok { color: var(--success); font-size: 0.68rem; font-weight: 700; }
     /* ── Mes personnages ── */
     .ch-card { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: 10px; background: var(--panel-2); margin-bottom: 0.45rem; border: 1px solid transparent; }
     .ch-card.picked { border-color: var(--success); background: rgba(45,138,78,0.1); }
@@ -926,9 +927,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.9.0';
+const APP_VERSION = '3.10.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.10.0', 'Voix neuronales Piper gratuites et illimitées (dans le navigateur) ; bascule automatique si les crédits Puter sont épuisés'],
     ['3.9.0', 'Catalogue des voix (Gemini, ElevenLabs, xAI, favoris, clés personnelles), catalogue de personnages réutilisables, notes'],
     ['3.8.0', 'Version ordinateur : l\'application occupe tout l\'écran (2 ou 3 colonnes), barre d\'information en bas, bouton plein écran'],
     ['3.7.0', 'Mode « 🔤 Lire » : lecture mot par mot pour les enfants (écoute, lecture guidée, lecture seul), grand texte, suivi des scènes lues'],
@@ -2329,6 +2331,44 @@ const ELEVEN_PREMADE = [
     { id: 'pNInz6obpgDQGcFmaJgB', g: 'h', label: 'Adam — grave' }, { id: 'VR6AewLTigWG4xSOukaG', g: 'h', label: 'Arnold — rocailleux' },
     { id: 'N2lVS1w4EtoT3dr4eOWO', g: 'h', label: 'Callum — rauque' }, { id: 'onwK4e9ZLuTAKqWW03F9', g: 'h', label: 'Daniel — conteur britannique' }
 ];
+// Piper : synthèse neuronale exécutée dans le navigateur (aucun serveur, aucun compte, aucun quota)
+const PIPER_VOICES = [
+    { id: 'fr_FR-siwis-medium', g: 'f', label: 'Siwis — féminine, claire (≈ 60 Mo)' },
+    { id: 'fr_FR-upmc-medium',  g: 'f', label: 'UPMC — féminine, posée (≈ 75 Mo)' },
+    { id: 'fr_FR-tom-medium',   g: 'h', label: 'Tom — masculine, chaleureuse (≈ 60 Mo)' },
+    { id: 'fr_FR-mls-medium',   g: 'h', label: 'MLS — masculine, lecture (≈ 75 Mo)' },
+    { id: 'fr_FR-gilles-low',   g: 'h', label: 'Gilles — masculine, légère (≈ 20 Mo)' },
+    { id: 'fr_FR-siwis-low',    g: 'f', label: 'Siwis légère (≈ 20 Mo)' }
+];
+const _piperStored = new Set();
+let _piperMod = null;
+async function loadPiper() {
+    if (_piperMod) return _piperMod;
+    if (!window.ort) await new Promise((res, rej) => {
+        const sc = document.createElement('script');
+        sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/onnxruntime-web/1.18.0/ort.wasm.min.js';
+        sc.onload = res; sc.onerror = () => rej(new Error('moteur ONNX introuvable (connexion ?)'));
+        document.head.appendChild(sc);
+    });
+    _piperMod = await import(new URL('vendor/piper/piper-tts-web.js', location.href).href);
+    try { (await _piperMod.stored()).forEach(v => _piperStored.add(v)); } catch (e) {}
+    return _piperMod;
+}
+async function piperSynth(o) {
+    const P = await loadPiper();
+    const voiceId = o.voice || PIPER_VOICES[0].id;
+    const first = !_piperStored.has(voiceId);
+    const name = (PIPER_VOICES.find(v => v.id === voiceId) || { label: voiceId }).label.split(' — ')[0];
+    if (first) logConsole('Téléchargement de la voix ' + name + ' (une seule fois, ensuite elle fonctionne hors ligne)…', 'info');
+    const blob = await P.predict({ text: o.text, voiceId }, pr => {
+        if (first && pr && pr.total) setStatus('Téléchargement de la voix ' + name + ' : ' + Math.round(pr.loaded / pr.total * 100) + ' %');
+    });
+    if (first) { _piperStored.add(voiceId); setStatus(null); logConsole('Voix ' + name + ' prête (gardée sur l\'appareil).', 'success'); updateCloudStatus(); }
+    return URL.createObjectURL(blob);
+}
+const piperVoiceFor = role => role === '__narrator__' ? (voiceCfg.narrator.piper || PIPER_VOICES[0].id) : ensureCharVoice(role, 'piper');
+const piperNeedsDownload = role => !_piperStored.has(piperVoiceFor(role));
+
 const KEYS_STORE = 'da_tts_keys';
 const ttsKeys = (() => { try { return JSON.parse(localStorage.getItem(KEYS_STORE) || '{}'); } catch (e) { return {}; } })();
 const saveTtsKeys = () => { try { localStorage.setItem(KEYS_STORE, JSON.stringify(ttsKeys)); } catch (e) {} };
@@ -2339,6 +2379,8 @@ const viaPuter = async (text, opts) => { const puter = await loadPuter(); const 
 
 const ENGINES = {
     browser: { label: 'Voix de l\'appareil', tier: 'free', note: 'Gratuit, hors ligne, aucune inscription.', instr: false },
+    piper: { label: '🧠 Voix neuronales intégrées (Piper)', tier: 'free', note: 'Gratuit et ILLIMITÉ : la voix est calculée dans votre navigateur, sans compte ni crédits. Au premier usage, chaque voix se télécharge une seule fois, puis fonctionne même hors ligne.', instr: false,
+        voices: () => PIPER_VOICES, synth: o => piperSynth(o) },
     openai: { label: '✨ OpenAI « conteur »', tier: 'puter', note: 'Joue le ton demandé (conte de fées, personnage). Très expressif.', instr: true,
         voices: () => OPENAI_VOICES,
         synth: o => viaPuter(o.text, { provider: 'openai', model: 'gpt-4o-mini-tts', voice: o.voice || 'shimmer', instructions: o.instr, response_format: 'mp3' }) },
@@ -2367,6 +2409,7 @@ const ENGINES = {
 };
 const TIER_LABEL = { free: 'Gratuit', puter: 'Gratuit · compte Puter', key: 'Payant · votre clé' };
 const isPuterEngine = e => ENGINES[e] && ENGINES[e].tier === 'puter';
+const isLocalNeural = e => e === 'piper';
 const isKeyEngine = e => ENGINES[e] && ENGINES[e].tier === 'key';
 function engineVoices(e) { return e === 'browser' ? frBrowserVoices().map(v => ({ id: v.name, label: v.name.replace(/Microsoft |Google /, ''), g: guessGender(v) })) : (ENGINES[e] && ENGINES[e].voices ? ENGINES[e].voices() : []); }
 
@@ -2395,7 +2438,8 @@ function ensureCharVoice(name, eng) {
     const list = engineVoices(eng);
     if (!list.length) return '';
     const g = characterGender(name);
-    const used = new Set(Object.values(voiceCfg.chars).map(c => c[eng]).concat([voiceCfg.narrator[eng]]));
+    // la voix du narrateur (même par défaut) est réservée : les personnages ont des voix différentes
+    const used = new Set(Object.values(voiceCfg.chars).map(c => c[eng]).concat([voiceCfg.narrator[eng] || list[0].id]));
     const pool = list.filter(v => v.g === g);
     const pick = (pool.length ? pool : list).find(v => !used.has(v.id)) || (pool[0] || list[0]);
     cfg[eng] = pick.id;
@@ -2413,7 +2457,7 @@ async function synthSample(eng, voice, text, isNarr) {
     if (isPuterEngine(eng) && !(await ensureCloudReady())) { showToast('Connectez-vous d\'abord à Puter (bouton dans « 🎙️ Voix »)', 'warn', 4000); return; }
     if (isKeyEngine(eng) && !ttsKeys[ENGINES[eng].keyName]) { showToast('Ajoutez d\'abord votre clé ' + ENGINES[eng].label.replace('🔑 ', ''), 'warn', 4000); return; }
     const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
-    const url = await withTimeout(ENGINES[eng].synth({ text, voice, instr: style.instr, isNarr: true, rate: style.rate, pitch: style.pitch }), 20000, 'Voix');
+    const url = await withTimeout(ENGINES[eng].synth({ text, voice, instr: style.instr, isNarr: true, rate: style.rate, pitch: style.pitch }), isLocalNeural(eng) && !_piperStored.has(voice) ? 240000 : 20000, 'Voix');
     stopAllSpeech();
     const a = new Audio(url); _currentAudio = a;
     await new Promise(r => { a.onended = a.onerror = r; a.play().catch(r); setTimeout(r, 30000); });
@@ -2443,7 +2487,7 @@ function openVoiceCatalog() {
                     '<div class="vc-enote">🔒 La clé reste sur cet appareil et n\'est envoyée qu\'au fournisseur.</div>';
             }
             html += '<div class="vc-voices">' + (voices.length ? voices.map(v =>
-                '<div class="vc-voice"><span class="vc-g">' + (v.g === 'f' ? '♀' : v.g === 'h' ? '♂' : '·') + '</span><span class="vc-vname">' + esc(v.label) + '</span>' +
+                '<div class="vc-voice"><span class="vc-g">' + (v.g === 'f' ? '♀' : v.g === 'h' ? '♂' : '·') + '</span><span class="vc-vname">' + esc(v.label) + (k === 'piper' && _piperStored.has(v.id) ? ' <span class="vc-ok">✓ téléchargée</span>' : '') + '</span>' +
                 '<button type="button" data-play="' + k + '|' + esc(v.id) + '" title="Écouter">▶</button>' +
                 '<button type="button" data-fav="' + k + '|' + esc(v.id) + '" class="' + (favs.has(k + '|' + v.id) ? 'on' : '') + '" title="Favori">⭐</button>' +
                 '<button type="button" data-narr="' + k + '|' + esc(v.id) + '" title="Utiliser pour le narrateur">📖 Narrateur</button></div>').join('')
@@ -2459,8 +2503,10 @@ function openVoiceCatalog() {
         if (t.dataset.play) {
             unlockAudio();
             const [eng, id] = t.dataset.play.split('|');
-            t.textContent = '…';
-            try { await synthSample(eng, id, sample, true); } catch (err) { showToast('Écoute impossible : ' + err.message.slice(0, 80), 'error', 4500); }
+            t.textContent = eng === 'piper' && !_piperStored.has(id) ? '⬇' : '…';
+            if (eng === 'piper') { try { await loadPiper(); } catch (e) {} }
+            try { await synthSample(eng, id, sample, true); }
+            catch (err) { showToast(isBalanceError(err) ? 'Crédits Puter épuisés : essayez les voix Piper, gratuites et illimitées' : 'Écoute impossible : ' + String(err.message || err).slice(0, 80), 'error', 5000); }
             t.textContent = '▶';
         } else if (t.dataset.fav) {
             const f = new Set(voiceCfg.favs || []); f.has(t.dataset.fav) ? f.delete(t.dataset.fav) : f.add(t.dataset.fav);
@@ -2582,6 +2628,7 @@ const cloud = { state: 'unknown', failures: 0, user: '' };
 async function ensureCloudReady() {
     if (cloud.state === 'off') return false;
     if (isKeyEngine(voiceCfg.engine)) { const ok = !!ttsKeys[ENGINES[voiceCfg.engine].keyName]; cloud.state = ok ? 'ok' : 'nokey'; return ok; }
+    if (isLocalNeural(voiceCfg.engine)) { cloud.state = 'ok'; return true; }
     try {
         const puter = await withTimeout(loadPuter(), 12000, 'Chargement de Puter');
         const signed = puter.auth && typeof puter.auth.isSignedIn === 'function' ? puter.auth.isSignedIn() : true;
@@ -2609,6 +2656,24 @@ function updateCloudStatus() {
     const on = voiceCfg.engine !== 'browser';
     box.classList.toggle('hidden', !on);
     if (!on) return;
+    if (isLocalNeural(voiceCfg.engine)) {
+        const need = [...new Set([piperVoiceFor('__narrator__')].concat(state.scenario ? state.scenario.characters.map(c => piperVoiceFor(c.name)) : []))];
+        const missing = need.filter(v => !_piperStored.has(v));
+        box.innerHTML = missing.length
+            ? '<span class="warn">' + missing.length + ' voix à télécharger (une seule fois).</span> <button type="button" class="btn-mini" id="piper-dl">⬇ Télécharger maintenant</button>'
+            : '<span class="ok">✓ Voix prêtes sur cet appareil : lecture illimitée, même hors ligne</span>';
+        const dl = document.getElementById('piper-dl');
+        if (dl) dl.onclick = async () => {
+            dl.disabled = true;
+            for (const v of missing) {
+                dl.textContent = 'Téléchargement…';
+                try { await piperSynth({ text: 'Bonjour.', voice: v }); } catch (e) { showToast('Téléchargement impossible : ' + (e.message || e), 'error', 5000); break; }
+            }
+            updateCloudStatus();
+        };
+        loadPiper().then(() => { if (missing.length && missing.every(v => _piperStored.has(v))) updateCloudStatus(); }).catch(() => {});
+        return;
+    }
     if (isKeyEngine(voiceCfg.engine)) {
         const has = !!ttsKeys[ENGINES[voiceCfg.engine].keyName];
         box.innerHTML = has ? '<span class="ok">✓ Clé enregistrée sur cet appareil</span> · <button type="button" class="link-btn" id="key-open">Gérer</button>'
@@ -2626,8 +2691,8 @@ function updateCloudStatus() {
 }
 
 const _ttsCache = new Map();   // texte + voix + ton → Promise<URL audio>
-function cloudAudioUrl(text, role) {
-    const eng = voiceCfg.engine;
+function cloudAudioUrl(text, role, engOverride) {
+    const eng = engOverride || voiceCfg.engine;
     const E = ENGINES[eng];
     const isNarr = role === '__narrator__';
     const cfg = isNarr ? null : charCfg(role);
@@ -2750,8 +2815,11 @@ async function speakBrowser(text, role, onWord, hooks = {}) {
 }
 let _speakToken = 0;
 
-async function speakCloud(text, role, hooks = {}) {
-    const url = await withTimeout(cloudAudioUrl(text, role), 15000, 'Voix IA');
+async function speakCloud(text, role, hooks = {}, engOverride) {
+    const eng = engOverride || voiceCfg.engine;
+    // Piper : le premier usage d'une voix la télécharge (jusqu'à quelques minutes sur une connexion lente)
+    const limit = isLocalNeural(eng) ? (piperNeedsDownload(role) ? 240000 : 45000) : 15000;
+    const url = await withTimeout(cloudAudioUrl(text, role, eng), limit, 'Voix IA');
     return new Promise(resolve => {
         const a = new Audio();
         if (rec.active) {      // pendant l'enregistrement, la voix passe par le bus audio pour être capturée
@@ -2759,6 +2827,15 @@ async function speakCloud(text, role, hooks = {}) {
             try { audioHub.get().createMediaElementSource(a).connect(audioHub.out); } catch (e) {}
         }
         a.src = url;
+        if (isLocalNeural(eng)) {
+            // Piper ne règle pas lui-même le ton : vitesse pour le narrateur, vitesse + hauteur pour les personnages
+            const isNarr = role === '__narrator__';
+            const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
+            const tone = isNarr ? null : TONES[charCfg(role).tone] || TONES.normal;
+            const userRate = parseFloat((document.getElementById('vw-rate') || {}).value || 0.9) / 0.9;
+            a.preservesPitch = isNarr;
+            a.playbackRate = Math.max(0.7, Math.min(1.35, (isNarr ? style.rate / 0.9 : 1 + (tone.pitch - 1) * 0.3) * userRate));
+        }
         _currentAudio = a;
         a.addEventListener('playing', () => { if (hooks.onStart) hooks.onStart(a.duration || text.length * 0.07); }, { once: true });
         let done = false; const fin = () => { if (!done) { done = true; if (_currentAudio === a) _currentAudio = null; resolve(); } };
@@ -2770,27 +2847,48 @@ async function speakCloud(text, role, hooks = {}) {
 }
 
 // Point d'entrée unique : role = '__narrator__' ou le nom du personnage
+const isBalanceError = e => /insufficient|funding|balance|credit|crédit|payment|upgrade|402|quota/i.test(String(e && (e.message || '')) + ' ' + (() => { try { return JSON.stringify(e); } catch (x) { return ''; } })());
+function switchToPiper(reason) {
+    voiceCfg.engine = 'piper'; saveVoiceCfg(); _cloudWarned = false; cloud.state = 'unknown';
+    renderVoicePanel();
+    logConsole(reason + ' → passage aux voix Piper, gratuites et illimitées.', 'warn');
+    showToast(reason + ' : passage automatique aux voix Piper (gratuites et illimitées)', 'warn', 6000);
+}
 async function speakLine(text, role, onWord, hooks = {}) {
     if (!text) return;
     if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} _currentAudio = null; }
-    if (voiceCfg.engine !== 'browser') {
+    const eng = voiceCfg.engine;
+    if (isLocalNeural(eng)) {
+        try { await speakCloud(text, role, hooks, 'piper'); return; }
+        catch (e) { logConsole('Voix Piper : ' + (e.message || e) + ' → voix de l\'appareil pour cette phrase.', 'warn'); }
+    } else if (eng !== 'browser') {
         const ready = await ensureCloudReady();
         if (ready) {
             try { await speakCloud(text, role, hooks); cloud.failures = 0; return; }
             catch (e) {
-                cloud.failures++;
-                logConsole('Voix IA : ' + e.message + ' → voix de l\'appareil.', 'warn');
-                if (cloud.failures >= 2 || /dépassé/.test(e.message)) {   // pas de réponse : inutile d'attendre à chaque phrase   // deux échecs de suite : on arrête d'attendre pour le reste de la lecture
-                    cloud.state = 'off';
-                    showToast('Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 4000);
-                    updateCloudStatus();
+                if (isPuterEngine(eng) && isBalanceError(e)) {
+                    // crédits Puter épuisés : inutile d'insister, on passe aux voix illimitées
+                    switchToPiper('Crédits Puter épuisés');
+                    try { await speakCloud(text, role, hooks, 'piper'); return; } catch (e2) {}
+                } else {
+                    cloud.failures++;
+                    logConsole('Voix IA : ' + (e.message || e) + ' → autre voix pour cette phrase.', 'warn');
+                    if (cloud.failures >= 2 || /dépassé/.test(e.message || '')) {
+                        cloud.state = 'off';
+                        showToast('Voix IA indisponibles : ' + (_piperStored.size ? 'voix Piper' : 'voix de l\'appareil') + ' utilisée', 'warn', 4000);
+                        updateCloudStatus();
+                    }
                 }
             }
         } else if (!_cloudWarned) {
             _cloudWarned = true;
-            showToast(cloud.state === 'signin' ? 'Voix IA : connectez-vous à Puter dans « 🎙️ Voix ». Voix de l\'appareil utilisée.'
-                : cloud.state === 'nokey' ? 'Ajoutez votre clé dans « 📚 Catalogue des voix ». Voix de l\'appareil utilisée.' : 'Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 5000);
+            showToast(cloud.state === 'signin' ? 'Voix IA : connectez-vous à Puter dans « 🎙️ Voix ». Voix de secours utilisée.'
+                : cloud.state === 'nokey' ? 'Ajoutez votre clé dans « 📚 Catalogue des voix ». Voix de secours utilisée.' : 'Voix IA indisponibles : voix de secours utilisée', 'warn', 5000);
             updateCloudStatus();
+        }
+        // secours : une voix Piper déjà téléchargée (aucun délai), sinon la voix de l'appareil
+        if (_piperStored.size) {
+            try { const v = [..._piperStored][0]; voiceCfg.narrator.piper = voiceCfg.narrator.piper || v; await speakCloud(text, role, hooks, 'piper'); return; } catch (e) {}
         }
     }
     return speakBrowser(text, role, onWord, hooks);
@@ -3738,7 +3836,7 @@ function narrate(text, character, narrator, onWord) {
         if (tl) tl.start(d);
         return sleep(d * 1000).then(done);
     }
-    const maxMs = 40000 + text.length * 200;   // toujours au-delà du délai des voix IA (15 s) + lecture de secours
+    const maxMs = 40000 + text.length * 200 + (isLocalNeural(voiceCfg.engine) && piperNeedsDownload(narrator ? '__narrator__' : character) ? 240000 : 0);   // toujours au-delà du délai des voix IA (15 s) + lecture de secours
     return withTimeout(speakLine(text, narrator ? '__narrator__' : character, tl ? ci => tl.boundary(ci) : null, { onStart: d => tl && tl.start(d) }), maxMs, 'Lecture de la phrase')
         .catch(e => { logConsole('Voix : ' + e.message + ', on continue.', 'warn'); _speakToken++; stopAllSpeech(); })
         .then(done);

@@ -1,0 +1,4 @@
+piper-tts-web 1.0.5 (@mintplex-labs/piper-tts-web, licence MIT) — synthèse vocale Piper exécutée dans le navigateur.
+Adaptations : moteur ONNX chargé depuis cdnjs (window.ort) au lieu d'un nom de paquet ; un seul fil de calcul
+si la page n'est pas isolée. Les modèles de voix (Hugging Face, diffusionstudio/piper-voices) sont téléchargés
+à la première utilisation puis gardés sur l'appareil.

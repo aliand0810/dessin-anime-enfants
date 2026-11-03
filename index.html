@@ -353,6 +353,12 @@
     .vp-row { padding: 0.35rem 0; border-top: 1px solid var(--border); color: var(--ink-dim); line-height: 1.45; }
     .vp-v { display: inline-block; min-width: 2.8rem; color: var(--ink); font-weight: 700; }
     @media print { .version-badge, .version-pop { display: none !important; } }
+    .fx-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 0.45rem; }
+    .fx-lbl { font-size: 0.75rem; }
+    .fx-none { font-size: 0.7rem; color: var(--ink-faint); }
+    .fx-chip { border: 1px solid var(--border); background: var(--panel-2); color: var(--ink); border-radius: 12px; padding: 0.15rem 0.55rem; font: inherit; font-size: 0.68rem; cursor: pointer; }
+    .fx-chip:hover { border-color: var(--error); color: #ff9a9a; }
+    .fx-add { width: auto; padding: 0.15rem 1.6rem 0.15rem 0.5rem; font-size: 0.68rem; border-radius: 12px; background-position: right 0.45rem center; }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -736,9 +742,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.5.0';
+const APP_VERSION = '3.6.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.6.0', 'Ambiances fiables (plus d\'eau ou de pluie inventées), ambiances modifiables par scène, lecture qui ne s\'arrête plus, animations plus fluides'],
     ['3.5.0', 'Lecture et enregistrement fiables : plus aucun blocage, connexion Puter dans « Voix », son déverrouillé sur iPhone'],
     ['3.4.0', 'Images Agnes récupérées via un relais : vidéo et PDF de nouveau possibles'],
     ['3.3.0', 'Bruitages et effets selon la scène, galerie « Mes vidéos », test animé des voix'],
@@ -1315,7 +1322,7 @@ Génère un JSON valide :
       "narration": "1 ou 2 phrases de conte lues par le narrateur (style conte de fées, au passé, avec émotion)",
       "image_prompt": "Prompt en anglais décrivant l'action et le décor de la scène, carré 1:1",
       "dialogue": { "character": "Nom", "text": "Phrase très courte" },
-      "ambiance": ["0 à 3 mots parmi : vent, explosion, eau, pluie, orage, feu, oiseaux, magie, neige, nuit, fete"]
+      "ambiance": ["uniquement ce qui est explicitement dans la scène, parmi : vent, explosion, eau, pluie, orage, feu, oiseaux, magie, neige, nuit, fete ; [] si rien"]
     }
   ]
 }
@@ -1474,9 +1481,16 @@ function displayScenario(scenario) {
         if (s.dialogue && s.dialogue.text) {
             html += '<div style="margin-top:0.3rem;font-style:italic;color:var(--accent-child);">💬 ' + esc(s.dialogue.character) + ' : « ' + esc(s.dialogue.text) + ' »</div>';
         }
-        html += '</div>';
+        html += '<div class="fx-chips" data-i="' + (s.scene_number - 1) + '"></div></div>';
     });
-    document.getElementById('scenario-display').innerHTML = html;
+    const disp = document.getElementById('scenario-display');
+    disp.innerHTML = html;
+    scenario.scenes.forEach((s, i) => renderFxChips(i));
+    if (!disp._fxBound) {
+        disp._fxBound = true;
+        disp.addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) editSceneFx(+b.closest('.fx-chips').dataset.i, b.dataset.rm, false); });
+        disp.addEventListener('change', e => { if (e.target.classList.contains('fx-add') && e.target.value) editSceneFx(+e.target.closest('.fx-chips').dataset.i, e.target.value, true); });
+    }
 }
 function displayGeneratedImage(url, label, sceneIndex) {
     document.getElementById('section-images').classList.remove('hidden');
@@ -2267,11 +2281,13 @@ function stopAllSpeech() {
 // Les phrases en cours sont gardées en mémoire : sinon Chrome peut les supprimer et la voix s'arrête net
 const _liveUtterances = new Set();
 let _ttsKeepAlive = null;
-function ttsKeepAlive(on) {
-    // contournement Chrome : les voix « Google » s'arrêtent seules après ~15 s sans pause/reprise
+function ttsKeepAlive(on, voice) {
+    // contournement Chrome : seules les voix « Google » s'arrêtent seules après ~15 s ; sur les autres voix,
+    // la pause/reprise peut au contraire bloquer la lecture (voix Microsoft, Edge), donc on ne l'applique pas
     clearInterval(_ttsKeepAlive); _ttsKeepAlive = null;
     const isChromeDesktop = /Chrome/.test(navigator.userAgent) && !/Android|Mobile|Edg\//.test(navigator.userAgent);
-    if (on && isChromeDesktop) _ttsKeepAlive = setInterval(() => {
+    const isGoogleVoice = voice ? /google/i.test(voice.name) : !speechSynth.getVoices().some(v => v.default && !/google/i.test(v.name));
+    if (on && isChromeDesktop && isGoogleVoice) _ttsKeepAlive = setInterval(() => {
         if (speechSynth.speaking && !speechSynth.paused) { speechSynth.pause(); speechSynth.resume(); }
     }, 10000);
 }
@@ -2296,7 +2312,8 @@ function sayUtterance(text, voice, pitch, rate, onBoundary) {
         u.onerror = e => fin(started ? 'ok' : 'erreur:' + (e.error || '?'));
         speechSynth.speak(u);
         // jamais démarrée après 2,5 s → phrase perdue
-        setTimeout(() => { if (!started && !speechSynth.speaking) fin('perdue'); }, 2500);
+        // jamais démarrée après 6 s (les voix en ligne peuvent mettre du temps) → phrase perdue
+        setTimeout(() => { if (!started && !speechSynth.speaking && !speechSynth.pending) fin('perdue'); }, 6000);
         // sécurité : on n'abandonne que si le moteur ne parle plus (évite de couper ou de sauter)
         const maxMs = 4000 + text.length * 160 / rate;
         const t0 = Date.now();
@@ -2337,7 +2354,7 @@ async function speakBrowser(text, role, onWord, hooks = {}) {
         const pauses = parts.length * (isNarr ? 0.45 : 0.2);
         hooks.onStart(text.length * 0.07 / baseRate + pauses + 0.3);
     }
-    ttsKeepAlive(true);
+    ttsKeepAlive(true, voice);
     let offset = 0;
     for (let i = 0; i < parts.length; i++) {
         if (myToken !== _speakToken) break;
@@ -2468,34 +2485,72 @@ function makeWordTimeline(text, onWordIdx) {
 // BRUITAGES ET EFFETS D'AMBIANCE selon ce que raconte la scène
 // (sons générés en direct + animations par-dessus l'image, aussi dans la vidéo enregistrée)
 // ══════════════════════════════════════════════════════════════════
+// Mots entiers uniquement (les lettres accentuées comptent comme des lettres) : « sable », « marelle », « beau » ne déclenchent rien
+const FXW = alts => new RegExp('(?<![\\p{L}])(?:' + alts + ')(?![\\p{L}])', 'giu');
 const FX_TYPES = {
-    wind:      { label: '🌬 Vent',       re: /\b(vent|venteu|souffl|brise|bourrasque|rafale|tempête|tornade|wind|breez|gust|storm)/i },
-    explosion: { label: '💥 Explosion',  re: /(explos|\bboum|badaboum|patatras|pétard|feux? d'artifice|kaboom|\bbang\b|firework|blast)/i, oneShot: true },
-    water:     { label: '🌊 Eau',        re: /\b(eau|rivière|ruisseau|lac|mer|océan|plage|vague|nag|baign|piscine|bateau|cascade|fontaine|mare|flaque|sable|water|river|lake|\bsea\b|ocean|beach|wave|swim|boat|pond)/i },
-    rain:      { label: '🌧 Pluie',      re: /\b(pluie|pleu|pleuv|averse|goutte|parapluie|rain|drizzl|umbrella)/i },
-    thunder:   { label: '⛈ Orage',      re: /\b(orage|tonnerre|éclair|foudre|thunder|lightning)/i, oneShot: true },
-    fire:      { label: '🔥 Feu',        re: /\b(flamme|cheminée|bûche|braise|feu de camp|incendie|dragon crach|campfire|fireplace|flame)|\bfeu\b(?! d'artifice)/i },
-    birds:     { label: '🐦 Oiseaux',    re: /\b(oiseau|piaf|gazouill|pépie|chant des|forêt|prairie|jardin|printemps|nid|bird|forest|meadow|garden|spring)/i },
-    magic:     { label: '✨ Magie',       re: /\b(magi|fée|baguette|étincel|scintill|sortilège|enchant|paillette|licorne|sparkl|magic|fairy|wand|glitter|unicorn)/i },
-    snow:      { label: '❄ Neige',       re: /\b(neige|flocon|hiver|bonhomme de neige|glace|glacé|snow|winter|frost|ice)/i },
-    night:     { label: '🌙 Nuit',       re: /\b(nuit|étoile|lune|dodo|endormi|dormir|ciel noir|hibou|night|star|moon|sleep)/i },
-    party:     { label: '🎉 Fête',       re: /\b(fête|applaudi|bravo|hourra|anniversaire|youpi|célébr|danse|party|cheer|celebrat|birthday)/i, oneShot: true }
+    wind:      { label: '🌬 Vent',      re: FXW("vents?|venteu(?:x|se)|souffl(?:e|ait|aient|ent|a)|brises?|bourrasques?|rafales?|tempêtes?|tornades?") },
+    explosion: { label: '💥 Explosion', re: FXW("explosions?|explos(?:e|a|ait|ent|er|èrent)|boum|badaboum|kaboum|pétards?|feux? d['’]artifice"), oneShot: true },
+    water:     { label: '🌊 Eau',       re: FXW("eaux?|rivières?|ruisseaux?|lacs?|mers?|océans?|plages?|vagues?|piscines?|cascades?|fontaines?|étangs?|baignades?|se baign\\p{L}*|nag(?:e|es|ent|er|eait|eaient|ea|eant)|bateaux?|barques?|voiliers?|flaques?|rivages?|marées?") },
+    rain:      { label: '🌧 Pluie',     re: FXW("pluies?|pleut|pleuvait|pleuvoir|pleuvra|averses?|parapluies?|bruine") },
+    thunder:   { label: '⛈ Orage',     re: FXW("orages?|orageu(?:x|se)|tonnerre|foudre|éclairs? (?:zèbre|déchire|illumine)\\p{L}*"), oneShot: true },
+    fire:      { label: '🔥 Feu',       re: FXW("flammes?|cheminées?|bûches?|braises?|feu de camp|feu de bois|incendies?|crach(?:e|ait|ent) du feu|(?:le|du|un|au) feu(?! d['’]artifice| rouge| vert)") },
+    birds:     { label: '🐦 Oiseaux',   re: FXW("oiseaux?|oisillons?|gazouill\\p{L}*|pépi(?:e|ent|ait)|merles?|moineaux?|rossignols?|mésanges?") },
+    magic:     { label: '✨ Magie',      re: FXW("magie|magiques?|magicien(?:ne)?s?|fées?|étincel\\p{L}*|scintill\\p{L}*|sortilèges?|enchant\\p{L}*|paillettes?|licornes?") },
+    snow:      { label: '❄ Neige',      re: FXW("neiges?|neigeait|neige|flocons?|bonhommes? de neige|hivers?|givre|banquise") },
+    night:     { label: '🌙 Nuit',      re: FXW("nuits?|étoiles?|étoilée?s?|lune|clair de lune|minuit|crépuscule") },
+    party:     { label: '🎉 Fête',      re: FXW("fêtes?|applaudi\\p{L}*|bravo|hourra|youpi|anniversaires?|célébr\\p{L}*|confettis?"), oneShot: true }
 };
 const FX_FR = { vent: 'wind', explosion: 'explosion', eau: 'water', mer: 'water', plage: 'water', pluie: 'rain', orage: 'thunder',
                 feu: 'fire', oiseaux: 'birds', magie: 'magic', neige: 'snow', nuit: 'night', fete: 'party', 'fête': 'party' };
+// Négations : « pas d'eau », « sans pluie », « il ne pleut pas », « plus de vent »
+const FX_NEG_BEFORE = /(?:\b(?:pas|plus|jamais|aucune?|sans|ni|point|guère)\s+(?:d['’]\s*|de\s+(?:la\s+|l['’]\s*)?|du\s+|des\s+|une?\s+)?|\bne\s+|\bn['’]\s*)$/i;
 
-// Ambiances d'une scène : celles proposées par l'IA + celles détectées dans le texte
+function fxDetect(text) {
+    const found = new Set();
+    if (!text) return found;
+    Object.entries(FX_TYPES).forEach(([k, t]) => {
+        t.re.lastIndex = 0;
+        for (const m of text.matchAll(t.re)) {
+            const before = text.slice(Math.max(0, m.index - 28), m.index);
+            if (!FX_NEG_BEFORE.test(before)) { found.add(k); break; }
+        }
+    });
+    return found;
+}
+
+// Ambiances d'une scène : détectées dans le texte français (narration, description, dialogue),
+// ambiances de l'IA gardées seulement si le texte les confirme, puis réglages manuels de l'utilisateur
 function sceneFx(sc) {
     if (!sc) return [];
-    const keys = new Set();
-    (Array.isArray(sc.ambiance) ? sc.ambiance : []).forEach(a => {
-        const k = FX_FR[String(a).toLowerCase().normalize('NFC').trim()] || (FX_TYPES[a] ? a : null);
-        if (k) keys.add(k);
-    });
-    const txt = [narrationOf(sc), sc.description, sc.image_prompt, sc.dialogue && sc.dialogue.text].filter(Boolean).join(' ');
-    Object.entries(FX_TYPES).forEach(([k, t]) => { if (t.re.test(txt)) keys.add(k); });
+    const txt = [narrationOf(sc), sc.description, sc.dialogue && sc.dialogue.text].filter(Boolean).join(' . ');
+    const keys = fxDetect(txt);
     if (keys.has('thunder')) keys.add('rain');
+    (sc.fxOff || []).forEach(k => keys.delete(k));
+    (sc.fxOn || []).forEach(k => { if (FX_TYPES[k]) keys.add(k); });
     return [...keys].slice(0, 4);   // 4 ambiances maximum pour rester lisible
+}
+
+// Puces d'ambiance éditables dans le scénario (✕ pour retirer, menu pour ajouter)
+function renderFxChips(i) {
+    const sc = state.scenario && state.scenario.scenes[i];
+    const box = document.querySelector('.fx-chips[data-i="' + i + '"]');
+    if (!sc || !box) return;
+    const keys = sceneFx(sc);
+    box.innerHTML = '<span class="fx-lbl">🔊</span>' +
+        (keys.length ? keys.map(k => '<button type="button" class="fx-chip" data-rm="' + k + '" title="Retirer cette ambiance">' + FX_TYPES[k].label + ' ✕</button>').join('')
+                     : '<span class="fx-none">Aucune ambiance</span>') +
+        '<select class="fx-add"><option value="">+ ajouter</option>' +
+        Object.entries(FX_TYPES).filter(([k]) => !keys.includes(k)).map(([k, t]) => '<option value="' + k + '">' + t.label + '</option>').join('') + '</select>';
+}
+function editSceneFx(i, key, add) {
+    const sc = state.scenario.scenes[i];
+    sc.fxOn = (sc.fxOn || []).filter(k => k !== key);
+    sc.fxOff = (sc.fxOff || []).filter(k => k !== key);
+    if (add) sc.fxOn.push(key); else sc.fxOff.push(key);
+    renderFxChips(i);
+    saveProject();
+    if (state.projectId) saveToLibrary(true);
+    if (viewer.open && viewer.mode === 'story' && sortedImages()[viewer.index] && sortedImages()[viewer.index].sceneIndex === i) fx.setVisual(sceneFx(sc));
 }
 const fxEnabled = () => { const c = document.getElementById('vw-sfx'); return !c || c.checked; };
 
@@ -2586,6 +2641,7 @@ const fx = (() => {
         },
         setVolume() { if (bus) bus.gain.setTargetAtTime(vol(), ctx().currentTime, 0.2); },
         setVisual(sceneKeys) { keys = sceneKeys || []; sceneStart = performance.now(); flashes = []; parts = []; },
+        active(now) { return keys.length > 0 || flashes.some(f => now - f.t < 3000); },
         // secousse (px) pour l'image, selon les explosions récentes
         shake(now) {
             let a = 0;
@@ -2596,12 +2652,13 @@ const fx = (() => {
         draw(c2, x, y, w, h, now) {
             if (!fxEnabled() || (!keys.length && !flashes.length)) return;
             const t = now / 1000, age = (now - sceneStart) / 1000, k = w / 1000;
+            const dens = w < 500 ? 0.55 : 1;   // densité réduite sur petit écran : animation plus fluide
             const rand = (i, s) => { const v = Math.sin(i * 127.1 + s * 311.7) * 43758.5453; return v - Math.floor(v); };
             c2.save(); c2.beginPath(); c2.rect(x, y, w, h); c2.clip();
             const fadeIn = Math.min(1, age / 1.2);
             if (keys.includes('night')) {
                 c2.fillStyle = 'rgba(10,15,60,' + 0.4 * fadeIn + ')'; c2.fillRect(x, y, w, h);
-                for (let i = 0; i < 40; i++) { const a = 0.4 + 0.6 * Math.abs(Math.sin(t * (1 + rand(i, 1) * 2) + i)); c2.fillStyle = 'rgba(255,255,220,' + a * fadeIn + ')'; c2.beginPath(); c2.arc(x + rand(i, 2) * w, y + rand(i, 3) * h * 0.45, (1 + rand(i, 4) * 2) * k * 1.5, 0, 7); c2.fill(); }
+                for (let i = 0; i < 40 * dens; i++) { const a = 0.4 + 0.6 * Math.abs(Math.sin(t * (1 + rand(i, 1) * 2) + i)); c2.fillStyle = 'rgba(255,255,220,' + a * fadeIn + ')'; c2.beginPath(); c2.arc(x + rand(i, 2) * w, y + rand(i, 3) * h * 0.45, (1 + rand(i, 4) * 2) * k * 1.5, 0, 7); c2.fill(); }
             }
             if (keys.includes('water')) {
                 for (let b = 0; b < 4; b++) {
@@ -2624,23 +2681,23 @@ const fx = (() => {
             if (keys.includes('rain')) {
                 c2.fillStyle = 'rgba(30,40,70,' + 0.15 * fadeIn + ')'; c2.fillRect(x, y, w, h);
                 c2.strokeStyle = 'rgba(200,220,255,' + 0.55 * fadeIn + ')'; c2.lineWidth = 2 * k;
-                for (let i = 0; i < 70; i++) { const p = ((t * (1.2 + rand(i, 13)) + rand(i, 14)) % 1), xx = x + rand(i, 15) * w * 1.1 - p * 60 * k, yy = y - 40 * k + p * (h + 80 * k); c2.beginPath(); c2.moveTo(xx, yy); c2.lineTo(xx - 8 * k, yy + 28 * k); c2.stroke(); }
+                for (let i = 0; i < 70 * dens; i++) { const p = ((t * (1.2 + rand(i, 13)) + rand(i, 14)) % 1), xx = x + rand(i, 15) * w * 1.1 - p * 60 * k, yy = y - 40 * k + p * (h + 80 * k); c2.beginPath(); c2.moveTo(xx, yy); c2.lineTo(xx - 8 * k, yy + 28 * k); c2.stroke(); }
             }
             if (keys.includes('snow')) {
-                for (let i = 0; i < 60; i++) { const p = ((t * (0.08 + rand(i, 16) * 0.1) + rand(i, 17)) % 1), xx = x + rand(i, 18) * w + Math.sin(t + i) * 18 * k, yy = y - 10 + p * (h + 20); c2.fillStyle = 'rgba(255,255,255,' + 0.85 * fadeIn + ')'; c2.beginPath(); c2.arc(xx, yy, (2 + rand(i, 19) * 4) * k, 0, 7); c2.fill(); }
+                for (let i = 0; i < 60 * dens; i++) { const p = ((t * (0.08 + rand(i, 16) * 0.1) + rand(i, 17)) % 1), xx = x + rand(i, 18) * w + Math.sin(t + i) * 18 * k, yy = y - 10 + p * (h + 20); c2.fillStyle = 'rgba(255,255,255,' + 0.85 * fadeIn + ')'; c2.beginPath(); c2.arc(xx, yy, (2 + rand(i, 19) * 4) * k, 0, 7); c2.fill(); }
             }
             if (keys.includes('fire')) {
                 const gl = c2.createLinearGradient(0, y + h, 0, y + h * 0.4);
                 gl.addColorStop(0, 'rgba(255,120,20,' + (0.32 + 0.1 * Math.sin(t * 9)) * fadeIn + ')'); gl.addColorStop(1, 'rgba(255,120,20,0)');
                 c2.fillStyle = gl; c2.fillRect(x, y + h * 0.4, w, h * 0.6);
-                for (let i = 0; i < 26; i++) { const p = ((t * (0.25 + rand(i, 20) * 0.3) + rand(i, 21)) % 1); c2.fillStyle = 'rgba(255,' + (150 + Math.round(rand(i, 22) * 90)) + ',60,' + (1 - p) * fadeIn + ')'; c2.beginPath(); c2.arc(x + rand(i, 23) * w + Math.sin(t * 3 + i) * 15 * k, y + h - p * h * 0.7, (2 + rand(i, 24) * 3) * k, 0, 7); c2.fill(); }
+                for (let i = 0; i < 26 * dens; i++) { const p = ((t * (0.25 + rand(i, 20) * 0.3) + rand(i, 21)) % 1); c2.fillStyle = 'rgba(255,' + (150 + Math.round(rand(i, 22) * 90)) + ',60,' + (1 - p) * fadeIn + ')'; c2.beginPath(); c2.arc(x + rand(i, 23) * w + Math.sin(t * 3 + i) * 15 * k, y + h - p * h * 0.7, (2 + rand(i, 24) * 3) * k, 0, 7); c2.fill(); }
             }
             if (keys.includes('birds')) {
                 c2.strokeStyle = 'rgba(40,40,60,' + 0.7 * fadeIn + ')'; c2.lineWidth = 3 * k;
                 for (let i = 0; i < 4; i++) { const p = ((t * (0.06 + rand(i, 25) * 0.05) + rand(i, 26)) % 1), xx = x + p * w * 1.2 - 0.1 * w, yy = y + h * (0.08 + rand(i, 27) * 0.25) + Math.sin(t * 1.5 + i) * 12 * k, fl = Math.sin(t * 9 + i * 2) * 8 * k, s = (12 + rand(i, 28) * 8) * k; c2.beginPath(); c2.moveTo(xx - s, yy - fl); c2.quadraticCurveTo(xx - s / 2, yy - s / 3, xx, yy); c2.quadraticCurveTo(xx + s / 2, yy - s / 3, xx + s, yy - fl); c2.stroke(); }
             }
             if (keys.includes('magic')) {
-                for (let i = 0; i < 24; i++) { const a = Math.max(0, Math.sin(t * (1.5 + rand(i, 29) * 2) + i * 2.3)); if (a < 0.2) continue; const xx = x + rand(i, 30) * w, yy = y + rand(i, 31) * h, s = (6 + rand(i, 32) * 10) * k * a; c2.fillStyle = 'rgba(255,' + (210 + Math.round(rand(i, 33) * 45)) + ',' + (120 + Math.round(rand(i, 34) * 135)) + ',' + a * fadeIn + ')'; c2.beginPath(); c2.moveTo(xx, yy - s); c2.lineTo(xx + s * 0.25, yy - s * 0.25); c2.lineTo(xx + s, yy); c2.lineTo(xx + s * 0.25, yy + s * 0.25); c2.lineTo(xx, yy + s); c2.lineTo(xx - s * 0.25, yy + s * 0.25); c2.lineTo(xx - s, yy); c2.lineTo(xx - s * 0.25, yy - s * 0.25); c2.closePath(); c2.fill(); }
+                for (let i = 0; i < 24 * dens; i++) { const a = Math.max(0, Math.sin(t * (1.5 + rand(i, 29) * 2) + i * 2.3)); if (a < 0.2) continue; const xx = x + rand(i, 30) * w, yy = y + rand(i, 31) * h, s = (6 + rand(i, 32) * 10) * k * a; c2.fillStyle = 'rgba(255,' + (210 + Math.round(rand(i, 33) * 45)) + ',' + (120 + Math.round(rand(i, 34) * 135)) + ',' + a * fadeIn + ')'; c2.beginPath(); c2.moveTo(xx, yy - s); c2.lineTo(xx + s * 0.25, yy - s * 0.25); c2.lineTo(xx + s, yy); c2.lineTo(xx + s * 0.25, yy + s * 0.25); c2.lineTo(xx, yy + s); c2.lineTo(xx - s * 0.25, yy + s * 0.25); c2.lineTo(xx - s, yy); c2.lineTo(xx - s * 0.25, yy - s * 0.25); c2.closePath(); c2.fill(); }
             }
             // éclairs, explosions et confettis (événements ponctuels)
             flashes = flashes.filter(f => now - f.t < 3000);
@@ -2667,25 +2724,43 @@ const fx = (() => {
 })();
 
 // Calque d'effets dans la visionneuse (dessiné par-dessus l'image)
-let _fxRaf = 0;
+let _fxRaf = 0, _fxSize = { w: 0, h: 0, at: 0 }, _fxShake = '', _fxIdle = false;
 function fxLoop() {
     const cv = document.getElementById('vw-fx');
     if (!cv || !viewer.open) { _fxRaf = 0; return; }
-    const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
-    if (cv.width !== Math.round(r.width * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+    const now = performance.now();
+    const active = fxEnabled() && document.getElementById('vw-anim').checked && fx.active(now);
+    if (!active) {                                  // rien à animer : on efface une fois puis on met en veille
+        if (!_fxIdle) { cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); _fxIdle = true; }
+        const kb = document.querySelector('.vw-scene .vw-kb');
+        if (kb && _fxShake) { kb.style.translate = ''; _fxShake = ''; }
+        _fxRaf = requestAnimationFrame(fxLoop); return;
+    }
+    _fxIdle = false;
+    if (now - _fxSize.at > 1000 || !cv.width) {    // taille relue au plus une fois par seconde (évite de ralentir la page)
+        const r = cv.getBoundingClientRect(), dpr = Math.min(1.5, window.devicePixelRatio || 1);
+        const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
+        if (w && (cv.width !== w || cv.height !== h)) { cv.width = w; cv.height = h; }
+        _fxSize.at = now;
+    }
     const c2 = cv.getContext('2d');
     c2.clearRect(0, 0, cv.width, cv.height);
-    const now = performance.now();
-    if (document.getElementById('vw-anim').checked) fx.draw(c2, 0, 0, cv.width, cv.height, now);
-    const sh = fx.shake(now), kb = document.querySelector('.vw-scene .vw-kb');
-    if (kb) kb.style.translate = sh.x ? sh.x + 'px ' + sh.y + 'px' : '';
+    fx.draw(c2, 0, 0, cv.width, cv.height, now);
+    const sh = fx.shake(now), v = sh.x ? sh.x.toFixed(1) + 'px ' + sh.y.toFixed(1) + 'px' : '';
+    if (v !== _fxShake) { const kb = document.querySelector('.vw-scene .vw-kb'); if (kb) kb.style.translate = v; _fxShake = v; }
     _fxRaf = requestAnimationFrame(fxLoop);
 }
 function startFxLoop() { if (!_fxRaf) _fxRaf = requestAnimationFrame(fxLoop); }
 
 // Événements ponctuels : quand la narration atteint le mot (« explosion », « tonnerre », « hourra »…)
 function fxOnWord(word) {
-    ['explosion', 'thunder', 'party'].forEach(k => { if (FX_TYPES[k].re.test(word) && fx.keys().includes(k)) fx.trigger(k); });
+    const w = String(word).replace(/[^\p{L}'’-]/gu, '');
+    ['explosion', 'thunder', 'party'].forEach(k => {
+        if (!fx.keys().includes(k)) return;
+        const re = FX_TYPES[k].re; re.lastIndex = 0;
+        // un mot seul (« boum », « tonnerre », « hourra ») ou le début d'une expression (« feux » d'artifice)
+        if (re.test(w) || (k === 'explosion' && /^(feux?|boum|explos)/i.test(w))) fx.trigger(k);
+    });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2829,6 +2904,8 @@ function renderViewer() {
         cap.innerHTML = narrationOf(sc).split(/\s+/).filter(Boolean).map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
         box.appendChild(wrap);
         box.appendChild(cap);
+        const nx = sortedImages()[i + 1];
+        if (nx) { const pre = new Image(); pre.src = nx.localUrl || nx.url; }
         startFxLoop();
     }
     document.getElementById('vw-counter').textContent = (i + 1) + ' / ' + n;
@@ -2916,6 +2993,7 @@ async function startReading() {
     document.getElementById('vw-play').textContent = '⏸ Pause';
     if (document.getElementById('vw-music').checked) music.start(document.getElementById('vw-music-style').value);
     while (viewer.playing && token === viewer.token) {
+      try {
         if (viewer.mode === 'pages') {
             const scenes = viewer.pageScenes[viewer.index] || [];
             if (!scenes.length) {                             // couverture / page Fin
@@ -2940,6 +3018,7 @@ async function startReading() {
             if (viewer.index === 0 && voiceCfg.intro && !/^\s*il était une fois/i.test(narrationOf(sceneOf(sortedImages()[0])))) { music.duck(true); await narrate('Il était une fois…', null, true); if (token !== viewer.token) return; await sleep(300); }
             await readScene(sceneOf(sortedImages()[viewer.index]), token, true);
         }
+      } catch (e) { logConsole('Lecture : erreur sur la scène ' + (viewer.index + 1) + ' (' + e.message + '), on continue.', 'warn'); setPhase('idle'); music.duck(false); }
         if (token !== viewer.token) return;
         await sleep(900);
         if (!document.getElementById('vw-auto').checked) break;

@@ -456,6 +456,52 @@
         .layout { grid-template-columns: 440px minmax(0, 1fr) 420px; }
         body { font-size: 16px; }
     }
+    /* ── Catalogue des voix ── */
+    .vc-box { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; width: min(760px, 100%); max-height: 88vh; overflow-y: auto; padding: 1rem 1.1rem; }
+    .vc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; font-size: 1.02rem; }
+    .vc-x { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--panel-2); color: var(--ink); cursor: pointer; }
+    .vc-intro { font-size: 0.76rem; color: var(--ink-dim); line-height: 1.5; margin-bottom: 0.6rem; }
+    .vc-group { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); margin: 0.9rem 0 0.4rem; }
+    .vc-engine { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 0.45rem; background: var(--panel-2); }
+    .vc-engine summary { display: flex; align-items: center; gap: 0.6rem; padding: 0.6rem 0.8rem; cursor: pointer; font-size: 0.86rem; }
+    .vc-ename { font-weight: 700; flex: 1; } .vc-n { font-size: 0.7rem; color: var(--ink-faint); } .vc-cur { font-size: 0.7rem; color: var(--success); font-weight: 700; }
+    .vc-tier { font-size: 0.62rem; font-weight: 800; padding: 0.12rem 0.45rem; border-radius: 10px; white-space: nowrap; }
+    .t-free { background: rgba(45,138,78,0.18); color: #6fdc96; } .t-puter { background: rgba(74,108,247,0.18); color: #9db0ff; } .t-key { background: rgba(212,160,23,0.18); color: #ffd27a; }
+    .vc-enote { font-size: 0.72rem; color: var(--ink-dim); padding: 0 0.8rem 0.5rem; line-height: 1.45; }
+    .vc-key { display: flex; gap: 0.4rem; padding: 0 0.8rem 0.4rem; flex-wrap: wrap; }
+    .vc-key input { flex: 1; min-width: 180px; padding: 0.5rem 0.7rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: ui-monospace, monospace; font-size: 0.78rem; }
+    .vc-key button, .vc-voice button { border: 1px solid var(--border); background: var(--panel); color: var(--ink); font: inherit; font-size: 0.72rem; font-weight: 700; padding: 0.35rem 0.6rem; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+    .vc-voices { padding: 0 0.6rem 0.6rem; display: grid; gap: 0.3rem; }
+    .vc-voice { display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.4rem; border-radius: 8px; background: var(--panel); }
+    .vc-g { width: 18px; text-align: center; color: var(--ink-dim); } .vc-vname { flex: 1; font-size: 0.8rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vc-voice button[data-fav] { filter: grayscale(1); opacity: 0.5; } .vc-voice button[data-fav].on { filter: none; opacity: 1; border-color: #ffd84d; }
+    .voice-note .vc-tier { margin-right: 0.2rem; }
+    /* ── Mes personnages ── */
+    .ch-card { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem; border-radius: 10px; background: var(--panel-2); margin-bottom: 0.45rem; border: 1px solid transparent; }
+    .ch-card.picked { border-color: var(--success); background: rgba(45,138,78,0.1); }
+    .ch-thumb { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+    .ch-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .ch-info { flex: 1; min-width: 0; } .ch-name { font-weight: 800; font-size: 0.86rem; }
+    .ch-app { font-size: 0.7rem; color: var(--ink-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ch-meta { font-size: 0.66rem; color: var(--ink-faint); }
+    .ch-actions { display: flex; gap: 0.25rem; } .ch-actions button { width: 30px; height: 30px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel); cursor: pointer; font-size: 0.78rem; }
+    .ch-new { margin: 0.3rem 0 0; padding: 0.55rem; }
+    .ch-edit label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.76rem; color: var(--ink-dim); margin-bottom: 0.7rem; }
+    .ch-edit label small { color: var(--ink-faint); font-size: 0.66rem; } .ch-edit textarea { min-height: 80px; }
+    .picked-chars { display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center; margin-top: 0.6rem; }
+    .pc-lbl { font-size: 0.72rem; color: var(--success); font-weight: 700; }
+    .sc-char { white-space: nowrap; } .sc-star { border: none; background: none; color: var(--ink-faint); cursor: pointer; font-size: 0.95rem; padding: 0 0.15rem; } .sc-star.on { color: #ffd84d; }
+    /* ── Notes ── */
+    .notes-bar { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; } .notes-bar input { flex: 1; padding: 0.5rem 0.7rem; font-size: 0.8rem; } .notes-bar .btn-mini { margin: 0; white-space: nowrap; }
+    .note { background: #fff8d6; color: #3b3320; border-radius: 10px; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
+    .note.pinned { box-shadow: 0 0 0 2px #e5b800, 0 2px 6px rgba(0,0,0,0.25); }
+    .note-head { display: flex; gap: 0.3rem; align-items: center; }
+    .note-title { flex: 1; border: none !important; background: transparent !important; color: #3b3320 !important; font-weight: 800; font-size: 0.86rem; padding: 0.2rem 0 !important; }
+    .note-head button { border: none; background: none; cursor: pointer; font-size: 0.85rem; }
+    .note-text { width: 100%; min-height: 70px; border: none !important; background: transparent !important; color: #3b3320 !important; font-size: 0.8rem; padding: 0.2rem 0 !important; line-height: 1.45; resize: vertical; }
+    .note-text:focus, .note-title:focus { outline: none; }
+    .note-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.64rem; color: #8a7a4d; }
+    .note-foot .link-btn { color: #6b4ed6; font-size: 0.68rem; }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -517,6 +563,7 @@
     </div>
     <div class="section-body"><div class="section-content">
         <textarea id="idea-input" placeholder="Exemple : Un petit lapin nommé Pilou part à la recherche de sa carotte magique dans la forêt enchantée…"></textarea>
+        <div class="picked-chars hidden" id="picked-chars"></div>
     </div></div>
 </div>
 
@@ -598,13 +645,10 @@
     <div class="section-body"><div class="section-content">
         <div class="control-row">
             <label class="control-label">Moteur de voix</label>
-            <select id="voice-engine">
-                <option value="browser">Voix de l'appareil (gratuit, hors ligne)</option>
-                <option value="openai">✨ Voix IA « conteur » — OpenAI via Puter (gratuit)</option>
-                <option value="polly">Voix IA Léa / Rémi — Amazon Polly via Puter (gratuit)</option>
-            </select>
+            <select id="voice-engine"></select>
             <div class="voice-note" id="voice-engine-note"></div>
             <div class="puter-status hidden" id="puter-status"></div>
+            <button type="button" class="btn-secondary" id="voice-catalog-btn" style="margin:0.6rem 0 0;padding:0.6rem">📚 Catalogue des voix — écouter, favoris, autres moteurs</button>
         </div>
         <div class="control-row">
             <label class="control-label">Narrateur</label>
@@ -631,6 +675,28 @@
             <div id="voice-chars"></div>
             <button type="button" class="btn-secondary" id="voice-auto-btn" style="margin:0.5rem 0 0;padding:0.55rem">🎲 Réattribuer les voix automatiquement</button>
         </div>
+    </div></div>
+</div>
+
+<div class="section" id="section-characters">
+    <div class="section-header" data-toggle="section-characters">
+        <span class="section-title">🧸 Mes personnages <span id="char-count"></span></span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="voice-note" style="margin:0 0 0.6rem">Cochez ➕ les personnages à reprendre : la prochaine histoire les utilisera avec la même apparence et la même voix.</div>
+        <div id="char-list"><div class="lib-empty">Chargement…</div></div>
+    </div></div>
+</div>
+
+<div class="section" id="section-notes">
+    <div class="section-header" data-toggle="section-notes">
+        <span class="section-title">📝 Notes <span id="notes-count"></span></span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="notes-bar"><input type="text" id="notes-search" placeholder="🔍 Rechercher dans les notes"><button type="button" class="btn-mini" id="note-new">＋ Note</button></div>
+        <div id="notes-list"></div>
     </div></div>
 </div>
 
@@ -802,6 +868,7 @@
 <div class="version-pop hidden" id="version-pop"></div>
 <div id="print-pages"></div>
 <div class="video-modal hidden" id="video-modal"></div>
+<div class="video-modal hidden" id="voice-catalog"></div>
 
 <div class="viewer hidden" id="viewer" role="dialog" aria-label="Aperçu plein écran">
     <div class="vw-top">
@@ -859,9 +926,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.8.0';
+const APP_VERSION = '3.9.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.9.0', 'Catalogue des voix (Gemini, ElevenLabs, xAI, favoris, clés personnelles), catalogue de personnages réutilisables, notes'],
     ['3.8.0', 'Version ordinateur : l\'application occupe tout l\'écran (2 ou 3 colonnes), barre d\'information en bas, bouton plein écran'],
     ['3.7.0', 'Mode « 🔤 Lire » : lecture mot par mot pour les enfants (écoute, lecture guidée, lecture seul), grand texte, suivi des scènes lues'],
     ['3.6.0', 'Ambiances fiables (plus d\'eau ou de pluie inventées), ambiances modifiables par scène, lecture qui ne s\'arrête plus, animations plus fluides'],
@@ -898,11 +966,12 @@ const state = {
 const DB_NAME = 'dessin_anime_db', DB_STORE = 'projects';
 function openDB() {
     return new Promise((res, rej) => {
-        const r = indexedDB.open(DB_NAME, 2);
+        const r = indexedDB.open(DB_NAME, 3);
         r.onupgradeneeded = () => {
             const db = r.result;
             if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE, { keyPath: 'id' });
             if (!db.objectStoreNames.contains('videos')) db.createObjectStore('videos', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('characters')) db.createObjectStore('characters', { keyPath: 'id' });
         };
         r.onsuccess = () => res(r.result);
         r.onerror = () => rej(r.error);
@@ -1448,7 +1517,7 @@ Génère un JSON valide :
   ]
 }
 
-Réponds UNIQUEMENT en JSON valide, sans markdown.`;
+Réponds UNIQUEMENT en JSON valide, sans markdown.` + pickedCharsPrompt();
 
         let scenario = null;
         for (let tryN = 1; tryN <= 3 && !scenario; tryN++) {
@@ -1463,6 +1532,7 @@ Réponds UNIQUEMENT en JSON valide, sans markdown.`;
         scenario.scenes = scenario.scenes.slice(0, firstBatch);
         if (state.sceneCount > scenario.scenes.length) await extendScenario(scenario, idea);
 
+        await applyPickedChars(scenario);
         state.scenario = scenario;
         state.femaleCharacters = scenario.characters
             .filter(c => c.gender === 'femme' || /fille|femme|maman|mère|sœur|miss|mme|madame/i.test(c.name || ''))
@@ -1595,7 +1665,10 @@ function displayScenario(scenario) {
     section.classList.add('open');
     let html = '<h3>🎬 ' + esc(scenario.title) + '</h3>';
     html += '<div style="font-size:0.75rem;color:var(--ink-dim);margin-bottom:0.6rem;">Personnages : ' +
-        scenario.characters.map(c => esc(c.name) + ' (' + esc(c.gender) + ')').join(', ') + '</div>';
+        scenario.characters.map(c => {
+            const saved = _charsCache.some(x => x.name.toLowerCase() === (c.name || '').toLowerCase());
+            return '<span class="sc-char">' + esc(c.name) + ' (' + esc(c.gender) + ') <button type="button" class="sc-star' + (saved ? ' on' : '') + '" data-addchar="' + esc(c.name) + '" title="' + (saved ? 'Mettre à jour dans « Mes personnages »' : 'Ajouter à « Mes personnages »') + '">' + (saved ? '★' : '☆') + '</button></span>';
+        }).join(' ') + '</div>';
     scenario.scenes.forEach(s => {
         html += '<div class="scene-item"><span class="scene-num">Scène ' + s.scene_number + '</span>' + esc(s.description) +
             (s.narration && s.narration !== s.description ? '<div style="margin-top:0.3rem;color:var(--ink-dim);">📖 ' + esc(s.narration) + '</div>' : '');
@@ -1609,7 +1682,10 @@ function displayScenario(scenario) {
     scenario.scenes.forEach((s, i) => renderFxChips(i));
     if (!disp._fxBound) {
         disp._fxBound = true;
-        disp.addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (b) editSceneFx(+b.closest('.fx-chips').dataset.i, b.dataset.rm, false); });
+        disp.addEventListener('click', e => {
+            const b = e.target.closest('[data-rm]'); if (b) editSceneFx(+b.closest('.fx-chips').dataset.i, b.dataset.rm, false);
+            const c = e.target.closest('[data-addchar]'); if (c) addCharToCatalog(c.dataset.addchar);
+        });
         disp.addEventListener('change', e => { if (e.target.classList.contains('fx-add') && e.target.value) editSceneFx(+e.target.closest('.fx-chips').dataset.i, e.target.value, true); });
     }
 }
@@ -2227,6 +2303,188 @@ function charCfg(name) {
     return voiceCfg.chars[name];
 }
 
+// ══════════════════════════════════════════════════════════════════
+// CATALOGUE DE VOIX : moteurs gratuits, gratuits avec compte Puter, payants avec votre clé
+// ══════════════════════════════════════════════════════════════════
+const GEMINI_VOICES = [
+    ['Aoede', 'f', 'légère, aérée'], ['Kore', 'f', 'ferme, claire'], ['Leda', 'f', 'jeune, pétillante'], ['Zephyr', 'f', 'lumineuse'],
+    ['Callirrhoe', 'f', 'détendue'], ['Autonoe', 'f', 'chaleureuse'], ['Despina', 'f', 'douce, fluide'], ['Erinome', 'f', 'nette'],
+    ['Laomedeia', 'f', 'enjouée'], ['Achernar', 'f', 'tendre'], ['Gacrux', 'f', 'mûre, posée'], ['Pulcherrima', 'f', 'expressive'],
+    ['Vindemiatrix', 'f', 'apaisante'], ['Sulafat', 'f', 'chaude'],
+    ['Puck', 'h', 'joyeux, rebondissant'], ['Charon', 'h', 'informatif, posé'], ['Fenrir', 'h', 'vif, excité'], ['Orus', 'h', 'ferme'],
+    ['Enceladus', 'h', 'soufflé, intime'], ['Iapetus', 'h', 'clair'], ['Umbriel', 'h', 'décontracté'], ['Algieba', 'h', 'doux'],
+    ['Algenib', 'h', 'grave, rauque'], ['Rasalgethi', 'h', 'conteur'], ['Alnilam', 'h', 'assuré'], ['Schedar', 'h', 'égal'],
+    ['Achird', 'h', 'amical'], ['Zubenelgenubi', 'h', 'naturel'], ['Sadachbia', 'h', 'vivant'], ['Sadaltager', 'h', 'savant']
+].map(([id, g, d]) => ({ id, g, label: id + ' — ' + d }));
+const XAI_VOICES = [
+    { id: 'eve', g: 'f', label: 'Eve — féminine, vive' }, { id: 'ara', g: 'f', label: 'Ara — féminine, chaleureuse' },
+    { id: 'rex', g: 'h', label: 'Rex — masculine, assurée' }, { id: 'sal', g: 'h', label: 'Sal — douce, neutre' }, { id: 'leo', g: 'h', label: 'Leo — masculine, grave' }
+];
+// Voix de base ElevenLabs (le modèle multilingue v2 les fait parler en français)
+const ELEVEN_PREMADE = [
+    { id: '21m00Tcm4TlvDq8ikWAM', g: 'f', label: 'Rachel — calme, posée' }, { id: 'EXAVITQu4vr4xnSDxMaL', g: 'f', label: 'Bella — douce' },
+    { id: 'MF3mGyEYCl7XYWbV9V6O', g: 'f', label: 'Elli — jeune, émotive' }, { id: 'AZnzlk1XvdvUeBnXmlld', g: 'f', label: 'Domi — énergique' },
+    { id: 'XB0fDUnXU5powFXDhCwa', g: 'f', label: 'Charlotte — séduisante, posée' }, { id: 'pFZP5JQG7iQjIQuC4Bku', g: 'f', label: 'Lily — chaleureuse' },
+    { id: 'ErXwobaYiN019PkySvjV', g: 'h', label: 'Antoni — bien posé' }, { id: 'TxGEqnHWrfWFTfGW9XjX', g: 'h', label: 'Josh — jeune, profond' },
+    { id: 'pNInz6obpgDQGcFmaJgB', g: 'h', label: 'Adam — grave' }, { id: 'VR6AewLTigWG4xSOukaG', g: 'h', label: 'Arnold — rocailleux' },
+    { id: 'N2lVS1w4EtoT3dr4eOWO', g: 'h', label: 'Callum — rauque' }, { id: 'onwK4e9ZLuTAKqWW03F9', g: 'h', label: 'Daniel — conteur britannique' }
+];
+const KEYS_STORE = 'da_tts_keys';
+const ttsKeys = (() => { try { return JSON.parse(localStorage.getItem(KEYS_STORE) || '{}'); } catch (e) { return {}; } })();
+const saveTtsKeys = () => { try { localStorage.setItem(KEYS_STORE, JSON.stringify(ttsKeys)); } catch (e) {} };
+let _elevenUserVoices = null;     // voix du compte ElevenLabs (clé personnelle)
+
+const blobUrl = async res => { if (!res.ok) { let m = ''; try { m = (await res.text()).slice(0, 140); } catch (e) {} throw new Error('HTTP ' + res.status + ' ' + m); } return URL.createObjectURL(await res.blob()); };
+const viaPuter = async (text, opts) => { const puter = await loadPuter(); const a = await puter.ai.txt2speech(text, opts); if (!a || !a.src) throw new Error('Pas d\'audio'); return a.src; };
+
+const ENGINES = {
+    browser: { label: 'Voix de l\'appareil', tier: 'free', note: 'Gratuit, hors ligne, aucune inscription.', instr: false },
+    openai: { label: '✨ OpenAI « conteur »', tier: 'puter', note: 'Joue le ton demandé (conte de fées, personnage). Très expressif.', instr: true,
+        voices: () => OPENAI_VOICES,
+        synth: o => viaPuter(o.text, { provider: 'openai', model: 'gpt-4o-mini-tts', voice: o.voice || 'shimmer', instructions: o.instr, response_format: 'mp3' }) },
+    gemini: { label: '🌟 Google Gemini', tier: 'puter', note: '30 voix naturelles, multilingues, avec consignes de ton.', instr: true,
+        voices: () => GEMINI_VOICES,
+        synth: o => viaPuter(o.text, { provider: 'gemini', voice: o.voice || 'Aoede', instructions: o.instr }) },
+    elevenlabs: { label: '🎭 ElevenLabs (via Puter)', tier: 'puter', note: 'Voix très réalistes, idéales pour les contes.', instr: false,
+        voices: () => ELEVEN_PREMADE,
+        synth: o => viaPuter(o.text, { provider: 'elevenlabs', model: 'eleven_multilingual_v2', voice: o.voice || ELEVEN_PREMADE[0].id,
+            voice_settings: { stability: o.isNarr ? 0.55 : 0.35, similarity_boost: 0.75, style: o.isNarr ? 0.3 : 0.6 } }) },
+    polly: { label: 'Amazon Polly Léa / Rémi', tier: 'puter', note: 'Voix françaises natives, sobres et claires.', instr: false,
+        voices: () => POLLY_VOICES, synth: o => pollySynth(o) },
+    xai: { label: 'xAI Grok', tier: 'puter', note: '5 voix expressives, en français.', instr: false,
+        voices: () => XAI_VOICES,
+        synth: o => viaPuter(o.text, { provider: 'xai', voice: o.voice || 'eve', language: 'fr' }) },
+    el_key: { label: '🔑 ElevenLabs (ma clé)', tier: 'key', keyName: 'elevenlabs', note: 'Vos voix ElevenLabs, y compris vos voix clonées. Facturé sur votre compte ElevenLabs.', instr: false,
+        voices: () => _elevenUserVoices || ELEVEN_PREMADE,
+        synth: async o => blobUrl(await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(o.voice || ELEVEN_PREMADE[0].id) + '?output_format=mp3_44100_128', {
+            method: 'POST', headers: { 'xi-api-key': ttsKeys.elevenlabs || '', 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+            body: JSON.stringify({ text: o.text, model_id: 'eleven_multilingual_v2', voice_settings: { stability: o.isNarr ? 0.55 : 0.35, similarity_boost: 0.75, style: o.isNarr ? 0.3 : 0.6 } }) })) },
+    oa_key: { label: '🔑 OpenAI (ma clé)', tier: 'key', keyName: 'openai', note: 'Même qualité que « OpenAI conteur », facturé sur votre compte OpenAI.', instr: true,
+        voices: () => OPENAI_VOICES,
+        synth: async o => blobUrl(await fetch('https://api.openai.com/v1/audio/speech', {
+            method: 'POST', headers: { 'Authorization': 'Bearer ' + (ttsKeys.openai || ''), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: 'gpt-4o-mini-tts', voice: o.voice || 'shimmer', input: o.text, instructions: o.instr, response_format: 'mp3' }) })) }
+};
+const TIER_LABEL = { free: 'Gratuit', puter: 'Gratuit · compte Puter', key: 'Payant · votre clé' };
+const isPuterEngine = e => ENGINES[e] && ENGINES[e].tier === 'puter';
+const isKeyEngine = e => ENGINES[e] && ENGINES[e].tier === 'key';
+function engineVoices(e) { return e === 'browser' ? frBrowserVoices().map(v => ({ id: v.name, label: v.name.replace(/Microsoft |Google /, ''), g: guessGender(v) })) : (ENGINES[e] && ENGINES[e].voices ? ENGINES[e].voices() : []); }
+
+async function pollySynth(o) {
+    const v = POLLY_VOICES.find(x => x.id === o.voice) || POLLY_VOICES[0];
+    const rate = Math.round(100 * (o.rate || 1)), pitch = Math.round(100 * ((o.pitch || 1) - 1));
+    const prosody = v.engine === 'neural' ? '<prosody rate="' + rate + '%">' : '<prosody rate="' + rate + '%" pitch="' + (pitch >= 0 ? '+' : '') + pitch + '%">';
+    const safe = o.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/([.!?…])\s+/g, '$1<break time="450ms"/> ').replace(/,\s+/g, ',<break time="200ms"/> ');
+    return viaPuter('<speak>' + prosody + safe + '</prosody></speak>', { provider: 'aws-polly', voice: v.id, engine: v.engine, language: 'fr-FR', ssml: true });
+}
+
+async function loadElevenUserVoices() {
+    if (!ttsKeys.elevenlabs) return null;
+    const r = await fetch('https://api.elevenlabs.io/v1/voices', { headers: { 'xi-api-key': ttsKeys.elevenlabs } });
+    if (!r.ok) throw new Error('Clé ElevenLabs refusée (HTTP ' + r.status + ')');
+    const j = await r.json();
+    _elevenUserVoices = (j.voices || []).map(v => ({ id: v.voice_id, g: /female|woman|femme/i.test(JSON.stringify(v.labels || {})) ? 'f' : 'h',
+        label: v.name + (v.category === 'cloned' ? ' — clonée' : v.labels && v.labels.description ? ' — ' + v.labels.description : '') }));
+    return _elevenUserVoices;
+}
+
+// Voix d'un personnage pour un moteur : attribuée automatiquement si besoin (genre + voix différentes)
+function ensureCharVoice(name, eng) {
+    const cfg = voiceCfg.chars[name] || (voiceCfg.chars[name] = { tone: 'joyeux' });
+    if (cfg[eng] != null && cfg[eng] !== '') return cfg[eng];
+    const list = engineVoices(eng);
+    if (!list.length) return '';
+    const g = characterGender(name);
+    const used = new Set(Object.values(voiceCfg.chars).map(c => c[eng]).concat([voiceCfg.narrator[eng]]));
+    const pool = list.filter(v => v.g === g);
+    const pick = (pool.length ? pool : list).find(v => !used.has(v.id)) || (pool[0] || list[0]);
+    cfg[eng] = pick.id;
+    saveVoiceCfg();
+    return pick.id;
+}
+
+// Synthèse avec un moteur et une voix précis (catalogue : écoute d'un extrait)
+async function synthSample(eng, voice, text, isNarr) {
+    if (eng === 'browser') {
+        const vs = frBrowserVoices(); const v = vs.find(x => x.name === voice) || vs[0];
+        await quietSpeech();
+        return sayUtterance(text, v || null, 1, 0.9, null);
+    }
+    if (isPuterEngine(eng) && !(await ensureCloudReady())) { showToast('Connectez-vous d\'abord à Puter (bouton dans « 🎙️ Voix »)', 'warn', 4000); return; }
+    if (isKeyEngine(eng) && !ttsKeys[ENGINES[eng].keyName]) { showToast('Ajoutez d\'abord votre clé ' + ENGINES[eng].label.replace('🔑 ', ''), 'warn', 4000); return; }
+    const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
+    const url = await withTimeout(ENGINES[eng].synth({ text, voice, instr: style.instr, isNarr: true, rate: style.rate, pitch: style.pitch }), 20000, 'Voix');
+    stopAllSpeech();
+    const a = new Audio(url); _currentAudio = a;
+    await new Promise(r => { a.onended = a.onerror = r; a.play().catch(r); setTimeout(r, 30000); });
+}
+
+// ── Fenêtre « Catalogue des voix » ──
+function openVoiceCatalog() {
+    const m = document.getElementById('voice-catalog');
+    const favs = new Set(voiceCfg.favs || []);
+    const sample = 'Il était une fois, au cœur d\'une forêt enchantée, un petit lapin qui rêvait d\'aventures.';
+    const groups = [['free', '🆓 Gratuit, sans compte'], ['puter', '🎁 Gratuit avec un compte Puter'], ['key', '🔑 Payant avec ma clé']];
+    let html = '<div class="vc-box"><div class="vc-head"><b>📚 Catalogue des voix</b><button type="button" class="vc-x" data-x>✕</button></div>' +
+        '<div class="vc-intro">Écoutez les voix (▶), marquez vos préférées (⭐) et choisissez celle du narrateur. Les voix ⭐ apparaissent en premier dans les listes.' +
+        ' <b>Puter</b> offre des crédits gratuits ; s\'ils s\'épuisent, Puter peut proposer d\'en ajouter. Les moteurs « ma clé » sont facturés directement par le fournisseur.</div>';
+    groups.forEach(([tier, title]) => {
+        html += '<h4 class="vc-group">' + title + '</h4>';
+        Object.entries(ENGINES).filter(([, e]) => e.tier === tier).forEach(([k, e]) => {
+            const voices = engineVoices(k);
+            html += '<details class="vc-engine"' + (k === voiceCfg.engine ? ' open' : '') + '><summary><span class="vc-ename">' + e.label + '</span><span class="vc-tier t-' + tier + '">' + TIER_LABEL[tier] + '</span>' +
+                (k === voiceCfg.engine ? '<span class="vc-cur">● utilisé</span>' : '') + '<span class="vc-n">' + (voices.length || '—') + ' voix</span></summary>' +
+                '<div class="vc-enote">' + esc(e.note) + '</div>';
+            if (tier === 'key') {
+                const has = !!ttsKeys[e.keyName];
+                html += '<div class="vc-key"><input type="password" data-key="' + e.keyName + '" placeholder="Votre clé ' + (e.keyName === 'openai' ? 'OpenAI (sk-…)' : 'ElevenLabs') + '" value="' + (has ? '••••••••' : '') + '" autocomplete="off">' +
+                    '<button type="button" data-savekey="' + e.keyName + '">' + (has ? 'Remplacer' : 'Enregistrer') + '</button>' + (has ? '<button type="button" data-delkey="' + e.keyName + '">Retirer</button>' : '') +
+                    (k === 'el_key' && has ? '<button type="button" data-loadel>Charger mes voix</button>' : '') + '</div>' +
+                    '<div class="vc-enote">🔒 La clé reste sur cet appareil et n\'est envoyée qu\'au fournisseur.</div>';
+            }
+            html += '<div class="vc-voices">' + (voices.length ? voices.map(v =>
+                '<div class="vc-voice"><span class="vc-g">' + (v.g === 'f' ? '♀' : v.g === 'h' ? '♂' : '·') + '</span><span class="vc-vname">' + esc(v.label) + '</span>' +
+                '<button type="button" data-play="' + k + '|' + esc(v.id) + '" title="Écouter">▶</button>' +
+                '<button type="button" data-fav="' + k + '|' + esc(v.id) + '" class="' + (favs.has(k + '|' + v.id) ? 'on' : '') + '" title="Favori">⭐</button>' +
+                '<button type="button" data-narr="' + k + '|' + esc(v.id) + '" title="Utiliser pour le narrateur">📖 Narrateur</button></div>').join('')
+                : '<div class="vc-enote">Aucune voix française trouvée sur cet appareil.</div>') + '</div></details>';
+        });
+    });
+    html += '</div>';
+    m.innerHTML = html;
+    m.classList.remove('hidden');
+    m.onclick = async e => {
+        if (e.target === m || e.target.closest('[data-x]')) { m.classList.add('hidden'); stopAllSpeech(); return; }
+        const t = e.target.closest('button'); if (!t) return;
+        if (t.dataset.play) {
+            unlockAudio();
+            const [eng, id] = t.dataset.play.split('|');
+            t.textContent = '…';
+            try { await synthSample(eng, id, sample, true); } catch (err) { showToast('Écoute impossible : ' + err.message.slice(0, 80), 'error', 4500); }
+            t.textContent = '▶';
+        } else if (t.dataset.fav) {
+            const f = new Set(voiceCfg.favs || []); f.has(t.dataset.fav) ? f.delete(t.dataset.fav) : f.add(t.dataset.fav);
+            voiceCfg.favs = [...f]; saveVoiceCfg(); t.classList.toggle('on');
+        } else if (t.dataset.narr) {
+            const [eng, id] = t.dataset.narr.split('|');
+            voiceCfg.engine = eng; voiceCfg.narrator[eng] = id; saveVoiceCfg();
+            renderVoicePanel(); openVoiceCatalog();
+            showToast('Narrateur : ' + id + ' (' + ENGINES[eng].label.replace(/^\S+\s/, '') + ')', 'success');
+        } else if (t.dataset.savekey) {
+            const inp = m.querySelector('[data-key="' + t.dataset.savekey + '"]'); const v = inp.value.trim();
+            if (!v || /^•+$/.test(v)) { showToast('Collez la clé dans le champ', 'warn'); return; }
+            ttsKeys[t.dataset.savekey] = v; saveTtsKeys(); showToast('Clé enregistrée sur cet appareil', 'success');
+            if (t.dataset.savekey === 'elevenlabs') loadElevenUserVoices().then(() => openVoiceCatalog()).catch(err => showToast(err.message, 'error', 4500)); else openVoiceCatalog();
+        } else if (t.dataset.delkey) {
+            delete ttsKeys[t.dataset.delkey]; saveTtsKeys(); if (t.dataset.delkey === 'elevenlabs') _elevenUserVoices = null; openVoiceCatalog();
+        } else if (t.hasAttribute('data-loadel')) {
+            t.textContent = 'Chargement…';
+            try { const l = await loadElevenUserVoices(); showToast(l.length + ' voix chargées depuis votre compte', 'success'); openVoiceCatalog(); }
+            catch (err) { showToast(err.message, 'error', 4500); t.textContent = 'Charger mes voix'; }
+        }
+    };
+}
+
 // ── Test animé d'une voix : carte avec avatar, ondes et mots surlignés au fil de la lecture ──
 let _testToken = 0;
 async function testVoice(text, role) {
@@ -2251,30 +2509,35 @@ async function testVoice(text, role) {
 }
 
 // ── Panneau Voix ──
-function voiceOptionsHtml(engine, selected, role) {
-    if (engine === 'browser') {
-        const vs = frBrowserVoices();
-        if (!vs.length) return '<option value="">Voix française par défaut</option>';
-        return '<option value="">Automatique</option>' + vs.map(v =>
-            '<option value="' + esc(v.name) + '"' + (v.name === selected ? ' selected' : '') + '>' + (isQualityVoice(v) ? '⭐ ' : '') + esc(v.name.replace(/Microsoft |Google /, '')) + '</option>').join('');
-    }
-    const list = engine === 'openai' ? OPENAI_VOICES : POLLY_VOICES;
-    return list.map(v => '<option value="' + v.id + '"' + (v.id === selected ? ' selected' : '') + '>' + esc(v.label) + '</option>').join('');
+function voiceOptionsHtml(engine, selected) {
+    if (engine === 'browser' && !frBrowserVoices().length) return '<option value="">Voix française par défaut</option>';
+    const favs = new Set(voiceCfg.favs || []);
+    const list = engineVoices(engine).slice().sort((a, b) => favs.has(engine + '|' + b.id) - favs.has(engine + '|' + a.id));
+    const q = engine === 'browser' ? new Set(frBrowserVoices().filter(isQualityVoice).map(v => v.name)) : new Set();
+    return (engine === 'browser' ? '<option value="">Automatique</option>' : '') + list.map(v =>
+        '<option value="' + esc(v.id) + '"' + (v.id === selected ? ' selected' : '') + '>' + (favs.has(engine + '|' + v.id) ? '★ ' : q.has(v.id) ? '⭐ ' : '') + esc(v.label) + '</option>').join('');
 }
 
 function renderVoicePanel() {
     const eng = voiceCfg.engine;
-    document.getElementById('voice-engine').value = eng;
+    const sel = document.getElementById('voice-engine');
+    if (!sel.options.length) {
+        sel.innerHTML = [['free', 'Gratuit'], ['puter', 'Gratuit avec un compte Puter'], ['key', 'Payant avec ma clé']].map(([t, l]) =>
+            '<optgroup label="' + l + '">' + Object.entries(ENGINES).filter(([, e]) => e.tier === t).map(([k, e]) => '<option value="' + k + '">' + e.label + '</option>').join('') + '</optgroup>').join('');
+    }
+    if (!ENGINES[eng]) voiceCfg.engine = 'browser';
+    sel.value = voiceCfg.engine;
     document.getElementById('voice-style').value = voiceCfg.narratorStyle;
     document.getElementById('voice-intro').checked = !!voiceCfg.intro;
     document.getElementById('voice-narrator').innerHTML = voiceOptionsHtml(eng, voiceCfg.narrator[eng]);
     const note = document.getElementById('voice-engine-note');
     const q = frBrowserVoices().filter(isQualityVoice).length;
     setTimeout(updateCloudStatus, 0);
-    note.innerHTML = eng === 'browser'
-        ? 'Gratuit et hors ligne. ' + (q ? '⭐ = voix naturelles (' + q + ' trouvées).' : 'Pour des voix plus naturelles : ouvrez l\'app dans <b>Microsoft Edge</b> (voix « Natural ») ou installez une voix « améliorée » dans les réglages de l\'appareil.')
-        : 'Voix IA neuronales via <b>Puter</b> : gratuit, sans clé API. Un compte Puter gratuit est demandé la première fois.' +
-          (eng === 'openai' ? ' Le ton « conte de fées » et le ton de chaque personnage sont joués par l\'IA.' : '');
+    const E = ENGINES[eng] || ENGINES.browser;
+    note.innerHTML = '<span class="vc-tier t-' + E.tier + '">' + TIER_LABEL[E.tier] + '</span> ' + (eng === 'browser'
+        ? 'Hors ligne. ' + (q ? '⭐ = voix naturelles (' + q + ' trouvées).' : 'Pour des voix plus naturelles : ouvrez l\'app dans <b>Microsoft Edge</b> (voix « Natural ») ou installez une voix « améliorée » dans les réglages de l\'appareil.')
+        : esc(E.note) + (E.tier === 'puter' ? ' Via <b>Puter</b>, sans clé API ; un compte gratuit est demandé la première fois.' : '') +
+          (E.instr ? ' Le ton « conte de fées » et celui de chaque personnage sont joués par l\'IA.' : ''));
     const box = document.getElementById('voice-chars');
     const chars = state.scenario ? state.scenario.characters : [];
     if (!chars.length) { box.innerHTML = '<div class="lib-empty">Les personnages apparaîtront après la création du scénario.</div>'; return; }
@@ -2285,7 +2548,7 @@ function renderVoicePanel() {
         const row = document.createElement('div');
         row.className = 'vc-row';
         row.innerHTML = '<div class="vc-name">' + (characterGender(ch.name) === 'f' ? '👧' : '👦') + ' ' + esc(ch.name) + '</div>' +
-            '<select data-k="voice">' + voiceOptionsHtml(eng, cfg[eng]) + '</select>' +
+            '<select data-k="voice">' + voiceOptionsHtml(eng, eng === 'browser' ? cfg[eng] : ensureCharVoice(ch.name, eng)) + '</select>' +
             '<select data-k="tone">' + Object.entries(TONES).map(([k, t]) => '<option value="' + k + '"' + (k === cfg.tone ? ' selected' : '') + '>' + t.label + '</option>').join('') + '</select>' +
             '<button type="button" class="vc-test" title="Écouter">▶</button>';
         row.querySelector('[data-k=voice]').addEventListener('change', e => { voiceCfg.chars[ch.name][voiceCfg.engine] = e.target.value; saveVoiceCfg(); });
@@ -2318,6 +2581,7 @@ function loadPuter() {
 const cloud = { state: 'unknown', failures: 0, user: '' };
 async function ensureCloudReady() {
     if (cloud.state === 'off') return false;
+    if (isKeyEngine(voiceCfg.engine)) { const ok = !!ttsKeys[ENGINES[voiceCfg.engine].keyName]; cloud.state = ok ? 'ok' : 'nokey'; return ok; }
     try {
         const puter = await withTimeout(loadPuter(), 12000, 'Chargement de Puter');
         const signed = puter.auth && typeof puter.auth.isSignedIn === 'function' ? puter.auth.isSignedIn() : true;
@@ -2345,6 +2609,13 @@ function updateCloudStatus() {
     const on = voiceCfg.engine !== 'browser';
     box.classList.toggle('hidden', !on);
     if (!on) return;
+    if (isKeyEngine(voiceCfg.engine)) {
+        const has = !!ttsKeys[ENGINES[voiceCfg.engine].keyName];
+        box.innerHTML = has ? '<span class="ok">✓ Clé enregistrée sur cet appareil</span> · <button type="button" class="link-btn" id="key-open">Gérer</button>'
+                            : '<span class="warn">Clé manquante : la voix de l\'appareil sera utilisée.</span> <button type="button" class="btn-mini" id="key-open">Ajouter ma clé</button>';
+        document.getElementById('key-open').onclick = openVoiceCatalog;
+        return;
+    }
     const signed = window.puter && puter.auth && puter.auth.isSignedIn && puter.auth.isSignedIn();
     if (signed) { cloud.state = cloud.state === 'off' ? 'off' : 'ok'; }
     box.innerHTML = signed
@@ -2357,34 +2628,18 @@ function updateCloudStatus() {
 const _ttsCache = new Map();   // texte + voix + ton → Promise<URL audio>
 function cloudAudioUrl(text, role) {
     const eng = voiceCfg.engine;
+    const E = ENGINES[eng];
     const isNarr = role === '__narrator__';
     const cfg = isNarr ? null : charCfg(role);
     const tone = isNarr ? null : TONES[cfg.tone] || TONES.normal;
     const style = NARRATOR_STYLES[voiceCfg.narratorStyle] || NARRATOR_STYLES.fairy;
-    const voice = isNarr ? voiceCfg.narrator[eng] : cfg[eng];
+    const voice = isNarr ? (voiceCfg.narrator[eng] || (engineVoices(eng)[0] || {}).id) : ensureCharVoice(role, eng);
     const key = eng + '|' + voice + '|' + (isNarr ? voiceCfg.narratorStyle : cfg.tone) + '|' + text;
     if (_ttsCache.has(key)) return _ttsCache.get(key);
-    const p = (async () => {
-        const puter = await loadPuter();
-        let audio;
-        if (eng === 'openai') {
-            const ch = !isNarr && state.scenario ? state.scenario.characters.find(c => c.name === role) : null;
-            const instructions = isNarr ? style.instr
-                : "Tu joues " + role + (ch && ch.appearance ? ' (' + ch.appearance + ')' : '') + " dans un dessin animé pour enfants. " + (tone.instr || 'Voix expressive de personnage de dessin animé.') + " Joue l'émotion de la réplique. Parle en français.";
-            audio = await puter.ai.txt2speech(text, { provider: 'openai', model: 'gpt-4o-mini-tts', voice: voice || 'shimmer', instructions, response_format: 'mp3' });
-        } else {
-            const v = POLLY_VOICES.find(x => x.id === voice) || POLLY_VOICES[0];
-            const rate = Math.round(100 * (isNarr ? style.rate : tone.rate));
-            const pitch = Math.round(100 * ((isNarr ? style.pitch : tone.pitch) - 1));
-            const prosody = v.engine === 'neural'
-                ? '<prosody rate="' + rate + '%">'                                  // les voix neuronales ignorent la hauteur
-                : '<prosody rate="' + rate + '%" pitch="' + (pitch >= 0 ? '+' : '') + pitch + '%">';
-            const safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/([.!?…])\s+/g, '$1<break time="450ms"/> ').replace(/,\s+/g, ',<break time="200ms"/> ');
-            audio = await puter.ai.txt2speech('<speak>' + prosody + safe + '</prosody></speak>', { provider: 'aws-polly', voice: v.id, engine: v.engine, language: 'fr-FR', ssml: true });
-        }
-        if (!audio || !audio.src) throw new Error('Pas d\'audio');
-        return audio.src;
-    })();
+    const ch = !isNarr && state.scenario ? state.scenario.characters.find(c => c.name === role) : null;
+    const instr = isNarr ? style.instr
+        : "Tu joues " + role + (ch && ch.appearance ? ' (' + ch.appearance + ')' : '') + " dans un dessin animé pour enfants. " + (tone.instr || 'Voix expressive de personnage de dessin animé.') + " Joue l'émotion de la réplique. Parle en français.";
+    const p = E.synth({ text, voice, instr, isNarr, rate: isNarr ? style.rate : tone.rate, pitch: isNarr ? style.pitch : tone.pitch });
     p.catch(() => _ttsCache.delete(key));
     _ttsCache.set(key, p);
     return p;
@@ -2533,7 +2788,8 @@ async function speakLine(text, role, onWord, hooks = {}) {
             }
         } else if (!_cloudWarned) {
             _cloudWarned = true;
-            showToast(cloud.state === 'signin' ? 'Voix IA : connectez-vous à Puter dans « 🎙️ Voix ». Voix de l\'appareil utilisée.' : 'Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 5000);
+            showToast(cloud.state === 'signin' ? 'Voix IA : connectez-vous à Puter dans « 🎙️ Voix ». Voix de l\'appareil utilisée.'
+                : cloud.state === 'nokey' ? 'Ajoutez votre clé dans « 📚 Catalogue des voix ». Voix de l\'appareil utilisée.' : 'Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 5000);
             updateCloudStatus();
         }
     }
@@ -3181,6 +3437,190 @@ function stopReadMode(keepPosition) {
     _speakToken++;
     stopAllSpeech();
     if (!keepPosition) rd.cur = -1;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MES PERSONNAGES : catalogue réutilisable d'une histoire à l'autre
+// (même nom, même apparence pour les images, même voix et même ton)
+// ══════════════════════════════════════════════════════════════════
+const dbAllChars = () => dbOp('readonly', st => st.getAll(), 'characters');
+const dbPutChar = c => dbOp('readwrite', st => st.put(c), 'characters');
+const dbDelChar = id => dbOp('readwrite', st => st.delete(id), 'characters');
+const CHAR_PICK_KEY = 'da_chars_selected';
+const pickedChars = () => { try { return new Set(JSON.parse(localStorage.getItem(CHAR_PICK_KEY) || '[]')); } catch (e) { return new Set(); } };
+const savePicked = s => { try { localStorage.setItem(CHAR_PICK_KEY, JSON.stringify([...s])); } catch (e) {} };
+let _charsCache = [];
+
+// Miniature du personnage : l'image d'une scène où il parle (sinon la première)
+async function charThumb(name) {
+    const imgs = sortedImages();
+    const im = imgs.find(x => { const sc = sceneOf(x); return sc.dialogue && sc.dialogue.character === name; }) || imgs[0];
+    if (!im) return '';
+    try {
+        const img = await loadImageForCanvas(im.localUrl || im.url);
+        if (img._tainted) return '';
+        const c = document.createElement('canvas'); c.width = c.height = 120;
+        const s = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
+        c.getContext('2d').drawImage(img, ((img.naturalWidth || img.width) - s) / 2, ((img.naturalHeight || img.height) - s) / 2, s, s, 0, 0, 120, 120);
+        return c.toDataURL('image/jpeg', 0.75);
+    } catch (e) { return ''; }
+}
+
+async function addCharToCatalog(name) {
+    const ch = state.scenario && state.scenario.characters.find(c => c.name === name);
+    if (!ch) return;
+    const existing = _charsCache.find(c => c.name.toLowerCase() === name.toLowerCase());
+    const rec = Object.assign(existing || { id: 'c' + Date.now().toString(36), createdAt: Date.now(), uses: 0 }, {
+        name: ch.name, gender: ch.gender || (characterGender(ch.name) === 'f' ? 'femme' : 'homme'), appearance: ch.appearance || '',
+        tone: (voiceCfg.chars[ch.name] || {}).tone || guessTone(ch),
+        voices: Object.assign({}, voiceCfg.chars[ch.name] || {}), updatedAt: Date.now()
+    });
+    delete rec.voices.tone;
+    const th = await charThumb(ch.name); if (th) rec.thumb = th;
+    await dbPutChar(rec);
+    showToast((existing ? 'Personnage mis à jour : ' : 'Ajouté à « Mes personnages » : ') + ch.name, 'success');
+    renderCharCatalog();
+    if (state.scenario) displayScenario(state.scenario);
+}
+
+async function renderCharCatalog() {
+    const box = document.getElementById('char-list');
+    if (!box) return;
+    try { _charsCache = await dbAllChars(); } catch (e) { box.innerHTML = '<div class="lib-empty">Indisponible sur ce navigateur</div>'; return; }
+    _charsCache.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    const picked = pickedChars();
+    document.getElementById('char-count').textContent = _charsCache.length ? '(' + _charsCache.length + ')' : '';
+    box.innerHTML = (_charsCache.length ? '' : '<div class="lib-empty">Aucun personnage. Après une histoire, cliquez sur « ⭐ » à côté d\'un personnage dans le scénario, ou créez-en un.</div>') +
+        _charsCache.map(c => '<div class="ch-card' + (picked.has(c.id) ? ' picked' : '') + '" data-id="' + c.id + '">' +
+            '<div class="ch-thumb">' + (c.thumb ? '<img src="' + c.thumb + '" alt="">' : (/femme|fille|f$/i.test(c.gender) ? '👧' : '👦')) + '</div>' +
+            '<div class="ch-info"><div class="ch-name">' + esc(c.name) + '</div><div class="ch-app" title="' + esc(c.appearance) + '">' + esc(c.appearance || 'Apparence non décrite') + '</div>' +
+            '<div class="ch-meta">' + ((TONES[c.tone] || {}).label || '') + (c.uses ? ' · utilisé ' + c.uses + ' fois' : '') + '</div></div>' +
+            '<div class="ch-actions"><button type="button" data-pick title="Utiliser dans la prochaine histoire">' + (picked.has(c.id) ? '✅' : '➕') + '</button>' +
+            '<button type="button" data-edit title="Modifier">✏️</button><button type="button" data-del title="Supprimer">🗑</button></div></div>').join('') +
+        '<button type="button" class="btn-secondary ch-new" id="char-new">＋ Nouveau personnage</button>';
+    renderPickedChips();
+}
+
+function renderPickedChips() {
+    const box = document.getElementById('picked-chars');
+    if (!box) return;
+    const picked = pickedChars();
+    const list = _charsCache.filter(c => picked.has(c.id));
+    box.classList.toggle('hidden', !list.length);
+    box.innerHTML = list.length ? '<span class="pc-lbl">🧸 Personnages imposés :</span>' + list.map(c => '<button type="button" class="fx-chip" data-unpick="' + c.id + '" title="Retirer">' + esc(c.name) + ' ✕</button>').join('') : '';
+}
+
+function editCharDialog(c) {
+    const m = document.getElementById('voice-catalog');
+    const isNew = !c;
+    c = c || { id: 'c' + Date.now().toString(36), name: '', gender: 'homme', appearance: '', tone: 'joyeux', voices: {}, createdAt: Date.now(), uses: 0 };
+    m.innerHTML = '<div class="vc-box ch-edit"><div class="vc-head"><b>' + (isNew ? '＋ Nouveau personnage' : '✏️ ' + esc(c.name)) + '</b><button type="button" class="vc-x" data-x>✕</button></div>' +
+        '<label>Nom<input type="text" id="ce-name" value="' + esc(c.name) + '" placeholder="Ex. : Pilou"></label>' +
+        '<label>Genre<select id="ce-gender"><option value="homme">Garçon / masculin</option><option value="femme">Fille / féminin</option></select></label>' +
+        '<label>Apparence <small>(précise et en anglais de préférence : elle est reprise telle quelle dans chaque image pour garder le même personnage)</small>' +
+        '<textarea id="ce-app" placeholder="Ex. : small white rabbit with long pink ears, blue scarf, big round eyes">' + esc(c.appearance) + '</textarea></label>' +
+        '<label>Ton de la voix<select id="ce-tone">' + Object.entries(TONES).map(([k, t]) => '<option value="' + k + '">' + t.label + '</option>').join('') + '</select></label>' +
+        '<div class="vw-modal-actions"><button type="button" class="vw-ghost" data-x>Annuler</button><button type="button" class="vw-play" id="ce-save">💾 Enregistrer</button></div></div>';
+    m.querySelector('#ce-gender').value = /femme|fille|f$/i.test(c.gender) ? 'femme' : 'homme';
+    m.querySelector('#ce-tone').value = c.tone || 'joyeux';
+    m.classList.remove('hidden');
+    m.onclick = e => { if (e.target === m || e.target.closest('[data-x]')) m.classList.add('hidden'); };
+    m.querySelector('#ce-save').onclick = async () => {
+        const name = m.querySelector('#ce-name').value.trim();
+        if (!name) { showToast('Donnez un nom au personnage', 'warn'); return; }
+        Object.assign(c, { name, gender: m.querySelector('#ce-gender').value, appearance: m.querySelector('#ce-app').value.trim(), tone: m.querySelector('#ce-tone').value, updatedAt: Date.now() });
+        await dbPutChar(c);
+        m.classList.add('hidden');
+        showToast('Personnage enregistré', 'success');
+        renderCharCatalog();
+    };
+}
+
+// Avant d'écrire une histoire : consigne pour l'IA avec les personnages imposés
+function pickedCharsPrompt() {
+    const picked = pickedChars();
+    const list = _charsCache.filter(c => picked.has(c.id));
+    if (!list.length) return '';
+    return '\n\nPersonnages imposés (garde EXACTEMENT ces noms, genres et apparences, tu peux en ajouter d\'autres si l\'histoire le demande) :\n' +
+        list.map(c => '- ' + c.name + ' (' + c.gender + ') : ' + (c.appearance || 'apparence libre')).join('\n');
+}
+// Après : on remet l'apparence, la voix et le ton enregistrés (cohérence des images et des voix)
+async function applyPickedChars(scenario) {
+    const picked = pickedChars();
+    const list = _charsCache.filter(c => picked.has(c.id));
+    for (const c of list) {
+        let ch = scenario.characters.find(x => (x.name || '').toLowerCase() === c.name.toLowerCase());
+        if (!ch) { ch = { name: c.name }; scenario.characters.push(ch); }
+        ch.name = c.name; ch.gender = c.gender;
+        if (c.appearance) ch.appearance = c.appearance;
+        voiceCfg.chars[c.name] = Object.assign({}, voiceCfg.chars[c.name] || {}, c.voices || {}, { tone: c.tone || 'joyeux' });
+        c.uses = (c.uses || 0) + 1; c.updatedAt = Date.now();
+        dbPutChar(c).catch(() => {});
+    }
+    if (list.length) { saveVoiceCfg(); logConsole('Personnages du catalogue repris : ' + list.map(c => c.name).join(', '), 'success'); }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// NOTES : idées et rappels pour les prochaines histoires
+// ══════════════════════════════════════════════════════════════════
+const NOTES_KEY = 'da_notes';
+const loadNotes = () => { try { return JSON.parse(localStorage.getItem(NOTES_KEY) || '[]'); } catch (e) { return []; } };
+const saveNotes = n => { try { localStorage.setItem(NOTES_KEY, JSON.stringify(n)); } catch (e) { showToast('Notes non enregistrées : espace plein', 'error'); } };
+let _noteTimer = null;
+
+function renderNotes() {
+    const box = document.getElementById('notes-list');
+    if (!box) return;
+    const q = (document.getElementById('notes-search').value || '').toLowerCase().trim();
+    const notes = loadNotes().sort((a, b) => (b.pin - a.pin) || (b.updatedAt - a.updatedAt));
+    document.getElementById('notes-count').textContent = notes.length ? '(' + notes.length + ')' : '';
+    const shown = notes.filter(n => !q || (n.title + ' ' + n.text).toLowerCase().includes(q));
+    box.innerHTML = shown.length ? shown.map(n => '<div class="note' + (n.pin ? ' pinned' : '') + '" data-id="' + n.id + '">' +
+        '<div class="note-head"><input class="note-title" value="' + esc(n.title) + '" placeholder="Titre de la note">' +
+        '<button type="button" data-npin title="Épingler">' + (n.pin ? '📌' : '📍') + '</button><button type="button" data-ndel title="Supprimer">🗑</button></div>' +
+        '<textarea class="note-text" placeholder="Idée d\'histoire, personnage, réglage à retenir…">' + esc(n.text) + '</textarea>' +
+        '<div class="note-foot"><span>' + (n.project ? '📚 ' + esc(n.project) + ' · ' : '') + new Date(n.updatedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</span>' +
+        '<button type="button" class="link-btn" data-nuse title="Copier dans « Votre histoire »">↪ Utiliser comme idée</button></div></div>').join('')
+        : '<div class="lib-empty">' + (q ? 'Aucune note ne correspond.' : 'Aucune note. Notez ici vos idées pour les prochaines histoires.') + '</div>';
+}
+function updateNote(id, patch, rerender) {
+    const notes = loadNotes(); const n = notes.find(x => x.id === id); if (!n) return;
+    Object.assign(n, patch, { updatedAt: Date.now() }); saveNotes(notes);
+    if (rerender) renderNotes();
+}
+function initNotes() {
+    const box = document.getElementById('notes-list');
+    document.getElementById('note-new').onclick = () => {
+        const notes = loadNotes();
+        notes.push({ id: 'n' + Date.now().toString(36), title: '', text: '', pin: 0, project: (state.scenario && state.scenario.title) || '', createdAt: Date.now(), updatedAt: Date.now() });
+        saveNotes(notes); document.getElementById('notes-search').value = ''; renderNotes();
+        const first = box.querySelector('.note-title'); if (first) first.focus();
+    };
+    document.getElementById('notes-search').oninput = renderNotes;
+    box.addEventListener('input', e => {
+        const card = e.target.closest('.note'); if (!card) return;
+        // enregistrement automatique, champ par champ (le titre et le texte ne s'écrasent plus)
+        updateNote(card.dataset.id, { [e.target.classList.contains('note-title') ? 'title' : 'text']: e.target.value });
+    });
+    box.addEventListener('click', e => {
+        const card = e.target.closest('.note'); if (!card) return;
+        const id = card.dataset.id;
+        if (e.target.closest('[data-ndel]')) {
+            if (!confirm('Supprimer cette note ?')) return;
+            saveNotes(loadNotes().filter(n => n.id !== id)); renderNotes();
+        } else if (e.target.closest('[data-npin]')) {
+            const n = loadNotes().find(x => x.id === id); updateNote(id, { pin: n && n.pin ? 0 : 1 }, true);
+        } else if (e.target.closest('[data-nuse]')) {
+            const n = loadNotes().find(x => x.id === id); if (!n) return;
+            const idea = document.getElementById('idea-input');
+            idea.value = (idea.value.trim() ? idea.value.trim() + '\n' : '') + [n.title, n.text].filter(Boolean).join(' : ');
+            idea.dispatchEvent(new Event('input'));
+            document.getElementById('section-idea').classList.add('open');
+            idea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast('Note copiée dans « Votre histoire »', 'success');
+        }
+    });
+    renderNotes();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -4193,6 +4633,21 @@ function stopAllVideos() {
     });
     renderLibrary();
     renderVideoLibrary();
+    renderCharCatalog();
+    initNotes();
+    document.getElementById('voice-catalog-btn').addEventListener('click', openVoiceCatalog);
+    document.getElementById('char-list').addEventListener('click', async e => {
+        if (e.target.closest('#char-new')) return editCharDialog(null);
+        const card = e.target.closest('.ch-card'); if (!card) return;
+        const c = _charsCache.find(x => x.id === card.dataset.id); if (!c) return;
+        if (e.target.closest('[data-pick]')) { const p = pickedChars(); p.has(c.id) ? p.delete(c.id) : p.add(c.id); savePicked(p); renderCharCatalog(); }
+        else if (e.target.closest('[data-edit]')) editCharDialog(c);
+        else if (e.target.closest('[data-del]')) { if (confirm('Supprimer « ' + c.name + ' » de vos personnages ?')) { await dbDelChar(c.id); const p = pickedChars(); p.delete(c.id); savePicked(p); renderCharCatalog(); } }
+    });
+    document.getElementById('picked-chars').addEventListener('click', e => {
+        const b = e.target.closest('[data-unpick]'); if (!b) return;
+        const p = pickedChars(); p.delete(b.dataset.unpick); savePicked(p); renderCharCatalog();
+    });
     document.getElementById('vw-sfx-vol').addEventListener('input', () => fx.setVolume());
     document.getElementById('vw-sfx').addEventListener('change', e => { if (!e.target.checked) fx.stop(); });
     document.getElementById('vprev-stop').addEventListener('click', () => {
@@ -4300,13 +4755,13 @@ function stopAllVideos() {
     if (!document.documentElement.requestFullscreen) fsBtn.classList.add('hidden');
 
     // ── Disposition ordinateur : 3e colonne (bibliothèque, vidéos) sur grand écran ──
-    const sideIds = ['restore-btn', 'section-videos-lib', 'section-library'];
+    const sideIds = ['restore-btn', 'section-characters', 'section-notes', 'section-videos-lib', 'section-library'];
     const placeSide = () => {
         const wide = window.innerWidth >= 1600;
         const target = document.getElementById(wide ? 'side-col' : 'controls-col');
         sideIds.forEach(id => { const el = document.getElementById(id); if (el && el.parentNode !== target) target.appendChild(el); });
         document.body.classList.toggle('wide', wide);
-        if (wide) ['section-videos-lib', 'section-library'].forEach(id => document.getElementById(id).classList.add('open'));
+        if (wide) ['section-characters', 'section-notes', 'section-videos-lib', 'section-library'].forEach(id => document.getElementById(id).classList.add('open'));
     };
     placeSide();
     let _rz; window.addEventListener('resize', () => { clearTimeout(_rz); _rz = setTimeout(placeSide, 150); });

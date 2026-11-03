@@ -213,6 +213,22 @@
     .lib-actions { display: flex; gap: 0.3rem; }
     .lib-actions button { width: 32px; height: 32px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel); color: var(--ink); cursor: pointer; }
 
+    .layout-panel { background: var(--panel-2); border-radius: 8px; padding: 0.8rem; margin: 0.8rem 0 0.4rem; }
+    .layout-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); margin-bottom: 0.6rem; }
+    .layout-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem; margin-bottom: 0.6rem; }
+    .layout-grid label { font-size: 0.68rem; color: var(--ink-dim); display: flex; flex-direction: column; gap: 0.25rem; }
+    .layout-grid select { padding: 0.55rem 0.7rem; font-size: 0.8rem; }
+    .layout-summary { font-size: 0.75rem; color: var(--accent-child); margin: 0.5rem 0; font-weight: 600; }
+    .page-previews { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem; }
+    .page-previews canvas { height: 150px; width: auto; flex-shrink: 0; border-radius: 3px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); background: #fff; }
+    #print-pages { display: none; }
+    @media print {
+        body.printing-pages > *:not(#print-pages) { display: none !important; }
+        body.printing-pages #print-pages { display: block; }
+        body.printing-pages #print-pages canvas { display: block; width: 100%; height: auto; page-break-after: always; break-after: page; }
+        body.printing-pages #print-pages canvas:last-child { page-break-after: auto; break-after: auto; }
+        body.printing-pages { background: #fff; padding: 0; }
+    }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -393,6 +409,48 @@
         <label class="board-check"><input type="checkbox" id="opt-bubbles" checked> Bulles de dialogue</label>
         <label class="board-check"><input type="checkbox" id="opt-captions" checked> Légendes de scène</label>
         <label class="board-check"><input type="checkbox" id="opt-titlebar" checked> Titre en haut</label>
+        <div class="layout-panel">
+            <div class="layout-title">📐 Mise en page PDF / impression</div>
+            <div class="layout-grid">
+                <label>Images par page
+                    <select id="pp-select">
+                        <option value="1">1 — pleine page</option>
+                        <option value="2">2</option>
+                        <option value="4">4</option>
+                        <option value="6" selected>6</option>
+                        <option value="9">9</option>
+                        <option value="12">12</option>
+                        <option value="16">16 — planche contact</option>
+                    </select>
+                </label>
+                <label>Orientation
+                    <select id="orient-select">
+                        <option value="portrait" selected>Portrait</option>
+                        <option value="landscape">Paysage</option>
+                    </select>
+                </label>
+                <label>Format
+                    <select id="format-select">
+                        <option value="a4" selected>A4</option>
+                        <option value="a5">A5 (petit livre)</option>
+                        <option value="a3">A3 (affiche)</option>
+                        <option value="letter">Letter (US)</option>
+                    </select>
+                </label>
+                <label>Marges
+                    <select id="margin-select">
+                        <option value="small">Fines</option>
+                        <option value="normal" selected>Normales</option>
+                        <option value="large">Larges (reliure)</option>
+                    </select>
+                </label>
+            </div>
+            <label class="board-check"><input type="checkbox" id="opt-cover" checked> Page de couverture</label>
+            <label class="board-check"><input type="checkbox" id="opt-endpage" checked> Page « Fin »</label>
+            <label class="board-check"><input type="checkbox" id="opt-pagenum" checked> Numéros de page</label>
+            <div class="layout-summary" id="layout-summary"></div>
+            <div class="page-previews" id="page-previews"></div>
+        </div>
         <div class="player-controls" style="padding:0.7rem 0 0;background:none;">
             <button type="button" id="board-recompose-btn">🔄 Réassembler</button>
             <button type="button" id="board-download-btn">⬇ PNG</button>
@@ -439,6 +497,7 @@
 <div class="status-bar" id="status-bar"><div class="spinner"></div><span id="status-text">Préparation…</span></div>
 <div class="toast" id="toast"><span class="toast-icon" id="toast-icon">✓</span><span id="toast-text">Message</span></div>
 
+<div id="print-pages"></div>
 <canvas id="noSleepCanvas" width="2" height="2"></canvas>
 <video id="noSleepVideo" playsinline muted loop></video>
 
@@ -1367,6 +1426,10 @@ function renderBoard(canvas, imgs, loaded, opts) {
     const contentW = cols * panel + (cols - 1) * gap;
     const left = (canvas.width - contentW) / 2;
 
+    const rowsH = rows * (panel + captionH) + (rows - 1) * gap;
+    const top = opts.height
+        ? Math.max(outer + titleH, outer + titleH + (canvas.height - outer * 2 - titleH - footerH - rowsH) / 2)
+        : outer + titleH;
     ctx.fillStyle = isComic ? '#fffdf5' : '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1383,7 +1446,7 @@ function renderBoard(canvas, imgs, loaded, opts) {
         const inRow = Math.min(cols, n - r * cols);           // centre la dernière ligne si incomplète
         const rowOffset = (cols - inRow) * (panel + gap) / 2;
         const x = left + rowOffset + c * (panel + gap);
-        const y = outer + titleH + r * (panel + captionH + gap);
+        const y = top + r * (panel + captionH + gap);
         const num = (opts.numberOffset || 0) + k + 1;
 
         if (loaded[k]) ctx.drawImage(loaded[k], x, y, panel, panel);
@@ -1439,79 +1502,194 @@ async function composeBoard() {
     });
     setStatus(null);
     if (_boardTainted) logConsole('Planche affichée. Export PNG/PDF direct bloqué par le serveur d\'images : utilisez « Imprimer → PDF ».', 'warn');
+    schedulePreview();
     logConsole((o.isComic ? 'BD' : 'Planche') + ' assemblée : ' + n + ' cases, ' + cols + ' colonne(s)', 'success');
 }
 
 // ══════════════════════════════════════════════════════════════════
 // EXPORT PDF (A4, 6 cases par page, couverture)
 // ══════════════════════════════════════════════════════════════════
-const PDF_PER_PAGE = 6;   // 2 colonnes × 3 lignes
-async function exportPDF() {
+// Formats papier en mm (portrait)
+const PAPER = { a4: [210, 297], a5: [148, 210], a3: [297, 420], letter: [215.9, 279.4] };
+const MARGIN = { small: 0.025, normal: 0.05, large: 0.08 };  // fraction de la largeur
+const PX_PER_MM = 150 / 25.4;                                // rendu à 150 dpi
+
+function layoutSettings() {
+    const perPage = parseInt(document.getElementById('pp-select').value);
+    const landscape = document.getElementById('orient-select').value === 'landscape';
+    const format = document.getElementById('format-select').value;
+    let [wmm, hmm] = PAPER[format];
+    if (landscape) [wmm, hmm] = [hmm, wmm];
+    return {
+        perPage, landscape, format, wmm, hmm,
+        W: Math.round(wmm * PX_PER_MM), H: Math.round(hmm * PX_PER_MM),
+        margin: MARGIN[document.getElementById('margin-select').value],
+        cover: document.getElementById('opt-cover').checked,
+        endPage: document.getElementById('opt-endpage').checked,
+        pageNum: document.getElementById('opt-pagenum').checked
+    };
+}
+
+// Grille colonnes × lignes adaptée à l'orientation
+function gridFor(perPage, landscape) {
+    const g = { 1: [1, 1], 2: [1, 2], 4: [2, 2], 6: [2, 3], 9: [3, 3], 12: [3, 4], 16: [4, 4] }[perPage] || [2, 3];
+    return landscape ? [g[1], g[0]] : g;
+}
+
+// Taille de case maximale qui tient dans la page
+function fitPanel(L, cols, rows, o) {
+    const capR = o.withCaptions ? (o.isComic ? 90 : 60) / 700 : 0;
+    const outer = Math.round(L.W * L.margin);
+    const footerH = L.pageNum ? 50 : 0;
+    let panel = 700;
+    for (let k = 0; k < 4; k++) {   // itère : marges et espacements dépendent de la taille de case
+        const sk = panel / 700;
+        const gap = Math.round((o.isComic ? 24 : 10) * Math.max(sk, 0.5));
+        const pw = (L.W - outer * 2 - (cols - 1) * gap) / cols;
+        const ph = (L.H - outer * 2 - footerH - (rows - 1) * gap) / (rows * (1 + capR));
+        panel = Math.floor(Math.min(pw, ph));
+    }
+    return Math.max(80, panel);
+}
+
+function drawCoverPage(c, L, o, loaded, imgs) {
+    const { W, H } = L;
+    const ctx = c.getContext('2d');
+    c.width = W; c.height = H;
+    const title = (state.scenario && state.scenario.title) || 'Mon histoire';
+    const u = Math.min(W, H) / 1240;          // échelle par rapport à un A4 portrait
+    ctx.fillStyle = o.isComic ? '#fffdf5' : '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = o.isComic ? '#e94560' : '#222'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold ' + Math.round(84 * u) + 'px "Comic Sans MS", "Chalkboard SE", sans-serif';
+    const tLines = wrapLines(ctx, title, W * 0.85).slice(0, 3);
+    tLines.forEach((l, i) => ctx.fillText(l, W / 2, H * 0.11 + i * 100 * u));
+    const top = H * 0.11 + tLines.length * 100 * u;
+    const side = Math.min(W * 0.75, H - top - 260 * u);
+    if (loaded[0] && side > 50) {
+        ctx.drawImage(loaded[0], (W - side) / 2, top, side, side);
+        if (o.isComic) { ctx.strokeStyle = '#111'; ctx.lineWidth = 8 * u; ctx.strokeRect((W - side) / 2, top, side, side); }
+    }
+    ctx.fillStyle = '#777'; ctx.font = Math.round(32 * u) + 'px sans-serif';
+    const chars = state.scenario && state.scenario.characters.length ? 'Avec ' + state.scenario.characters.map(x => x.name).join(', ') : '';
+    if (chars) ctx.fillText(chars, W / 2, H - 170 * u, W * 0.85);
+    ctx.font = Math.round(26 * u) + 'px sans-serif';
+    ctx.fillText((o.isComic ? 'Bande dessinée' : 'Album photo') + ' · ' + imgs.length + ' images · ' + new Date().toLocaleDateString('fr-FR'), W / 2, H - 90 * u);
+}
+
+function drawEndPage(c, L, o) {
+    const { W, H } = L;
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d');
+    const u = Math.min(W, H) / 1240;
+    ctx.fillStyle = o.isComic ? '#fffdf5' : '#fff'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = o.isComic ? '#e94560' : '#222'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold ' + Math.round(160 * u) + 'px "Comic Sans MS", "Chalkboard SE", sans-serif';
+    ctx.fillText('Fin', W / 2, H / 2 - 40 * u);
+    ctx.fillStyle = '#999'; ctx.font = Math.round(30 * u) + 'px sans-serif';
+    ctx.fillText((state.scenario && state.scenario.title) || '', W / 2, H / 2 + 90 * u, W * 0.85);
+}
+
+// Produit toutes les pages (canvas) selon la mise en page choisie
+async function buildPages() {
     const imgs = state.images.slice().sort((a, b) => a.sceneIndex - b.sceneIndex);
-    if (!imgs.length) { showToast('Aucune image à exporter', 'warn'); return; }
+    if (!imgs.length) return null;
+    const L = layoutSettings();
+    const o = boardOptions();
+    const loaded = await loadBoardImages(imgs);
+    const tainted = loaded.some(im => im && im._tainted);
+    const [cols, rows] = gridFor(L.perPage, L.landscape);
+    const panel = fitPanel(L, cols, rows, o);
+    const contentPages = Math.ceil(imgs.length / L.perPage);
+    const total = contentPages + (L.cover ? 1 : 0) + (L.endPage ? 1 : 0);
+    const title = (state.scenario && state.scenario.title) || 'Mon histoire';
+    const pages = [];
+    let pageNo = 0;
+    const newCanvas = () => { const c = document.createElement('canvas'); pages.push(c); pageNo++; return c; };
+
+    if (L.cover) drawCoverPage(newCanvas(), L, o, loaded, imgs);
+    for (let pg = 0; pg < contentPages; pg++) {
+        const from = pg * L.perPage, to = from + L.perPage;
+        const c = newCanvas();
+        renderBoard(c, imgs.slice(from, to), loaded.slice(from, to), {
+            ...o, cols, panel, numberOffset: from, titleText: '',
+            footer: L.pageNum ? title + ' — ' + pageNo + ' / ' + total : '',
+            width: L.W, height: L.H
+        });
+        // la marge de renderBoard dépend de la case : on impose celle choisie pour toutes les pages
+        if (pg % 4 === 3) await sleep(0);
+    }
+    if (L.endPage) drawEndPage(newCanvas(), L, o);
+    return { pages, L, o, tainted, imgs };
+}
+
+// Résumé + miniatures des pages
+let _previewTimer = null;
+function schedulePreview() { clearTimeout(_previewTimer); _previewTimer = setTimeout(updateLayoutPreview, 250); }
+async function updateLayoutPreview() {
+    const box = document.getElementById('page-previews');
+    const sum = document.getElementById('layout-summary');
+    if (!state.images.length) { box.innerHTML = ''; sum.textContent = ''; return; }
+    const res = await buildPages();
+    if (!res) return;
+    const { pages, L } = res;
+    const [cols, rows] = gridFor(L.perPage, L.landscape);
+    sum.textContent = '→ ' + pages.length + ' page(s) ' + L.format.toUpperCase() + ' ' + (L.landscape ? 'paysage' : 'portrait') +
+        ' · ' + cols + ' × ' + rows + ' images par page' + (L.cover ? ' · couverture' : '') + (L.endPage ? ' · page Fin' : '');
+    box.innerHTML = '';
+    pages.forEach(c => box.appendChild(c));
+}
+
+async function exportPDF() {
+    if (!state.images.length) { showToast('Aucune image à exporter', 'warn'); return; }
     if (!window.jspdf) { showToast('Module PDF non chargé (connexion ?) — utilisez Imprimer', 'error', 4000); return; }
     setStatus('Création du PDF…');
-    const loaded = await loadBoardImages(imgs);
-    if (loaded.some(im => im && im._tainted)) {
+    const res = await buildPages();
+    if (res.tainted) {
         setStatus(null);
         logConsole('Export PDF direct bloqué par le serveur d\'images (CORS) → impression en PDF.', 'warn');
         showToast('Choisissez « Enregistrer en PDF » dans la fenêtre d\'impression', 'warn', 5000);
-        return printBoard();
+        return printBoard(res);
     }
-    const o = boardOptions();
-    const title = (state.scenario && state.scenario.title) || 'Mon histoire';
+    const { pages, L, o } = res;
     const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-    const W = 1240, H = 1754;  // A4 à 150 dpi
-    const c = document.createElement('canvas');
-    const pages = Math.ceil(imgs.length / PDF_PER_PAGE);
-
-    // Couverture : titre + première image
-    c.width = W; c.height = H;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = o.isComic ? '#fffdf5' : '#fff'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = o.isComic ? '#e94560' : '#222'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold 84px "Comic Sans MS", "Chalkboard SE", sans-serif';
-    wrapLines(ctx, title, W - 160).slice(0, 3).forEach((l, i) => ctx.fillText(l, W / 2, 230 + i * 100));
-    if (loaded[0]) {
-        const side = 900;
-        ctx.drawImage(loaded[0], (W - side) / 2, 470, side, side);
-        if (o.isComic) { ctx.strokeStyle = '#111'; ctx.lineWidth = 8; ctx.strokeRect((W - side) / 2, 470, side, side); }
-    }
-    ctx.fillStyle = '#777'; ctx.font = '32px sans-serif';
-    const chars = state.scenario && state.scenario.characters.length ? 'Avec ' + state.scenario.characters.map(x => x.name).join(', ') : '';
-    if (chars) ctx.fillText(chars, W / 2, 1460, W - 160);
-    ctx.font = '26px sans-serif';
-    ctx.fillText((o.isComic ? 'Bande dessinée' : 'Album photo') + ' · ' + imgs.length + ' images · ' + new Date().toLocaleDateString('fr-FR'), W / 2, 1640);
-    pdf.addImage(c.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 210, 297);
-
-    for (let pg = 0; pg < pages; pg++) {
-        setStatus('PDF : page ' + (pg + 2) + '/' + (pages + 1) + '…');
-        const sub = imgs.slice(pg * PDF_PER_PAGE, (pg + 1) * PDF_PER_PAGE);
-        const subL = loaded.slice(pg * PDF_PER_PAGE, (pg + 1) * PDF_PER_PAGE);
-        renderBoard(c, sub, subL, { ...o, cols: 2, panel: 470, numberOffset: pg * PDF_PER_PAGE, titleText: '', footer: title + ' — page ' + (pg + 1) + '/' + pages, width: W, height: H });
-        pdf.addPage();
-        pdf.addImage(c.toDataURL('image/jpeg', 0.88), 'JPEG', 0, 0, 210, 297);
+    const pdf = new jsPDF({ orientation: L.landscape ? 'landscape' : 'portrait', unit: 'mm', format: [L.wmm, L.hmm].sort((a, b) => a - b), compress: true });
+    for (let i = 0; i < pages.length; i++) {
+        setStatus('PDF : page ' + (i + 1) + '/' + pages.length + '…');
+        if (i > 0) pdf.addPage();
+        pdf.addImage(pages[i].toDataURL('image/jpeg', 0.88), 'JPEG', 0, 0, L.wmm, L.hmm);
         await sleep(0);
     }
-    const name = title.replace(/[^\w\-]+/g, '_') + (o.isComic ? '_BD' : '_album') + '.pdf';
+    const title = (state.scenario && state.scenario.title) || 'Mon histoire';
+    const name = title.replace(/[^\w\-]+/g, '_') + (o.isComic ? '_BD' : '_album') + '_' + L.perPage + 'par-page.pdf';
     try {
         const blob = pdf.output('blob');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob); a.download = name;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-        showToast('PDF enregistré (' + (pages + 1) + ' pages)', 'success');
-        logConsole('PDF créé : ' + name + ' — ' + (pages + 1) + ' pages', 'success');
+        showToast('PDF enregistré (' + pages.length + ' pages)', 'success');
+        logConsole('PDF créé : ' + name + ' — ' + pages.length + ' pages', 'success');
     } catch (e) { showToast('Échec du PDF : ' + e.message, 'error'); }
     setStatus(null);
 }
 
-// Secours : impression de la planche (« Enregistrer en PDF » du navigateur), fonctionne même si CORS bloque
-function printBoard() {
-    if (document.getElementById('section-board').classList.contains('hidden')) { showToast('Assemblez d\'abord la planche', 'warn'); return; }
-    document.body.classList.add('printing-board');
-    setTimeout(() => { window.print(); setTimeout(() => document.body.classList.remove('printing-board'), 500); }, 100);
+// Impression page par page avec la même mise en page que le PDF (marche même si CORS bloque l'export)
+async function printBoard(prebuilt) {
+    if (!state.images.length) { showToast('Aucune image à imprimer', 'warn'); return; }
+    setStatus('Préparation de l\'impression…');
+    const res = prebuilt && prebuilt.pages ? prebuilt : await buildPages();
+    const holder = document.getElementById('print-pages');
+    holder.innerHTML = '';
+    res.pages.forEach(c => holder.appendChild(c));
+    let st = document.getElementById('print-page-style');
+    if (!st) { st = document.createElement('style'); st.id = 'print-page-style'; document.head.appendChild(st); }
+    st.textContent = '@page { size: ' + res.L.wmm + 'mm ' + res.L.hmm + 'mm; margin: 0; }';
+    setStatus(null);
+    document.body.classList.add('printing-pages');
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => { document.body.classList.remove('printing-pages'); holder.innerHTML = ''; schedulePreview(); }, 500);
+    }, 150);
 }
 
 function downloadBoard() {
@@ -1752,7 +1930,9 @@ function stopAllVideos() {
     updateGenerateBtn();
     updateRestoreBtn();
     document.getElementById('board-pdf-btn').addEventListener('click', exportPDF);
-    document.getElementById('board-print-btn').addEventListener('click', printBoard);
+    ['pp-select', 'orient-select', 'format-select', 'margin-select', 'opt-cover', 'opt-endpage', 'opt-pagenum']
+        .forEach(id => document.getElementById(id).addEventListener('change', schedulePreview));
+    document.getElementById('board-print-btn').addEventListener('click', () => printBoard());
     document.getElementById('board-save-btn').addEventListener('click', () => saveToLibrary(false));
     document.getElementById('api-dot').addEventListener('click', () => {
         const inp = document.getElementById('api-key-input');

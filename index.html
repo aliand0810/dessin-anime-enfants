@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dessin Animé Enfants — Image par Image</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    :root {
+        --bg: #0f0f13; --panel: #1a1a22; --panel-2: #22222e; --border: #2e2e3e;
+        --ink: #e8e8f0; --ink-dim: #8888a0; --ink-faint: #55556a;
+        --success: #2d8a4e; --error: #c0392b; --warn: #d4a017; --info: #4a6cf7;
+        --accent: #e94560; --accent-child: #ff6b9d; --radius: 12px;
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        background: var(--bg); color: var(--ink); min-height: 100vh;
+        padding: 1.5rem 1rem 8rem; font-size: 15px; line-height: 1.5;
+        max-width: 1000px; margin: 0 auto;
+    }
+    header { margin-bottom: 1.5rem; text-align: center; }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.03em; margin-bottom: 0.3rem;
+         background: linear-gradient(135deg, #ff6b9d, #4a6cf7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { font-size: 0.85rem; color: var(--ink-dim); }
+
+    .toast {
+        position: fixed; top: 1.5rem; left: 50%;
+        transform: translateX(-50%) translateY(-100px);
+        background: var(--panel); color: var(--ink);
+        padding: 0.85rem 1.4rem; border-radius: 10px;
+        font-size: 0.85rem; font-weight: 500;
+        box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+        border: 1px solid var(--border);
+        z-index: 1000; opacity: 0;
+        transition: transform 0.35s ease, opacity 0.35s ease;
+        max-width: 90vw; text-align: center;
+        display: flex; align-items: center; gap: 0.5rem;
+    }
+    .toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--error); }
+    .toast.warn { border-color: var(--warn); }
+
+    .section { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1rem; overflow: hidden; }
+    .section-header { padding: 1rem 1.2rem; cursor: pointer; user-select: none; display: flex; justify-content: space-between; align-items: center; }
+    .section-header:active { background: var(--panel-2); }
+    .section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-dim); font-weight: 700; }
+    .section-header .chevron { font-size: 0.7rem; color: var(--ink-faint); transition: transform 0.2s; }
+    .section.open .section-header .chevron { transform: rotate(180deg); }
+    .section-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+    .section.open .section-body { max-height: 15000px; }
+    .section-content { padding: 0 1.2rem 1.2rem; }
+
+    .api-panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.2rem; margin-bottom: 1rem; }
+    .api-key-input {
+        width: 100%; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--border);
+        background: var(--bg); color: var(--ink); font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+        font-size: 0.85rem; margin-bottom: 0.6rem;
+    }
+    .api-key-input:focus { outline: none; border-color: var(--accent-child); }
+    .api-save-btn {
+        width: 100%; padding: 0.8rem 1.2rem; border-radius: 8px; border: none;
+        background: var(--accent-child); color: #fff; font-size: 0.9rem; font-weight: 700; font-family: inherit;
+        cursor: pointer; transition: opacity 0.2s; margin-bottom: 0.6rem;
+    }
+    .api-save-btn:active { opacity: 0.7; }
+    .api-status-line { font-size: 0.75rem; padding: 0.55rem 0.85rem; border-radius: 6px; display: flex; align-items: center; gap: 0.5rem; background: var(--panel-2); color: var(--ink-dim); }
+    .api-status-line.ok { background: #1a2e1a; color: var(--success); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-faint); flex-shrink: 0; }
+    .api-status-line.ok .status-dot { background: var(--success); }
+
+    textarea, input[type="text"], select {
+        width: 100%; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid var(--border);
+        background: var(--bg); color: var(--ink); font-family: inherit; font-size: 0.9rem;
+    }
+    textarea:focus, input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent-child); }
+    textarea { min-height: 100px; line-height: 1.5; resize: vertical; }
+    select {
+        -webkit-appearance: none; appearance: none;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%238888a0' d='M0 0l5 6 5-6z'/></svg>");
+        background-repeat: no-repeat; background-position: right 0.9rem center; background-size: 10px;
+    }
+    .control-row { margin-bottom: 0.9rem; }
+    .control-label { display: block; font-size: 0.72rem; color: var(--ink-dim); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+
+    .btn-primary {
+        width: 100%; padding: 1.1rem; border-radius: var(--radius); border: none;
+        background: linear-gradient(135deg, #ff6b9d, #4a6cf7); color: #fff; font-size: 1rem; font-weight: 700;
+        font-family: inherit; cursor: pointer; transition: opacity 0.2s, transform 0.1s; margin-bottom: 1rem;
+    }
+    .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+    .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-stop {
+        width: 100%; padding: 0.8rem; border-radius: var(--radius); border: 1px solid var(--error);
+        background: transparent; color: var(--error); font-size: 0.85rem; font-weight: 700;
+        font-family: inherit; cursor: pointer; margin-bottom: 1rem; display: none;
+    }
+    .btn-stop.visible { display: block; }
+    .btn-secondary {
+        width: 100%; padding: 0.8rem; border-radius: var(--radius); border: 1px solid var(--info);
+        background: transparent; color: var(--info); font-size: 0.85rem; font-weight: 700;
+        font-family: inherit; cursor: pointer; margin-bottom: 1rem;
+    }
+
+    .console-panel {
+        background: #0a0a0e; border: 1px solid var(--border); border-radius: var(--radius);
+        padding: 0.8rem 1rem; margin-bottom: 1rem; max-height: 280px; overflow-y: auto;
+        font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 0.72rem; line-height: 1.6;
+    }
+    .console-panel .log-line { padding: 0.15rem 0; }
+    .console-panel .log-time { color: var(--ink-faint); margin-right: 0.5rem; }
+    .console-panel .log-info { color: var(--info); }
+    .console-panel .log-success { color: var(--success); }
+    .console-panel .log-error { color: var(--error); }
+    .console-panel .log-warn { color: var(--warn); }
+    .console-panel .log-text { color: var(--ink); }
+
+    .scenario-display { background: var(--panel-2); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+    .scenario-display h3 { font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--accent-child); }
+    .scenario-display .scene-item { padding: 0.6rem 0.8rem; border-left: 3px solid var(--info); margin-bottom: 0.4rem; background: var(--panel); border-radius: 0 6px 6px 0; font-size: 0.8rem; }
+    .scenario-display .scene-item .scene-num { font-weight: 700; color: var(--info); margin-right: 0.3rem; }
+
+    .generated-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; margin-bottom: 1rem; }
+    .gen-image-card { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: var(--panel-2); animation: fadeIn 0.4s ease; }
+    .gen-image-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; }
+    .gen-image-card .gen-label { padding: 0.3rem 0.5rem; font-size: 0.65rem; color: var(--ink-dim); text-align: center; }
+
+    .generated-videos { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.8rem; margin-bottom: 1rem; }
+    .gen-video-card { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: var(--panel-2); animation: fadeIn 0.5s ease; }
+    .gen-video-card video { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: #000; }
+    .gen-video-card .gen-label { padding: 0.4rem 0.5rem; font-size: 0.68rem; color: var(--ink); text-align: center; background: var(--panel); border-top: 1px solid var(--border); font-weight: 600; display: flex; justify-content: center; align-items: center; gap: 0.4rem; }
+    .gen-video-card .gen-label a { color: var(--info); text-decoration: none; font-size: 0.8rem; }
+    .gen-video-card .gen-dialogue { padding: 0.4rem 0.6rem; font-size: 0.68rem; color: var(--accent-child); font-style: italic; background: var(--panel); border-top: 1px solid var(--border); }
+
+    .pending-video-card { border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: var(--panel-2); padding: 1rem 0.8rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 220px; text-align: center; }
+    .pending-video-card .pending-spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent-child); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 0.8rem; }
+    .pending-video-card .pending-label { font-size: 0.82rem; color: var(--ink); font-weight: 700; margin-bottom: 0.4rem; }
+    .pending-video-card .pending-progress-text { font-size: 0.7rem; color: var(--ink-dim); font-family: ui-monospace, monospace; margin-bottom: 0.5rem; }
+    .pending-video-card .pending-progress-bar { width: 100%; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+    .pending-video-card .pending-progress-fill { height: 100%; background: linear-gradient(90deg, #ff6b9d, #4a6cf7); border-radius: 3px; transition: width 0.5s ease; width: 0%; }
+
+    .video-player-container { background: #000; border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; position: relative; }
+    .video-player-container video { width: 100%; display: block; max-height: 60vh; object-fit: contain; background: #000; }
+    .subtitle-overlay {
+        position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.65); color: #fff; padding: 0.4rem 0.9rem; border-radius: 20px;
+        font-size: 1rem; font-weight: 700; max-width: 90%; text-align: center; pointer-events: none;
+        opacity: 0; transition: opacity 0.3s;
+    }
+    .subtitle-overlay.visible { opacity: 1; }
+    .player-controls { display: flex; gap: 0.5rem; padding: 0.7rem; background: var(--panel); flex-wrap: wrap; }
+    .player-controls button { flex: 1; min-width: 80px; padding: 0.6rem 0.8rem; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--ink); font-family: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+    .player-controls button:active { background: var(--border); }
+    .progress-bar { height: 4px; background: var(--panel-2); border-radius: 2px; overflow: hidden; margin-top: 0.5rem; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #ff6b9d, #4a6cf7); border-radius: 2px; transition: width 0.3s; }
+
+    .status-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--panel); border-top: 1px solid var(--border); color: var(--ink); padding: 0.8rem 1.2rem; font-size: 0.78rem; display: flex; align-items: center; gap: 0.6rem; transform: translateY(100%); transition: transform 0.3s; z-index: 100; }
+    .status-bar.visible { transform: translateY(0); }
+    .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--accent-child); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .hidden { display: none !important; }
+    .board-wrap { background: #fff; border-radius: 8px; overflow: hidden; margin-bottom: 0.8rem; }
+    .board-wrap canvas { width: 100%; height: auto; display: block; }
+    .board-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--ink-dim); margin-right: 1rem; cursor: pointer; }
+    .gen-image-card { position: relative; }
+    .regen-btn {
+        position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 50%;
+        border: none; background: rgba(0,0,0,0.6); color: #fff; font-size: 0.85rem; cursor: pointer;
+    }
+    .regen-btn:disabled { opacity: 0.4; }
+    .gen-image-card.loading img { opacity: 0.3; }
+    #noSleepCanvas, #noSleepVideo { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0.01; pointer-events: none; z-index: -1; }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>🎨 Dessin Animé Enfants</h1>
+    <p class="subtitle">Image par image · Vidéos animées pour les petits</p>
+</header>
+
+<div class="api-panel" id="api-panel">
+    <input type="password" class="api-key-input" id="api-key-input" placeholder="Collez votre clé API Agnes (sk-...)" autocomplete="off" spellcheck="false">
+    <button type="button" class="api-save-btn" id="api-save-btn">Enregistrer la clé</button>
+    <div class="api-status-line" id="api-status-line">
+        <span class="status-dot"></span>
+        <span id="api-status-text">Aucune clé API enregistrée</span>
+    </div>
+</div>
+
+<div class="section open" id="section-idea">
+    <div class="section-header" data-toggle="section-idea">
+        <span class="section-title">💡 Votre histoire pour enfants</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <textarea id="idea-input" placeholder="Exemple : Un petit lapin nommé Pilou part à la recherche de sa carotte magique dans la forêt enchantée..."></textarea>
+    </div></div>
+</div>
+
+<div class="section open" id="section-style">
+    <div class="section-header" data-toggle="section-style">
+        <span class="section-title">🎨 Style visuel enfantin</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <select id="style-select">
+            <option value="cartoon-cute" selected>🧸 Cartoon mignon (couleurs pastel)</option>
+            <option value="watercolor-child">🎨 Aquarelle douce pour enfants</option>
+            <option value="claymation-child">🧱 Pâte à modeler (Claymation)</option>
+            <option value="paper-cut">✂️ Papier découpé</option>
+            <option value="crayon-child">🖍️ Crayon de couleur</option>
+            <option value="3d-toy">🧸 Jouets 3D (style Pixar enfantin)</option>
+        </select>
+    </div></div>
+</div>
+
+<div class="section open" id="section-tech">
+    <div class="section-header" data-toggle="section-tech">
+        <span class="section-title">⚙️ Paramètres</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="control-row">
+            <label class="control-label">Type de création</label>
+            <select id="mode-select">
+                <option value="video" selected>🎬 Dessin animé (vidéo)</option>
+                <option value="comic">💬 Bande dessinée (sans vidéo)</option>
+                <option value="photo">🖼️ Planche photo (images assemblées)</option>
+            </select>
+        </div>
+        <div class="control-row" id="row-columns">
+            <label class="control-label">Disposition de la planche</label>
+            <select id="columns-select">
+                <option value="auto" selected>Automatique</option>
+                <option value="1">1 colonne (bande verticale)</option>
+                <option value="2">2 colonnes</option>
+                <option value="3">3 colonnes</option>
+                <option value="row">1 ligne (bande horizontale)</option>
+            </select>
+        </div>
+        <div class="control-row">
+            <label class="control-label">Nombre de scènes</label>
+            <select id="scene-count-select">
+                <option value="3">3 scènes (très court)</option>
+                <option value="4" selected>4 scènes (court)</option>
+                <option value="5">5 scènes (recommandé)</option>
+                <option value="6">6 scènes (long)</option>
+                <option value="8">8 scènes</option>
+                <option value="10">10 scènes</option>
+                <option value="15">15 scènes</option>
+                <option value="20">20 scènes</option>
+                <option value="30">30 scènes</option>
+                <option value="40">40 scènes</option>
+                <option value="50">50 scènes (maximum)</option>
+            </select>
+        </div>
+        <div class="control-row" id="row-duration">
+            <label class="control-label">Durée par clip vidéo</label>
+            <select id="duration-select">
+                <option value="4">4 secondes</option>
+                <option value="5" selected>5 secondes (recommandé)</option>
+                <option value="6">6 secondes</option>
+            </select>
+        </div>
+    </div></div>
+</div>
+
+<button type="button" class="btn-primary" id="generate-btn" disabled>🎬 Générer le dessin animé</button>
+<button type="button" class="btn-stop" id="stop-btn">⏹ Arrêter la génération</button>
+<button type="button" class="btn-secondary hidden" id="restore-btn">📂 Reprendre le dernier dessin animé</button>
+
+<div class="console-panel" id="console-panel">
+    <div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">[Système]</span> <span class="log-text">En attente de votre histoire...</span></div>
+</div>
+
+<div class="section hidden" id="section-scenario">
+    <div class="section-header" data-toggle="section-scenario">
+        <span class="section-title">📜 Scénario généré</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="scenario-display" id="scenario-display"></div>
+    </div></div>
+</div>
+
+<div class="section hidden" id="section-images">
+    <div class="section-header" data-toggle="section-images">
+        <span class="section-title">🖼️ Images générées (image par image)</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="generated-images" id="generated-images"></div>
+    </div></div>
+</div>
+
+<div class="section hidden open" id="section-board">
+    <div class="section-header" data-toggle="section-board">
+        <span class="section-title" id="board-title">💬 Planche assemblée</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="board-wrap"><canvas id="board-canvas"></canvas></div>
+        <label class="board-check"><input type="checkbox" id="opt-bubbles" checked> Bulles de dialogue</label>
+        <label class="board-check"><input type="checkbox" id="opt-captions" checked> Légendes de scène</label>
+        <label class="board-check"><input type="checkbox" id="opt-titlebar" checked> Titre en haut</label>
+        <div class="player-controls" style="padding:0.7rem 0 0;background:none;">
+            <button type="button" id="board-recompose-btn">🔄 Réassembler</button>
+            <button type="button" id="board-download-btn">⬇ Télécharger PNG</button>
+            <button type="button" id="board-animate-btn">🎬 Animer en vidéo</button>
+        </div>
+    </div></div>
+</div>
+
+<div class="section hidden open" id="section-videos">
+    <div class="section-header" data-toggle="section-videos">
+        <span class="section-title">🎞️ Clips vidéo animés</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="generated-videos" id="generated-videos"></div>
+    </div></div>
+</div>
+
+<div class="section hidden" id="section-player">
+    <div class="section-header" data-toggle="section-player">
+        <span class="section-title">🎬 Lecture du dessin animé</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content">
+        <div class="video-player-container">
+            <video id="player-video" controls playsinline></video>
+            <div class="subtitle-overlay" id="subtitle-overlay"></div>
+        </div>
+        <div class="player-controls">
+            <button type="button" id="play-all-btn">▶ Lire tout</button>
+            <button type="button" id="stop-all-btn">⏹ Arrêter</button>
+        </div>
+        <div class="progress-bar"><div class="progress-bar-fill" id="player-progress" style="width:0%"></div></div>
+        <div style="font-size:0.75rem;color:var(--ink-dim);margin-top:0.5rem;text-align:center;" id="player-info">Scène 1</div>
+    </div></div>
+</div>
+
+<div class="status-bar" id="status-bar"><div class="spinner"></div><span id="status-text">Préparation…</span></div>
+<div class="toast" id="toast"><span class="toast-icon" id="toast-icon">✓</span><span id="toast-text">Message</span></div>
+
+<canvas id="noSleepCanvas" width="2" height="2"></canvas>
+<video id="noSleepVideo" playsinline muted loop></video>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ══════════════════════════════════════════════════════════════════
+const API_BASE = 'https://apihub.agnes-ai.com/v1';
+const POLL_BASE = 'https://apihub.agnes-ai.com/agnesapi';
+const MODEL_TEXT = 'agnes-2.5-flash';
+const MODEL_IMAGE = 'agnes-image-2.5-flash';
+const MODEL_VIDEO = 'agnes-video-2.5-flash';
+const POLL_INTERVAL_MS = 2000;
+const PROJECT_KEY = 'dessin_anime_last_project';
+const BATCH_SCENES = 10;   // scènes demandées par appel texte (au-delà, l'histoire est écrite en plusieurs fois)
+
+const STYLES = {
+    'cartoon-cute': 'Cute children cartoon style, pastel colors, soft rounded shapes, big expressive eyes, friendly characters, simple backgrounds, kawaii aesthetic, no text',
+    'watercolor-child': 'Soft watercolor illustration for children, gentle bleeding colors, paper texture, dreamy and warm atmosphere, hand-painted feel, no text',
+    'claymation-child': 'Claymation stop-motion style for kids, plasticine texture, fingerprint details, miniature set, warm lighting, cute characters, no text',
+    'paper-cut': 'Paper cutout animation style, layered construction paper shapes, textured edges, simple flat colors, children book aesthetic, no text',
+    'crayon-child': 'Colored pencil drawing style for children, visible crayon strokes, textured paper, vibrant but soft colors, naive art, no text',
+    '3d-toy': '3D rendered toy-like characters, Pixar-style child-friendly design, soft global illumination, playful colors, rounded shapes, no text'
+};
+
+// ══════════════════════════════════════════════════════════════════
+// ÉTAT
+// ══════════════════════════════════════════════════════════════════
+const state = {
+    isRunning: false, stopRequested: false, idea: '',
+    selectedStyle: 'cartoon-cute', sceneCount: 4, videoSeconds: 5,
+    scenario: null, images: [], videos: [],
+    currentSceneIndex: 0, isPlayingSequence: false, femaleCharacters: [], mode: 'video'
+};
+
+// ══════════════════════════════════════════════════════════════════
+// SAUVEGARDE / REPRISE DU PROJET
+// ══════════════════════════════════════════════════════════════════
+function saveProject() {
+    try {
+        localStorage.setItem(PROJECT_KEY, JSON.stringify({
+            savedAt: Date.now(), idea: state.idea, style: state.selectedStyle, mode: state.mode,
+            scenario: state.scenario,
+            images: state.images.map(im => ({ sceneIndex: im.sceneIndex, url: im.url })),
+            videos: state.videos.map(v => v ? { sceneIndex: v.sceneIndex, url: v.url, sceneNumber: v.sceneNumber } : null),
+            femaleCharacters: state.femaleCharacters
+        }));
+    } catch (e) {}
+}
+function loadProject() {
+    try { return JSON.parse(localStorage.getItem(PROJECT_KEY) || 'null'); } catch (e) { return null; }
+}
+function restoreProject() {
+    const p = loadProject();
+    if (!p || !p.scenario) { showToast('Aucun projet sauvegardé', 'warn'); return; }
+    state.scenario = p.scenario;
+    state.idea = p.idea || '';
+    state.selectedStyle = p.style || 'cartoon-cute';
+    if (p.mode) { document.getElementById('mode-select').value = p.mode; updateModeUI(); }
+    state.femaleCharacters = p.femaleCharacters || [];
+    state.images = (p.images || []).map(im => ({ ...im, scene: p.scenario.scenes[im.sceneIndex] }));
+    state.videos = (p.videos || []).map(v => v ? { ...v, dialogue: (p.scenario.scenes[v.sceneIndex] || {}).dialogue } : null);
+
+    document.getElementById('idea-input').value = state.idea;
+    document.getElementById('generated-images').innerHTML = '';
+    document.getElementById('generated-videos').innerHTML = '';
+    displayScenario(state.scenario);
+    state.images.forEach(im => displayGeneratedImage(im.url, 'Scène ' + (im.sceneIndex + 1), im.sceneIndex));
+    if (state.images.length && state.mode !== 'video') composeBoard();
+    state.videos.forEach((v, i) => {
+        if (!v || !v.url) return;
+        const grid = document.getElementById('generated-videos');
+        const ph = document.createElement('div');
+        ph.id = 'pending-video-' + i;
+        grid.appendChild(ph);
+        replacePendingWithVideo(i, v.url, v.dialogue, v.sceneNumber || i + 1);
+    });
+    const hasVideos = state.videos.some(v => v && v.url);
+    if (hasVideos) {
+        document.getElementById('section-videos').classList.remove('hidden');
+        document.getElementById('section-player').classList.remove('hidden');
+    }
+    updateGenerateBtn();
+    logConsole('Projet restauré : « ' + state.scenario.title + ' »', 'success');
+    logConsole('Note : les liens vidéo peuvent expirer côté serveur — téléchargez vos clips ⬇.', 'warn');
+    showToast('Projet restauré', 'success');
+}
+function updateRestoreBtn() {
+    const p = loadProject();
+    document.getElementById('restore-btn').classList.toggle('hidden', !(p && p.scenario));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ANTI-VEILLE
+// ══════════════════════════════════════════════════════════════════
+let wakeLockSentinel = null, canvasStream = null;
+async function activateWakeLock() {
+    if ('wakeLock' in navigator) { try { wakeLockSentinel = await navigator.wakeLock.request('screen'); } catch (e) {} }
+    if (!wakeLockSentinel) {
+        try {
+            const canvas = document.getElementById('noSleepCanvas');
+            const video = document.getElementById('noSleepVideo');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 2, 2);
+            canvasStream = canvas.captureStream(1);
+            video.srcObject = canvasStream;
+            video.play().catch(() => {});
+        } catch (e) {}
+    }
+}
+async function deactivateWakeLock() {
+    if (wakeLockSentinel) { try { await wakeLockSentinel.release(); } catch (e) {} wakeLockSentinel = null; }
+    if (canvasStream) { try { canvasStream.getTracks().forEach(t => t.stop()); } catch (e) {} canvasStream = null; }
+}
+// Le wake lock est libéré quand l'onglet passe en arrière-plan : on le reprend au retour
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.isRunning) activateWakeLock();
+});
+
+// ══════════════════════════════════════════════════════════════════
+// TOAST / LOG / UTILITAIRES
+// ══════════════════════════════════════════════════════════════════
+let toastTimeout = null;
+function showToast(message, type = 'success', duration = 2500) {
+    const toast = document.getElementById('toast');
+    toast.classList.remove('visible', 'success', 'error', 'warn');
+    void toast.offsetWidth;
+    document.getElementById('toast-icon').textContent = ({ success: '✓', error: '✕', warn: '⚠' })[type] || '✓';
+    document.getElementById('toast-text').textContent = message;
+    toast.classList.add(type);
+    requestAnimationFrame(() => toast.classList.add('visible'));
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.classList.remove('visible'), duration);
+}
+function logConsole(message, type = 'info') {
+    const panel = document.getElementById('console-panel');
+    const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const labels = { info: '[Info]', success: '[OK]', error: '[Erreur]', warn: '[Attention]', text: '[Texte]' };
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = '<span class="log-time">' + time + '</span><span class="log-' + type + '">' + (labels[type] || '[Info]') + '</span> <span class="log-text">' + esc(message) + '</span>';
+    panel.appendChild(line);
+    panel.scrollTop = panel.scrollHeight;
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function setStatus(text) {
+    const bar = document.getElementById('status-bar');
+    if (text) { bar.classList.add('visible'); document.getElementById('status-text').textContent = text; }
+    else bar.classList.remove('visible');
+}
+
+// Extraction JSON robuste : tolère texte parasite, ```json, virgules finales
+function parseJsonLoose(raw) {
+    let s = String(raw).replace(/```json/gi, '').replace(/```/g, '').trim();
+    const start = s.indexOf('{'), end = s.lastIndexOf('}');
+    if (start === -1 || end <= start) throw new Error('Aucun JSON trouvé dans la réponse');
+    s = s.slice(start, end + 1);
+    try { return JSON.parse(s); }
+    catch (e) { return JSON.parse(s.replace(/,\s*([}\]])/g, '$1')); }
+}
+function validateScenario(sc) {
+    if (!sc || !Array.isArray(sc.scenes) || sc.scenes.length < 2) throw new Error('Scénario incomplet (scènes manquantes)');
+    if (!Array.isArray(sc.characters)) sc.characters = [];
+    sc.title = sc.title || 'Mon dessin animé';
+    sc.scenes.forEach((s, i) => {
+        s.scene_number = i + 1;
+        s.description = s.description || '';
+        s.image_prompt = s.image_prompt || s.description;
+    });
+    return sc;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CLÉ API
+// ══════════════════════════════════════════════════════════════════
+function getApiKey() { try { return (localStorage.getItem('agnes_api_key') || '').trim(); } catch (e) { return ''; } }
+function saveApiKey() {
+    const input = document.getElementById('api-key-input');
+    const key = input.value.trim();
+    if (!key) { localStorage.removeItem('agnes_api_key'); updateApiPanel(); showToast('Clé supprimée', 'warn'); return; }
+    localStorage.setItem('agnes_api_key', key);
+    updateApiPanel();
+    showToast('Clé API enregistrée ✓', 'success');
+    input.blur();
+}
+function updateApiPanel() {
+    const line = document.getElementById('api-status-line');
+    const txt = document.getElementById('api-status-text');
+    const input = document.getElementById('api-key-input');
+    const key = getApiKey();
+    if (key) { line.classList.add('ok'); txt.textContent = 'Clé API active · ' + key.slice(0, 8) + '…' + key.slice(-4); input.value = key; }
+    else { line.classList.remove('ok'); txt.textContent = 'Aucune clé API enregistrée'; input.value = ''; }
+    updateGenerateBtn();
+}
+function updateGenerateBtn() {
+    const btn = document.getElementById('generate-btn');
+    const hasKey = !!getApiKey();
+    const hasIdea = document.getElementById('idea-input').value.trim().length > 10;
+    btn.disabled = !hasKey || !hasIdea || state.isRunning;
+    if (state.isRunning) btn.textContent = 'Génération en cours…';
+    else if (!hasKey) btn.textContent = 'Ajoutez votre clé API';
+    else if (!hasIdea) btn.textContent = 'Décrivez votre histoire';
+    else btn.textContent = ({ video: '🎬 Générer le dessin animé', comic: '💬 Créer la bande dessinée', photo: '🖼️ Créer la planche photo' })[state.mode] || '🎬 Générer';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FETCH RETRY
+// ══════════════════════════════════════════════════════════════════
+async function fetchWithRetry(url, options = {}, maxRetries = 3, label = 'API') {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        if (state.stopRequested) throw new Error('Arrêt demandé');
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 60000);
+            const res = await fetch(url, { ...options, signal: controller.signal });
+            clearTimeout(timeout);
+            if ([500, 502, 503, 520].includes(res.status) && attempt < maxRetries) {
+                const wait = Math.pow(2, attempt) * 3000 + Math.random() * 2000;
+                logConsole(label + ' : HTTP ' + res.status + ', retry dans ' + Math.round(wait / 1000) + 's…', 'warn');
+                await sleep(wait); continue;
+            }
+            if (res.status === 429 && attempt < maxRetries) {
+                logConsole(label + ' : 429, attente de 30s…', 'warn');
+                await sleep(30000); continue;
+            }
+            return res;
+        } catch (e) {
+            if (e.message === 'Arrêt demandé') throw e;
+            if (attempt < maxRetries) {
+                logConsole(label + ' : ' + (e.name === 'AbortError' ? 'timeout' : 'réseau') + ', retry…', 'warn');
+                await sleep(Math.pow(2, attempt) * 2000 + Math.random() * 1000);
+            } else throw new Error(label + ' : échec — ' + e.message);
+        }
+    }
+    throw new Error(label + ' : échec');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// APPELS API
+// ══════════════════════════════════════════════════════════════════
+async function callTextAPI(messages, options = {}) {
+    logConsole('Requête texte → ' + MODEL_TEXT, 'info');
+    const res = await fetchWithRetry(API_BASE + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + getApiKey(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: MODEL_TEXT, messages, temperature: options.temperature ?? 0.8, max_tokens: options.maxTokens ?? 2048 })
+    }, 3, 'Texte');
+    if (!res.ok) throw new Error('Text API HTTP ' + res.status);
+    const data = await res.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error('Pas de contenu texte');
+    return content;
+}
+
+async function callImageAPI(prompt, size = '1K', ratio = '1:1') {
+    logConsole('Requête image → ' + MODEL_IMAGE, 'info');
+    const res = await fetchWithRetry(API_BASE + '/images/generations', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + getApiKey(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: MODEL_IMAGE, prompt, size, ratio, extra_body: { response_format: 'url' } })
+    }, 3, 'Image');
+    if (!res.ok) throw new Error('Image API HTTP ' + res.status);
+    const data = await res.json();
+    const url = data.data?.[0]?.url;
+    if (!url) throw new Error('Pas d\'URL d\'image');
+    return url;
+}
+
+async function createVideoTask(firstFrameUrl, lastFrameUrl, prompt) {
+    logConsole('Requête vidéo → ' + MODEL_VIDEO + ' (keyframe, ' + state.videoSeconds + 's)', 'info');
+    const res = await fetchWithRetry(API_BASE + '/videos', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + getApiKey(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: MODEL_VIDEO, prompt, seconds: String(state.videoSeconds),
+            mode: 'keyframe', size: '720P', aspect_ratio: '1:1',
+            first_frame: firstFrameUrl, last_frame: lastFrameUrl
+        })
+    }, 3, 'Vidéo');
+    if (!res.ok) { const err = await res.text(); throw new Error('Video API HTTP ' + res.status + ' — ' + err.slice(0, 200)); }
+    const data = await res.json();
+    if (!data.video_id) throw new Error('Pas de video_id');
+    logConsole('✓ Tâche vidéo créée : ' + String(data.video_id).slice(0, 20) + '…', 'success');
+    return data.video_id;
+}
+
+async function pollVideo(videoId, index) {
+    const startTime = Date.now();
+    logConsole('Polling clip ' + (index + 1) + '…', 'info');
+    for (let attempt = 0; attempt < 300; attempt++) {
+        if (state.stopRequested) throw new Error('Arrêt demandé');
+        const url = POLL_BASE + '?video_id=' + encodeURIComponent(videoId) + '&model_name=' + encodeURIComponent(MODEL_VIDEO);
+        try {
+            const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getApiKey() } });
+            if (!res.ok) { await sleep(POLL_INTERVAL_MS); continue; }
+            const d = await res.json();
+            const status = d.status || 'unknown';
+            const elapsed = Math.round((Date.now() - startTime) / 1000);
+            updatePendingVideoCard(index, 'Génération…', d.progress || 0, elapsed);
+            if (['completed', 'succeeded', 'done'].includes(status)) {
+                if (!d.url) throw new Error('Terminé mais pas d\'URL');
+                logConsole('✅ Clip ' + (index + 1) + ' prêt en ' + elapsed + 's', 'success');
+                return { videoUrl: d.url, elapsed };
+            }
+            if (status === 'failed' || status === 'error') throw new Error('Échec (' + status + ')');
+        } catch (e) {
+            if (e.message === 'Arrêt demandé' || e.message.startsWith('Échec') || e.message.startsWith('Terminé')) throw e;
+        }
+        await sleep(POLL_INTERVAL_MS);
+    }
+    throw new Error('Délai dépassé');
+}
+
+// Suite de l'histoire par lots de 10 scènes, jusqu'à 50
+async function extendScenario(scenario, idea) {
+    let guard = 0;
+    while (scenario.scenes.length < state.sceneCount && guard++ < 10) {
+        if (state.stopRequested) break;
+        const done = scenario.scenes.length;
+        const n = Math.min(BATCH_SCENES, state.sceneCount - done);
+        const isEnd = done + n >= state.sceneCount;
+        setStatus('L\'IA écrit la suite… (' + done + '/' + state.sceneCount + ' scènes)');
+        const recap = scenario.scenes.slice(-4).map(s => s.scene_number + '. ' + s.description).join('\n');
+        const prompt = `Suite d'un dessin animé pour enfants (3-8 ans) intitulé « ${scenario.title} ».
+Idée de départ : "${idea}"
+Personnages : ${scenario.characters.map(c => c.name + ' (' + c.appearance + ')').join(' ; ')}
+Dernières scènes :
+${recap}
+
+Écris les scènes ${done + 1} à ${done + n} (exactement ${n} scènes), joyeuses, mêmes personnages, dialogues de 8 mots max.${isEnd ? ' La dernière scène doit conclure l\'histoire avec une fin heureuse.' : ' Ne termine pas encore l\'histoire.'}
+
+JSON valide uniquement :
+{ "scenes": [ { "scene_number": ${done + 1}, "description": "...", "image_prompt": "prompt en anglais (action + décor)", "dialogue": { "character": "Nom", "text": "..." } } ] }`;
+        let added = null;
+        for (let tryN = 1; tryN <= 2 && !added; tryN++) {
+            try {
+                const raw = await callTextAPI([
+                    { role: 'system', content: 'Tu réponds uniquement en JSON valide.' },
+                    { role: 'user', content: prompt }
+                ], { temperature: 0.8, maxTokens: 3000 });
+                const j = parseJsonLoose(raw);
+                if (Array.isArray(j.scenes) && j.scenes.length) added = j.scenes.slice(0, n);
+            } catch (e) { logConsole('Suite illisible (essai ' + tryN + ') : ' + e.message, 'warn'); }
+        }
+        if (!added) { logConsole('Suite impossible : histoire limitée à ' + done + ' scènes', 'warn'); break; }
+        scenario.scenes.push(...added);
+        logConsole('Scénario : ' + scenario.scenes.length + '/' + state.sceneCount + ' scènes', 'success');
+    }
+    validateScenario(scenario); // renumérote
+}
+
+// Prompt vidéo construit à partir de la scène (au lieu d'un prompt générique)
+function buildVideoPrompt(scene, nextScene, isLast) {
+    const parts = [];
+    if (scene && scene.description) parts.push('Scene: ' + scene.description + '.');
+    if (isLast) parts.push('Gentle idle animation: characters breathe, blink, smile and wave goodbye, subtle camera push-in, happy ending.');
+    else if (nextScene && nextScene.description) parts.push('Smoothly transitions toward: ' + nextScene.description + '.');
+    if (scene && scene.dialogue && scene.dialogue.character) parts.push(scene.dialogue.character + ' talks with a cheerful expression and mouth movement.');
+    parts.push('Cute children cartoon animation, soft playful movement, consistent characters, no text, no watermark.');
+    return parts.join(' ');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PIPELINE PRINCIPAL
+// ══════════════════════════════════════════════════════════════════
+async function runFullPipeline() {
+    if (state.isRunning) return;
+    const idea = document.getElementById('idea-input').value.trim();
+    if (idea.length < 10) { showToast('Histoire trop courte', 'error'); return; }
+    if (!getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
+
+    stopAllVideos();
+    Object.assign(state, {
+        isRunning: true, stopRequested: false, idea,
+        sceneCount: parseInt(document.getElementById('scene-count-select').value),
+        videoSeconds: parseInt(document.getElementById('duration-select').value),
+        selectedStyle: document.getElementById('style-select').value,
+        mode: document.getElementById('mode-select').value,
+        images: [], videos: []
+    });
+
+    document.getElementById('stop-btn').classList.add('visible');
+    document.getElementById('restore-btn').classList.add('hidden');
+    document.getElementById('generate-btn').disabled = true;
+    document.getElementById('console-panel').innerHTML = '';
+    document.getElementById('generated-images').innerHTML = '';
+    document.getElementById('generated-videos').innerHTML = '';
+    ['section-scenario', 'section-images', 'section-board', 'section-videos', 'section-player'].forEach(id => document.getElementById(id).classList.add('hidden'));
+
+    logConsole('Démarrage — « ' + idea.slice(0, 50) + '… »', 'info');
+    logConsole('Style : ' + state.selectedStyle + ' · Scènes : ' + state.sceneCount, 'info');
+    await activateWakeLock();
+    setStatus('Initialisation…');
+
+    try {
+        // ═══ ÉTAPE 1 : SCÉNARIO ═══
+        logConsole('ÉTAPE 1/3 — Scénario pour enfants', 'success');
+        setStatus('L\'IA écrit l\'histoire…');
+
+        const firstBatch = Math.min(state.sceneCount, BATCH_SCENES);
+        const scenarioPrompt = `Tu es un scénariste de dessins animés pour enfants (3-8 ans). Crée une histoire courte à partir de cette idée :
+
+"${idea}"
+
+Contraintes :
+- Public : enfants de 3 à 8 ans
+- Nombre de scènes : exactement ${firstBatch}${state.sceneCount > firstBatch ? ' (début d\'une histoire qui en comptera ' + state.sceneCount + ' au total : ne la termine pas encore)' : ''}
+- Chaque scène doit être visuellement simple et joyeuse, avec le même décor général pour garder une continuité
+- Les dialogues doivent être très courts (max 8 mots) et adaptés aux enfants
+- Pour chaque personnage, une apparence TRÈS précise et constante (espèce, couleurs exactes, vêtements, accessoire distinctif)
+
+Génère un JSON valide :
+{
+  "title": "Titre de l'histoire",
+  "characters": [
+    { "name": "Nom", "gender": "homme ou femme", "appearance": "Description précise EN ANGLAIS (species, exact colors, clothing, distinctive accessory)" }
+  ],
+  "scenes": [
+    {
+      "scene_number": 1,
+      "description": "Description visuelle simple et joyeuse",
+      "image_prompt": "Prompt en anglais décrivant l'action et le décor de la scène, carré 1:1",
+      "dialogue": { "character": "Nom", "text": "Phrase très courte" }
+    }
+  ]
+}
+
+Réponds UNIQUEMENT en JSON valide, sans markdown.`;
+
+        let scenario = null;
+        for (let tryN = 1; tryN <= 2 && !scenario; tryN++) {
+            const raw = await callTextAPI([
+                { role: 'system', content: 'Tu réponds uniquement en JSON valide.' },
+                { role: 'user', content: scenarioPrompt }
+            ], { temperature: tryN === 1 ? 0.85 : 0.5, maxTokens: 2048 });
+            try { scenario = validateScenario(parseJsonLoose(raw)); }
+            catch (e) { logConsole('Scénario illisible (essai ' + tryN + ') : ' + e.message, 'warn'); }
+        }
+        if (!scenario) throw new Error('Impossible d\'obtenir un scénario valide');
+        scenario.scenes = scenario.scenes.slice(0, firstBatch);
+        if (state.sceneCount > scenario.scenes.length) await extendScenario(scenario, idea);
+
+        state.scenario = scenario;
+        state.femaleCharacters = scenario.characters
+            .filter(c => c.gender === 'femme' || /fille|femme|maman|mère|sœur|miss|mme|madame/i.test(c.name || ''))
+            .map(c => (c.name || '').toLowerCase());
+
+        logConsole('Histoire : « ' + scenario.title + ' »', 'success');
+        displayScenario(scenario);
+        saveProject();
+
+        // ═══ ÉTAPE 2 : IMAGES ═══
+        logConsole('ÉTAPE 2/' + (state.mode === 'video' ? 3 : 2) + ' — Images (image par image)', 'success');
+
+        for (let i = 0; i < scenario.scenes.length; i++) {
+            if (state.stopRequested) break;
+            const scene = scenario.scenes[i];
+            setStatus('Image ' + (i + 1) + '/' + scenario.scenes.length + '…');
+            const imagePrompt = buildImagePrompt(scene);
+            let ok = false;
+            for (let tryN = 1; tryN <= 2 && !ok && !state.stopRequested; tryN++) {
+                try {
+                    const imageUrl = await callImageAPI(imagePrompt, '1K', '1:1');
+                    state.images.push({ sceneIndex: i, url: imageUrl, scene });
+                    displayGeneratedImage(imageUrl, 'Scène ' + scene.scene_number, i);
+                    logConsole('Image ' + (i + 1) + ' ✓', 'success');
+                    ok = true;
+                } catch (e) {
+                    logConsole('Erreur image ' + (i + 1) + ' (essai ' + tryN + ') : ' + e.message, 'error');
+                }
+            }
+            saveProject();
+            await sleep(1000);
+        }
+
+        if (state.images.length < 1) throw new Error('Aucune image générée');
+
+        if (state.mode !== 'video') {
+            // ═══ BD / PLANCHE PHOTO : assemblage, pas de vidéo ═══
+            await composeBoard();
+            setStatus(null);
+            showToast(state.mode === 'photo' ? 'Planche photo prête !' : 'Bande dessinée prête !', 'success');
+        } else {
+            await runVideoStage();
+            setStatus('✦ Dessin animé terminé ✦');
+            await sleep(3000);
+            setStatus(null);
+        }
+    } catch (e) {
+        logConsole('ERREUR : ' + e.message, 'error');
+        setStatus('Erreur : ' + e.message.slice(0, 50));
+        await sleep(4000);
+        setStatus(null);
+        showToast('Erreur : ' + e.message.slice(0, 60), 'error');
+    }
+
+    state.isRunning = false;
+    state.stopRequested = false;
+    document.getElementById('stop-btn').classList.remove('visible');
+    updateGenerateBtn();
+    updateRestoreBtn();
+    await deactivateWakeLock();
+}
+
+// ═══ ÉTAPE VIDÉOS (réutilisable depuis une BD) ═══
+async function runVideoStage() {
+        // Un clip PAR SCÈNE : scène i → scène i+1, et la dernière scène anime sa propre image
+        logConsole('ÉTAPE 3/3 — Vidéos animées (keyframes)', 'success');
+        state.videos = [];
+        document.getElementById('generated-videos').innerHTML = '';
+        setStatus('Création des clips vidéo…');
+
+        const totalClips = state.images.length;
+        for (let i = 0; i < totalClips; i++) createPendingVideoCard(i, totalClips);
+        document.getElementById('section-videos').classList.remove('hidden');
+        document.getElementById('section-videos').classList.add('open');
+
+        const videoPromises = [];
+        for (let i = 0; i < totalClips; i++) {
+            if (state.stopRequested) break;
+            const isLast = i === totalClips - 1;
+            const startImg = state.images[i];
+            const endImg = isLast ? startImg : state.images[i + 1];
+            const scene = startImg.scene || {};
+            const nextScene = isLast ? null : endImg.scene;
+            const dialogue = scene.dialogue;
+
+            updatePendingVideoCard(i, 'Création de la tâche…', 0, 0);
+            try {
+                const videoId = await createVideoTask(startImg.url, endImg.url, buildVideoPrompt(scene, nextScene, isLast));
+                updatePendingVideoCard(i, 'En file d\'attente…', 0, 0);
+                videoPromises.push(
+                    pollVideo(videoId, i).then(result => {
+                        state.videos[i] = { sceneIndex: startImg.sceneIndex, url: result.videoUrl, dialogue, sceneNumber: i + 1 };
+                        replacePendingWithVideo(i, result.videoUrl, dialogue, i + 1);
+                        document.getElementById('section-player').classList.remove('hidden');
+                        saveProject();
+                        showToast('Clip ' + (i + 1) + ' prêt !', 'success', 2000);
+                        return result;
+                    }).catch(e => {
+                        logConsole('Erreur clip ' + (i + 1) + ' : ' + e.message, 'error');
+                        markPendingFailed(i, e.message);
+                        return null;
+                    })
+                );
+            } catch (e) {
+                logConsole('Échec création clip ' + (i + 1) + ' : ' + e.message, 'error');
+                markPendingFailed(i, e.message);
+            }
+            await sleep(1500);
+        }
+
+        setStatus('Attente des clips…');
+        await Promise.allSettled(videoPromises);
+
+        const ready = state.videos.filter(v => v && v.url);
+        logConsole(ready.length + '/' + totalClips + ' clips générés', ready.length > 0 ? 'success' : 'error');
+        showToast(ready.length + ' clip(s) généré(s)', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// AFFICHAGE
+// ══════════════════════════════════════════════════════════════════
+function displayScenario(scenario) {
+    const section = document.getElementById('section-scenario');
+    section.classList.remove('hidden');
+    section.classList.add('open');
+    let html = '<h3>🎬 ' + esc(scenario.title) + '</h3>';
+    html += '<div style="font-size:0.75rem;color:var(--ink-dim);margin-bottom:0.6rem;">Personnages : ' +
+        scenario.characters.map(c => esc(c.name) + ' (' + esc(c.gender) + ')').join(', ') + '</div>';
+    scenario.scenes.forEach(s => {
+        html += '<div class="scene-item"><span class="scene-num">Scène ' + s.scene_number + '</span>' + esc(s.description);
+        if (s.dialogue && s.dialogue.text) {
+            html += '<div style="margin-top:0.3rem;font-style:italic;color:var(--accent-child);">💬 ' + esc(s.dialogue.character) + ' : « ' + esc(s.dialogue.text) + ' »</div>';
+        }
+        html += '</div>';
+    });
+    document.getElementById('scenario-display').innerHTML = html;
+}
+function displayGeneratedImage(url, label, sceneIndex) {
+    document.getElementById('section-images').classList.remove('hidden');
+    let card = document.getElementById('img-card-' + sceneIndex);
+    if (!card) {
+        card = document.createElement('div');
+        card.className = 'gen-image-card';
+        card.id = 'img-card-' + sceneIndex;
+        const grid = document.getElementById('generated-images');
+        // insertion triée par numéro de scène
+        const next = [...grid.children].find(c => parseInt(c.id.replace('img-card-', '')) > sceneIndex);
+        grid.insertBefore(card, next || null);
+    }
+    card.classList.remove('loading');
+    card.innerHTML = '<img src="' + esc(url) + '" alt="" loading="lazy"><div class="gen-label">' + esc(label) + '</div>' +
+        '<button type="button" class="regen-btn" title="Regénérer cette image">↻</button>';
+    card.querySelector('.regen-btn').addEventListener('click', () => regenerateImage(sceneIndex));
+}
+
+// ══════════════════════════════════════════════════════════════════
+// IMAGE PAR IMAGE : prompt partagé + regénération individuelle
+// ══════════════════════════════════════════════════════════════════
+function buildImagePrompt(scene) {
+    const sc = state.scenario;
+    const stylePrompt = STYLES[state.selectedStyle] || STYLES['cartoon-cute'];
+    const characterDesc = sc && sc.characters.length
+        ? 'Recurring characters (keep EXACTLY the same look in every image): ' + sc.characters.map(c => c.name + ' = ' + c.appearance).join('; ') + '. '
+        : '';
+    return characterDesc + 'Scene: ' + scene.image_prompt + '. ' + stylePrompt + '. Square 1:1 format, children friendly, no text, no speech bubbles, no watermark.';
+}
+
+async function regenerateImage(sceneIndex) {
+    if (state.isRunning) { showToast('Attendez la fin de la génération', 'warn'); return; }
+    if (!getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
+    const scene = state.scenario && state.scenario.scenes[sceneIndex];
+    if (!scene) return;
+    const card = document.getElementById('img-card-' + sceneIndex);
+    if (card) { card.classList.add('loading'); card.querySelector('.regen-btn').disabled = true; }
+    state.stopRequested = false;
+    logConsole('Regénération image scène ' + (sceneIndex + 1) + '…', 'info');
+    try {
+        const url = await callImageAPI(buildImagePrompt(scene), '1K', '1:1');
+        const existing = state.images.find(im => im.sceneIndex === sceneIndex);
+        if (existing) existing.url = url;
+        else { state.images.push({ sceneIndex, url, scene }); state.images.sort((a, b) => a.sceneIndex - b.sceneIndex); }
+        displayGeneratedImage(url, 'Scène ' + (sceneIndex + 1), sceneIndex);
+        saveProject();
+        logConsole('Image scène ' + (sceneIndex + 1) + ' remplacée ✓', 'success');
+        if (!document.getElementById('section-board').classList.contains('hidden')) composeBoard();
+    } catch (e) {
+        logConsole('Erreur regénération : ' + e.message, 'error');
+        showToast('Échec de la regénération', 'error');
+        if (card) { card.classList.remove('loading'); card.querySelector('.regen-btn').disabled = false; }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ASSEMBLAGE : BANDE DESSINÉE / PLANCHE PHOTO (canvas)
+// ══════════════════════════════════════════════════════════════════
+const _imgCache = {};
+// Charge l'image en blob pour éviter un canvas "tainted" (export PNG impossible sinon)
+let _boardTainted = false;
+async function loadImageForCanvas(url) {
+    if (_imgCache[url]) return _imgCache[url];
+    const make = (src, cors) => new Promise((res, rej) => {
+        const im = new Image();
+        if (cors) im.crossOrigin = 'anonymous';
+        im.onload = () => res(im);
+        im.onerror = () => rej(new Error('chargement image'));
+        im.src = src;
+    });
+    let img = null;
+    // 1) fetch en blob (export PNG possible)
+    try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        img = await make(URL.createObjectURL(await r.blob()), false);
+    } catch (e) { logConsole('Image via fetch bloquée (' + e.message + '), autre méthode…', 'warn'); }
+    // 2) image CORS
+    if (!img) { try { img = await make(url, true); } catch (e) {} }
+    // 3) image simple : s'affiche toujours, mais l'export PNG sera bloqué
+    if (!img) { img = await make(url, false); img._tainted = true; }
+    _imgCache[url] = img;
+    return img;
+}
+
+function wrapLines(ctx, text, maxWidth) {
+    const words = String(text).split(/\s+/);
+    const lines = [];
+    let line = '';
+    words.forEach(w => {
+        const test = line ? line + ' ' + w : w;
+        if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = w; }
+        else line = test;
+    });
+    if (line) lines.push(line);
+    return lines;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+// Bulle de dialogue façon BD, alternée gauche/droite
+function drawBubble(ctx, px, py, size, dialogue, alignRight) {
+    const fontSize = Math.round(size * 0.045);
+    ctx.font = 'bold ' + fontSize + 'px "Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif';
+    const maxW = size * 0.62;
+    const name = dialogue.character ? dialogue.character + ' :' : '';
+    const lines = wrapLines(ctx, dialogue.text, maxW);
+    const lineH = fontSize * 1.25;
+    const nameH = name ? fontSize * 0.9 : 0;
+    const textW = Math.max(...lines.map(l => ctx.measureText(l).width), name ? ctx.measureText(name).width * 0.8 : 0);
+    const pad = fontSize * 0.7;
+    const bw = textW + pad * 2;
+    const bh = lines.length * lineH + nameH + pad * 1.6;
+    const margin = size * 0.04;
+    const bx = alignRight ? px + size - bw - margin : px + margin;
+    const by = py + margin;
+
+    // queue de bulle
+    const tailX = alignRight ? bx + bw * 0.7 : bx + bw * 0.3;
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = Math.max(2, size * 0.006);
+    ctx.beginPath();
+    ctx.moveTo(tailX - fontSize * 0.6, by + bh - 2);
+    ctx.lineTo(tailX + (alignRight ? fontSize * 0.8 : -fontSize * 0.8), by + bh + fontSize * 1.4);
+    ctx.lineTo(tailX + fontSize * 0.6, by + bh - 2);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    roundRect(ctx, bx, by, bw, bh, fontSize * 0.9);
+    ctx.fill(); ctx.stroke();
+    // masque la jointure queue/bulle
+    ctx.fillRect(tailX - fontSize * 0.55, by + bh - ctx.lineWidth * 1.5, fontSize * 1.1, ctx.lineWidth * 2);
+
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    let ty = by + pad * 0.8;
+    if (name) {
+        ctx.font = 'bold ' + Math.round(fontSize * 0.75) + 'px sans-serif';
+        ctx.fillStyle = '#e94560';
+        ctx.fillText(name, bx + pad, ty);
+        ty += nameH;
+    }
+    ctx.font = 'bold ' + fontSize + 'px "Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif';
+    ctx.fillStyle = '#111';
+    lines.forEach(l => { ctx.fillText(l, bx + pad, ty); ty += lineH; });
+}
+
+function getBoardColumns(n) {
+    const v = document.getElementById('columns-select').value;
+    if (v === 'row') return n;
+    if (v !== 'auto') return Math.min(parseInt(v), n);
+    if (n <= 2) return n;
+    if (n === 4) return 2;
+    if (n > 30) return 6;
+    if (n > 16) return 5;
+    if (n > 9) return 4;
+    return 3;
+}
+
+async function composeBoard() {
+    const imgs = state.images.slice().sort((a, b) => a.sceneIndex - b.sceneIndex);
+    if (!imgs.length) return;
+    const isComic = state.mode !== 'photo';
+    const withBubbles = document.getElementById('opt-bubbles').checked;
+    const withCaptions = document.getElementById('opt-captions').checked;
+    const withTitle = document.getElementById('opt-titlebar').checked;
+
+    const section = document.getElementById('section-board');
+    section.classList.remove('hidden');
+    section.classList.add('open');
+    document.getElementById('board-title').textContent = isComic ? '💬 Bande dessinée' : '🖼️ Planche photo';
+    setStatus('Assemblage de la planche…');
+
+    // chaque image est chargée indépendamment : une image en échec n'empêche plus la planche
+    const loaded = await Promise.all(imgs.map(im => loadImageForCanvas(im.url).catch(e => {
+        logConsole('Image scène ' + (im.sceneIndex + 1) + ' introuvable (lien expiré ?)', 'error');
+        return null;
+    })));
+    if (!loaded.some(Boolean)) { setStatus(null); showToast('Aucune image chargeable — regénérez-les ↻', 'error', 4000); return; }
+    _boardTainted = loaded.some(im => im && im._tainted);
+
+    const n = imgs.length;
+    const cols = getBoardColumns(n);
+    const rows = Math.ceil(n / cols);
+    const colsGuess = getBoardColumns(n), rowsGuess = Math.ceil(n / colsGuess);
+    const fitArea = Math.sqrt(14e6 / (colsGuess * rowsGuess * 1.25));
+    const fitSide = Math.min(15000 / (colsGuess * 1.05), 15000 / (rowsGuess * 1.3));
+    const panel = Math.max(200, Math.floor(Math.min(700, fitArea, fitSide)));  // taille d'une case
+    const gap = isComic ? 24 : 10;
+    const border = isComic ? 6 : 0;
+    const sk = panel / 700;
+    const captionH = withCaptions ? Math.round((isComic ? 90 : 60) * sk) : 0;
+    const titleH = withTitle ? Math.max(110, Math.round(110 * sk)) : 0;
+    const outer = isComic ? 40 : 16;
+
+    const canvas = document.getElementById('board-canvas');
+    canvas.width = outer * 2 + cols * panel + (cols - 1) * gap;
+    canvas.height = outer * 2 + titleH + rows * (panel + captionH) + (rows - 1) * gap;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = isComic ? '#fffdf5' : '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (withTitle && state.scenario) {
+        ctx.fillStyle = isComic ? '#e94560' : '#222';
+        ctx.font = 'bold 64px "Comic Sans MS", "Chalkboard SE", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(state.scenario.title, canvas.width / 2, outer + titleH / 2 - 6, canvas.width - outer * 2);
+    }
+
+    imgs.forEach((im, k) => {
+        const c = k % cols, r = Math.floor(k / cols);
+        // centre la dernière ligne si incomplète
+        const inRow = Math.min(cols, n - r * cols);
+        const rowOffset = (cols - inRow) * (panel + gap) / 2;
+        const x = outer + rowOffset + c * (panel + gap);
+        const y = outer + titleH + r * (panel + captionH + gap);
+
+        if (loaded[k]) ctx.drawImage(loaded[k], x, y, panel, panel);
+        else {
+            ctx.fillStyle = '#eee'; ctx.fillRect(x, y, panel, panel);
+            ctx.fillStyle = '#999'; ctx.font = 'bold 40px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('Image indisponible ↻', x + panel / 2, y + panel / 2);
+        }
+        if (border) {
+            ctx.strokeStyle = '#111';
+            ctx.lineWidth = border;
+            ctx.strokeRect(x, y, panel, panel + captionH);
+        }
+        const scene = (state.scenario && state.scenario.scenes[im.sceneIndex]) || im.scene || {};
+        if (isComic && withBubbles && scene.dialogue && scene.dialogue.text) {
+            drawBubble(ctx, x, y, panel, scene.dialogue, k % 2 === 1);
+        }
+        if (withCaptions) {
+            ctx.fillStyle = isComic ? '#fff3c4' : '#fff';
+            ctx.fillRect(x + border / 2, y + panel, panel - border, captionH - border / 2);
+            if (isComic) { ctx.strokeStyle = '#111'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y + panel); ctx.lineTo(x + panel, y + panel); ctx.stroke(); }
+            ctx.fillStyle = '#333';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            const fs = Math.round((isComic ? 24 : 22) * sk);
+            ctx.font = (isComic ? 'italic ' : '') + fs + 'px sans-serif';
+            const capLines = wrapLines(ctx, (k + 1) + '. ' + (scene.description || ''), panel - 30 * sk).slice(0, 2);
+            capLines.forEach((l, li) => ctx.fillText(l, x + 15 * sk, y + panel + 12 * sk + li * fs * 1.3));
+        }
+    });
+
+    setStatus(null);
+    if (_boardTainted) logConsole('Planche affichée. Export PNG bloqué par le serveur d\'images (CORS) : utilisez une capture d\'écran.', 'warn');
+    logConsole((isComic ? 'BD' : 'Planche') + ' assemblée : ' + n + ' cases, ' + cols + ' colonne(s)', 'success');
+}
+
+function downloadBoard() {
+    if (_boardTainted) {
+        showToast('Le serveur d\'images bloque l\'export : faites un appui long sur la planche → Enregistrer l\'image, ou une capture', 'warn', 6000);
+        return;
+    }
+    const canvas = document.getElementById('board-canvas');
+    const name = ((state.scenario && state.scenario.title) || 'planche').replace(/[^\w\-]+/g, '_') + (state.mode === 'photo' ? '_planche' : '_BD') + '.png';
+    try {
+        canvas.toBlob(blob => {
+            if (!blob) { showToast('Export impossible', 'error'); return; }
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+            showToast('Planche téléchargée', 'success');
+        }, 'image/png');
+    } catch (e) {
+        showToast('Export bloqué par le serveur d\'images (CORS)', 'error', 4000);
+        logConsole('Export PNG impossible : ' + e.message + ' — faites une capture d\'écran de la planche.', 'warn');
+    }
+}
+
+// À partir d'une BD/planche déjà faite : lancer seulement l'étape vidéo
+async function animateFromImages() {
+    if (state.isRunning) return;
+    if (state.images.length < 1) { showToast('Aucune image', 'warn'); return; }
+    if (!getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
+    state.isRunning = true; state.stopRequested = false;
+    state.videoSeconds = parseInt(document.getElementById('duration-select').value);
+    document.getElementById('stop-btn').classList.add('visible');
+    updateGenerateBtn();
+    await activateWakeLock();
+    try { await runVideoStage(); }
+    catch (e) { logConsole('ERREUR : ' + e.message, 'error'); }
+    state.isRunning = false;
+    document.getElementById('stop-btn').classList.remove('visible');
+    setStatus(null);
+    updateGenerateBtn();
+    await deactivateWakeLock();
+}
+
+function updateModeUI() {
+    state.mode = document.getElementById('mode-select').value;
+    document.getElementById('row-duration').classList.toggle('hidden', state.mode !== 'video');
+    document.getElementById('row-columns').classList.toggle('hidden', state.mode === 'video');
+    document.getElementById('opt-bubbles').parentNode.classList.toggle('hidden', state.mode === 'photo');
+    updateGenerateBtn();
+}
+function createPendingVideoCard(index, total) {
+    const card = document.createElement('div');
+    card.className = 'pending-video-card';
+    card.id = 'pending-video-' + index;
+    card.innerHTML = '<div class="pending-spinner"></div><div class="pending-label">Clip ' + (index + 1) + ' / ' + total + '</div>' +
+        '<div class="pending-progress-text" id="pending-progress-' + index + '">En attente…</div>' +
+        '<div class="pending-progress-bar"><div class="pending-progress-fill" id="pending-fill-' + index + '"></div></div>';
+    document.getElementById('generated-videos').appendChild(card);
+}
+function updatePendingVideoCard(index, label, progress, elapsed) {
+    const progEl = document.getElementById('pending-progress-' + index);
+    const fillEl = document.getElementById('pending-fill-' + index);
+    if (progEl) {
+        let text = label;
+        if (progress > 0) text += ' ' + progress + '%';
+        if (elapsed > 0) text += ' · ' + elapsed + 's';
+        progEl.textContent = text;
+    }
+    if (fillEl && progress > 0) fillEl.style.width = progress + '%';
+}
+function replacePendingWithVideo(index, videoUrl, dialogue, sceneNumber) {
+    const pending = document.getElementById('pending-video-' + index);
+    if (!pending) return;
+    const card = document.createElement('div');
+    card.className = 'gen-video-card';
+    card.id = 'video-card-' + index;
+    card.innerHTML =
+        '<video src="' + esc(videoUrl) + '" controls playsinline preload="metadata"></video>' +
+        '<div class="gen-label">🎬 Clip ' + sceneNumber + ' <span style="color:var(--success);font-size:0.6rem;">✓</span>' +
+        '<a href="#" data-dl="' + index + '" title="Télécharger">⬇</a></div>' +
+        (dialogue && dialogue.text ? '<div class="gen-dialogue">💬 ' + esc(dialogue.character) + ' : « ' + esc(dialogue.text) + ' »</div>' : '');
+    card.querySelector('[data-dl]').addEventListener('click', e => { e.preventDefault(); downloadClip(index); });
+    pending.parentNode.replaceChild(card, pending);
+}
+function markPendingFailed(index, errorMessage) {
+    const pending = document.getElementById('pending-video-' + index);
+    if (!pending) return;
+    pending.innerHTML = '<div style="color:var(--error);font-size:2rem;">✕</div><div class="pending-label" style="color:var(--error);">Échec</div>' +
+        '<div class="pending-progress-text">' + esc(errorMessage.slice(0, 60)) + '</div>';
+}
+
+// Téléchargement d'un clip (fallback : ouverture dans un nouvel onglet si CORS bloque)
+async function downloadClip(index) {
+    const v = state.videos[index];
+    if (!v || !v.url) return;
+    const name = ((state.scenario && state.scenario.title) || 'dessin-anime').replace(/[^\w\-]+/g, '_') + '_clip' + (index + 1) + '.mp4';
+    try {
+        const res = await fetch(v.url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        showToast('Clip ' + (index + 1) + ' téléchargé', 'success');
+    } catch (e) {
+        window.open(v.url, '_blank');
+        showToast('Ouvert dans un onglet — enregistrez-le depuis là', 'warn', 3500);
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// LECTEUR SÉQUENTIEL + TTS ENFANT + SOUS-TITRES
+// ══════════════════════════════════════════════════════════════════
+let speechSynth = null;
+function initSpeech() {
+    if ('speechSynthesis' in window) {
+        speechSynth = window.speechSynthesis;
+        speechSynth.getVoices();
+        speechSynth.onvoiceschanged = () => speechSynth.getVoices();
+    }
+}
+function isFemaleCharacter(name) {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return state.femaleCharacters.some(f => f && (n.includes(f) || f.includes(n)));
+}
+function speakText(text, characterName) {
+    return new Promise(resolve => {
+        if (!speechSynth) return resolve();
+        speechSynth.cancel();
+        setTimeout(() => {
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'fr-FR';
+            u.rate = 0.9;
+            u.pitch = isFemaleCharacter(characterName) ? 1.4 : 1.1;
+            const frVoices = speechSynth.getVoices().filter(v => v.lang && v.lang.startsWith('fr'));
+            if (frVoices.length) {
+                const female = frVoices.find(v => /amelie|marie|audrey|female|denise|julie/i.test(v.name));
+                const male = frVoices.find(v => /thomas|nicolas|male|henri|paul/i.test(v.name));
+                u.voice = (isFemaleCharacter(characterName) ? female : male) || frVoices[0];
+            }
+            u.onend = u.onerror = () => resolve();
+            speechSynth.speak(u);
+            setTimeout(resolve, 8000); // sécurité si onend ne se déclenche pas
+        }, 100);
+    });
+}
+function stopSpeech() { if (speechSynth) speechSynth.cancel(); }
+function showSubtitle(text) {
+    const el = document.getElementById('subtitle-overlay');
+    if (text) { el.textContent = text; el.classList.add('visible'); }
+    else el.classList.remove('visible');
+}
+
+function playAllVideos() {
+    if (!state.videos.some(v => v && v.url)) return;
+    state.isPlayingSequence = true;
+    document.getElementById('play-all-btn').textContent = '⏸ Lecture…';
+    document.getElementById('section-player').classList.add('open');
+    playVideoAt(0);
+}
+
+function playVideoAt(index) {
+    while (index < state.videos.length && (!state.videos[index] || !state.videos[index].url)) index++;
+    if (index >= state.videos.length || !state.isPlayingSequence) {
+        state.isPlayingSequence = false;
+        showSubtitle(null);
+        document.getElementById('play-all-btn').textContent = '▶ Lire tout';
+        return;
+    }
+    const video = document.getElementById('player-video');
+    const v = state.videos[index];
+    const total = state.videos.length;
+    video.src = v.url;
+    video.currentTime = 0;
+    video.play().catch(() => {});
+    document.getElementById('player-info').textContent = 'Scène ' + (index + 1) + ' / ' + total;
+    document.getElementById('player-progress').style.width = ((index + 1) / total * 100) + '%';
+
+    let speechDone = Promise.resolve();
+    showSubtitle(null);
+    if (v.dialogue && v.dialogue.text) {
+        speechDone = sleep(500).then(() => {
+            if (!state.isPlayingSequence) return;
+            showSubtitle(v.dialogue.character + ' : « ' + v.dialogue.text + ' »');
+            return speakText(v.dialogue.text, v.dialogue.character);
+        });
+    }
+    // On attend la fin de la vidéo ET de la voix avant de passer à la scène suivante
+    video.onended = async () => {
+        if (!state.isPlayingSequence) return;
+        await speechDone;
+        await sleep(300);
+        if (state.isPlayingSequence) playVideoAt(index + 1);
+    };
+}
+
+function stopAllVideos() {
+    state.isPlayingSequence = false;
+    const video = document.getElementById('player-video');
+    video.onended = null;
+    video.pause();
+    try { video.currentTime = 0; } catch (e) {}
+    stopSpeech();
+    showSubtitle(null);
+    document.getElementById('play-all-btn').textContent = '▶ Lire tout';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+(function init() {
+    initSpeech();
+    document.getElementById('api-save-btn').addEventListener('click', saveApiKey);
+    document.getElementById('api-key-input').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveApiKey(); } });
+    document.getElementById('generate-btn').addEventListener('click', runFullPipeline);
+    document.getElementById('restore-btn').addEventListener('click', restoreProject);
+    document.getElementById('stop-btn').addEventListener('click', () => {
+        state.stopRequested = true;
+        logConsole('Arrêt demandé', 'warn');
+        setStatus('Arrêt en cours…');
+    });
+    document.getElementById('idea-input').addEventListener('input', updateGenerateBtn);
+    document.getElementById('mode-select').addEventListener('change', updateModeUI);
+    document.getElementById('columns-select').addEventListener('change', () => { if (state.images.length && state.mode !== 'video') composeBoard(); });
+    ['opt-bubbles', 'opt-captions', 'opt-titlebar'].forEach(id => document.getElementById(id).addEventListener('change', composeBoard));
+    document.getElementById('board-recompose-btn').addEventListener('click', composeBoard);
+    document.getElementById('board-download-btn').addEventListener('click', downloadBoard);
+    document.getElementById('board-animate-btn').addEventListener('click', animateFromImages);
+    updateModeUI();
+    document.querySelectorAll('[data-toggle]').forEach(h => h.addEventListener('click', () => document.getElementById(h.dataset.toggle).classList.toggle('open')));
+    document.getElementById('play-all-btn').addEventListener('click', () => state.isPlayingSequence ? stopAllVideos() : playAllVideos());
+    document.getElementById('stop-all-btn').addEventListener('click', stopAllVideos);
+    updateApiPanel();
+    updateGenerateBtn();
+    updateRestoreBtn();
+    logConsole('Application prête pour les enfants.', 'info');
+})();
+</script>
+</body>
+</html>

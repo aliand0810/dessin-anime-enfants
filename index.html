@@ -270,6 +270,38 @@
     .vc-name { font-size: 0.78rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .vc-row select, .vc-pair select { padding: 0.45rem 1.6rem 0.45rem 0.55rem; font-size: 0.72rem; background-position: right 0.5rem center; }
     .vc-test { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--accent-child); color: #fff; cursor: pointer; font-size: 0.75rem; }
+    .vw-scene .vw-kb { width: 100%; height: 100%; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.6); }
+    .vw-scene .vw-kb img { border-radius: 0; box-shadow: none; transform-origin: 50% 50%; will-change: transform; }
+    .viewer.anim-on .vw-scene.narrating .vw-kb img, .viewer.anim-on .vw-scene.talking .vw-kb img { animation: kb0 16s ease-out forwards; }
+    .viewer.anim-on .vw-scene.kb1.narrating .vw-kb img, .viewer.anim-on .vw-scene.kb1.talking .vw-kb img { animation-name: kb1; }
+    .viewer.anim-on .vw-scene.kb2.narrating .vw-kb img, .viewer.anim-on .vw-scene.kb2.talking .vw-kb img { animation-name: kb2; }
+    .viewer.anim-on .vw-scene.kb3.narrating .vw-kb img, .viewer.anim-on .vw-scene.kb3.talking .vw-kb img { animation-name: kb3; }
+    @keyframes kb0 { from { transform: scale(1.04); } to { transform: scale(1.16) translate(-3%, -2%); } }
+    @keyframes kb1 { from { transform: scale(1.04); } to { transform: scale(1.16) translate(3%, -2%); } }
+    @keyframes kb2 { from { transform: scale(1.16) translate(-2%, 2%); } to { transform: scale(1.04); } }
+    @keyframes kb3 { from { transform: scale(1.04); } to { transform: scale(1.15) translate(2%, 3%); } }
+    .viewer.anim-on .vw-scene.talking .vw-kb { animation: talk 0.5s ease-in-out infinite alternate; }
+    @keyframes talk { from { transform: translateY(0) scale(1); } to { transform: translateY(-4px) scale(1.006); } }
+    .viewer.reading.anim-on .vw-scene:not(.has-spoken) .vw-bubble { opacity: 0; transform: scale(0.85); }
+    .vw-bubble { transition: opacity 0.35s, transform 0.35s, box-shadow 0.3s; }
+    .vw-badge { position: absolute; right: 3%; bottom: 3%; display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; border-radius: 20px; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); font-size: 0.78rem; font-weight: 700; opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; }
+    .vw-badge.on { opacity: 1; transform: none; }
+    .vw-waves { display: inline-flex; gap: 2px; align-items: center; height: 14px; }
+    .vw-waves i { width: 3px; height: 100%; background: #ff6b9d; border-radius: 2px; animation: wave 0.8s ease-in-out infinite; }
+    .vw-waves i:nth-child(2) { animation-delay: 0.15s; } .vw-waves i:nth-child(3) { animation-delay: 0.3s; } .vw-waves i:nth-child(4) { animation-delay: 0.45s; }
+    @keyframes wave { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+    .vw-caption .w.on { color: #ff6b9d; text-shadow: 0 0 12px rgba(255,107,157,0.45); }
+    .vw-caption .w.read { color: #fff; }
+    .vw-caption { color: rgba(238,238,238,0.78); }
+    .vw-settings { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.5rem 1rem; padding: 0.6rem 0.8rem; margin-bottom: 0.6rem; border-radius: 12px; background: rgba(255,255,255,0.06); }
+    .vw-ghost { padding: 0.5rem 0.9rem; border-radius: 20px; border: 1px solid rgba(255,255,255,0.18); background: transparent; color: #ddd; font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+    .vw-ghost[aria-expanded="true"] { background: rgba(255,255,255,0.12); }
+    .vw-mini { width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(255,255,255,0.12); color: #fff; cursor: pointer; }
+    .vw-rec-dot { display: none; color: #ff4d4d; font-size: 0.75rem; font-weight: 800; animation: blink 1s steps(2) infinite; }
+    .viewer.recording .vw-rec-dot { display: inline; }
+    .viewer.recording #vw-rec { border-color: #ff4d4d; color: #ff8080; }
+    @keyframes blink { 50% { opacity: 0.2; } }
+    @media (prefers-reduced-motion: reduce) { .viewer .vw-scene .vw-kb img, .viewer .vw-scene .vw-kb { animation: none !important; } }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -315,7 +347,7 @@
 <div class="layout">
 <aside class="controls-col" id="controls-col">
 <div class="api-panel" id="api-panel">
-    <input type="password" class="api-key-input" id="api-key-input" placeholder="Collez votre clé API Agnes (sk-...)" autocomplete="off" spellcheck="false">
+    <input type="password" class="api-key-input" id="api-key-input" placeholder="Collez votre clé API Agnes (sk-…)" autocomplete="off" spellcheck="false">
     <button type="button" class="api-save-btn" id="api-save-btn">Enregistrer la clé</button>
     <div class="api-status-line" id="api-status-line">
         <span class="status-dot"></span>
@@ -329,7 +361,7 @@
         <span class="chevron">▼</span>
     </div>
     <div class="section-body"><div class="section-content">
-        <textarea id="idea-input" placeholder="Exemple : Un petit lapin nommé Pilou part à la recherche de sa carotte magique dans la forêt enchantée..."></textarea>
+        <textarea id="idea-input" placeholder="Exemple : Un petit lapin nommé Pilou part à la recherche de sa carotte magique dans la forêt enchantée…"></textarea>
     </div></div>
 </div>
 
@@ -455,7 +487,7 @@
 <main class="results-col" id="results-col">
 
 <div class="console-panel" id="console-panel">
-    <div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">[Système]</span> <span class="log-text">En attente de votre histoire...</span></div>
+    <div class="log-line"><span class="log-time">--:--:--</span><span class="log-info">[Système]</span> <span class="log-text">En attente de votre histoire…</span></div>
 </div>
 
 <div class="section hidden" id="section-scenario">
@@ -582,6 +614,7 @@
 <div class="viewer hidden" id="viewer" role="dialog" aria-label="Aperçu plein écran">
     <div class="vw-top">
         <div class="vw-title" id="vw-title"></div>
+        <span class="vw-rec-dot">● REC</span>
         <div class="vw-tabs">
             <button type="button" data-vmode="story" class="active">📖 Histoire</button>
             <button type="button" data-vmode="pages">📄 Pages</button>
@@ -595,22 +628,23 @@
     </div>
     <div class="vw-bottom">
         <div class="vw-progress"><div class="vw-progress-fill" id="vw-progress"></div></div>
-        <div class="vw-controls">
-            <button type="button" class="vw-play" id="vw-play">▶ Lecture audio</button>
-            <span class="vw-counter" id="vw-counter"></span>
+        <div class="vw-settings hidden" id="vw-settings">
             <label class="vw-opt"><input type="checkbox" id="vw-voice" checked> 🗣 Voix</label>
             <label class="vw-opt">Vitesse
                 <select id="vw-rate"><option value="0.75">Lente</option><option value="0.9" selected>Normale</option><option value="1.1">Rapide</option></select>
             </label>
             <label class="vw-opt"><input type="checkbox" id="vw-music" checked> 🎵 Musique</label>
-            <select id="vw-music-style" class="vw-sel">
-                <option value="lullaby">Berceuse</option>
-                <option value="happy" selected>Joyeuse</option>
-                <option value="adventure">Aventure</option>
-                <option value="magic">Magique</option>
-            </select>
+            <select id="vw-music-style" class="vw-sel"></select>
+            <button type="button" class="vw-mini" id="vw-music-test" title="Écouter la mélodie">♪</button>
             <input type="range" id="vw-music-vol" min="0" max="100" value="40" title="Volume de la musique">
+            <label class="vw-opt"><input type="checkbox" id="vw-anim" checked> 🎞 Animation</label>
             <label class="vw-opt"><input type="checkbox" id="vw-auto" checked> ⏭ Suivant auto</label>
+        </div>
+        <div class="vw-controls">
+            <button type="button" class="vw-play" id="vw-play">▶ Lecture audio</button>
+            <span class="vw-counter" id="vw-counter"></span>
+            <button type="button" class="vw-ghost" id="vw-rec">⏺ Enregistrer en vidéo</button>
+            <button type="button" class="vw-ghost" id="vw-settings-btn" aria-expanded="false">⚙ Réglages</button>
         </div>
     </div>
 </div>
@@ -1043,7 +1077,7 @@ async function createVideoTask(firstFrameUrl, lastFrameUrl, prompt) {
 
 async function pollVideo(videoId, index) {
     const startTime = Date.now();
-    logConsole('Polling clip ' + (index + 1) + '…', 'info');
+    logConsole('Suivi du clip ' + (index + 1) + '…', 'info');
     for (let attempt = 0; attempt < 300; attempt++) {
         if (state.stopRequested) throw new Error('Arrêt demandé');
         const url = POLL_BASE + '?video_id=' + encodeURIComponent(videoId) + '&model_name=' + encodeURIComponent(MODEL_VIDEO);
@@ -1084,7 +1118,7 @@ Personnages : ${scenario.characters.map(c => c.name + ' (' + c.appearance + ')')
 Dernières scènes :
 ${recap}
 
-Écris les scènes ${done + 1} à ${done + n} (exactement ${n} scènes), joyeuses, mêmes personnages, dialogues de 8 mots max.${isEnd ? ' La dernière scène doit conclure l\'histoire avec une fin heureuse.' : ' Ne termine pas encore l\'histoire.'}
+Écris les scènes ${done + 1} à ${done + n} (exactement ${n} scènes), joyeuses, mêmes personnages, dialogues de 8 mots max. « description » et « dialogue » en français correct, sans faute ; « image_prompt » en anglais.${isEnd ? ' La dernière scène doit conclure l\'histoire avec une fin heureuse.' : ' Ne termine pas encore l\'histoire.'}
 
 JSON valide uniquement :
 { "scenes": [ { "scene_number": ${done + 1}, "description": "...", "image_prompt": "prompt en anglais (action + décor)", "dialogue": { "character": "Nom", "text": "..." } } ] }`;
@@ -1164,6 +1198,7 @@ Contraintes :
 - Nombre de scènes : exactement ${firstBatch}${state.sceneCount > firstBatch ? ' (début d\'une histoire qui en comptera ' + state.sceneCount + ' au total : ne la termine pas encore)' : ''}
 - Chaque scène doit être visuellement simple et joyeuse, avec le même décor général pour garder une continuité
 - Les dialogues doivent être très courts (max 8 mots) et adaptés aux enfants
+- « title », « description » et « dialogue » sont rédigés en français correct, sans faute d'orthographe ; seuls « image_prompt » et « appearance » sont en anglais
 - Pour chaque personnage, une apparence TRÈS précise et constante (espèce, couleurs exactes, vêtements, accessoire distinctif)
 
 Génère un JSON valide :
@@ -1265,7 +1300,7 @@ Réponds UNIQUEMENT en JSON valide, sans markdown.`;
 // ═══ ÉTAPE VIDÉOS (réutilisable depuis une BD) ═══
 async function runVideoStage() {
         // Un clip PAR SCÈNE : scène i → scène i+1, et la dernière scène anime sa propre image
-        logConsole('ÉTAPE 3/3 — Vidéos animées (keyframes)', 'success');
+        logConsole('ÉTAPE 3/3 — Vidéos animées (images clés)', 'success');
         state.videos = [];
         document.getElementById('generated-videos').innerHTML = '';
         setStatus('Création des clips vidéo…');
@@ -1351,12 +1386,12 @@ function displayGeneratedImage(url, label, sceneIndex) {
     }
     card.classList.remove('loading');
     card.innerHTML = '<img src="' + esc(url) + '" alt="" loading="lazy"><div class="gen-label">' + esc(label) + '</div>' +
-        '<button type="button" class="regen-btn" title="Regénérer cette image">↻</button>';
+        '<button type="button" class="regen-btn" title="Régénérer cette image">↻</button>';
     card.querySelector('.regen-btn').addEventListener('click', () => regenerateImage(sceneIndex));
 }
 
 // ══════════════════════════════════════════════════════════════════
-// IMAGE PAR IMAGE : prompt partagé + regénération individuelle
+// IMAGE PAR IMAGE : prompt partagé + régénération individuelle
 // ══════════════════════════════════════════════════════════════════
 function buildImagePrompt(scene) {
     const sc = state.scenario;
@@ -1375,7 +1410,7 @@ async function regenerateImage(sceneIndex) {
     const card = document.getElementById('img-card-' + sceneIndex);
     if (card) { card.classList.add('loading'); card.querySelector('.regen-btn').disabled = true; }
     state.stopRequested = false;
-    logConsole('Regénération image scène ' + (sceneIndex + 1) + '…', 'info');
+    logConsole('Régénération de l\'image de la scène ' + (sceneIndex + 1) + '…', 'info');
     try {
         const url = await callImageAPI(buildImagePrompt(scene), '1K', '1:1');
         const existing = state.images.find(im => im.sceneIndex === sceneIndex);
@@ -1386,8 +1421,8 @@ async function regenerateImage(sceneIndex) {
         logConsole('Image scène ' + (sceneIndex + 1) + ' remplacée ✓', 'success');
         if (!document.getElementById('section-board').classList.contains('hidden')) composeBoard();
     } catch (e) {
-        logConsole('Erreur regénération : ' + e.message, 'error');
-        showToast('Échec de la regénération', 'error');
+        logConsole('Erreur de régénération : ' + e.message, 'error');
+        showToast('Échec de la régénération', 'error');
         if (card) { card.classList.remove('loading'); card.querySelector('.regen-btn').disabled = false; }
     }
 }
@@ -1413,7 +1448,7 @@ async function loadImageForCanvas(url) {
         const r = await fetch(url);
         if (!r.ok) throw new Error('HTTP ' + r.status);
         img = await make(URL.createObjectURL(await r.blob()), false);
-    } catch (e) { logConsole('Image via fetch bloquée (' + e.message + '), autre méthode…', 'warn'); }
+    } catch (e) { logConsole('Téléchargement direct de l\'image bloqué (' + e.message + '), autre méthode…', 'warn'); }
     // 2) image CORS
     if (!img) { try { img = await make(url, true); } catch (e) {} }
     // 3) image simple : s'affiche toujours, mais l'export PNG sera bloqué
@@ -1605,7 +1640,7 @@ async function composeBoard() {
     setStatus('Assemblage de la planche…');
 
     const loaded = await loadBoardImages(imgs);
-    if (!loaded.some(Boolean)) { setStatus(null); showToast('Aucune image chargeable — regénérez-les ↻', 'error', 4000); return; }
+    if (!loaded.some(Boolean)) { setStatus(null); showToast('Aucune image ne peut être chargée — régénérez-les ↻', 'error', 4000); return; }
     _boardTainted = loaded.some(im => im && im._tainted);
 
     const n = imgs.length;
@@ -2018,7 +2053,7 @@ function stopAllSpeech() {
 }
 
 // Voix du navigateur « conte de fées » : phrase par phrase, avec de vraies pauses et une intonation qui varie
-function speakBrowser(text, role, onWord) {
+function speakBrowser(text, role, onWord, hooks = {}) {
     return new Promise(async resolve => {
         if (!speechSynth) return setTimeout(resolve, 600 + text.length * 45);
         speechSynth.cancel();
@@ -2035,6 +2070,10 @@ function speakBrowser(text, role, onWord) {
         // découpe en phrases et propositions pour respirer comme un conteur
         const parts = isNarr ? (text.match(/[^.!?…;:,]+[.!?…;:,]*/g) || [text]) : (text.match(/[^.!?…]+[.!?…]*/g) || [text]);
         let offset = 0, myToken = ++_speakToken;
+        if (hooks.onStart) {   // durée estimée (texte + pauses de conte) pour animer pendant la lecture
+            const pauses = parts.reduce((t, p) => t + (/[.!?…]\s*$/.test(p) ? (isNarr ? 0.42 : 0.2) : /[,;:]\s*$/.test(p) ? (isNarr ? 0.16 : 0.08) : 0), 0);
+            hooks.onStart(text.length * 0.068 / baseRate + pauses + 0.3);
+        }
         for (let i = 0; i < parts.length; i++) {
             if (myToken !== _speakToken) return resolve();
             const part = parts[i].trim();
@@ -2063,11 +2102,17 @@ function speakBrowser(text, role, onWord) {
 }
 let _speakToken = 0;
 
-async function speakCloud(text, role) {
+async function speakCloud(text, role, hooks = {}) {
     const url = await cloudAudioUrl(text, role);
     return new Promise(resolve => {
-        const a = new Audio(url);
+        const a = new Audio();
+        if (rec.active) {      // pendant l'enregistrement, la voix passe par le bus audio pour être capturée
+            a.crossOrigin = 'anonymous';
+            try { audioHub.get().createMediaElementSource(a).connect(audioHub.out); } catch (e) {}
+        }
+        a.src = url;
         _currentAudio = a;
+        a.addEventListener('playing', () => { if (hooks.onStart) hooks.onStart(a.duration || text.length * 0.07); }, { once: true });
         let done = false; const fin = () => { if (!done) { done = true; if (_currentAudio === a) _currentAudio = null; resolve(); } };
         a.onended = a.onerror = fin;
         a.play().catch(fin);
@@ -2076,20 +2121,83 @@ async function speakCloud(text, role) {
 }
 
 // Point d'entrée unique : role = '__narrator__' ou le nom du personnage
-async function speakLine(text, role, onWord) {
+async function speakLine(text, role, onWord, hooks = {}) {
     if (!text) return;
     stopAllSpeech();
     if (voiceCfg.engine !== 'browser') {
-        try { return await speakCloud(text, role); }
+        try { return await speakCloud(text, role, hooks); }
         catch (e) {
             if (!_cloudWarned) {
                 _cloudWarned = true;
-                logConsole('Voix IA indisponibles (' + e.message + ') → voix du navigateur.', 'warn');
-                showToast('Voix IA indisponibles : voix du navigateur utilisée', 'warn', 3500);
+                logConsole('Voix IA indisponibles (' + e.message + ') → voix de l\'appareil.', 'warn');
+                showToast('Voix IA indisponibles : voix de l\'appareil utilisée', 'warn', 3500);
             }
         }
     }
-    return speakBrowser(text, role, onWord);
+    return speakBrowser(text, role, onWord, hooks);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// ANIMATION SYNCHRONISÉE AVEC LA LECTURE (visionneuse + vidéo enregistrée)
+// ══════════════════════════════════════════════════════════════════
+const anim = { phase: 'idle', speaker: '', sceneIdx: -1, sceneT0: 0, wordIdx: -1, dialogShown: false, kbDir: 0 };
+
+function setPhase(phase, speaker) {
+    anim.phase = phase;
+    anim.speaker = speaker || '';
+    if (phase === 'dialog') anim.dialogShown = true;
+    const wrap = document.querySelector('.vw-scene');
+    const badge = document.getElementById('vw-badge');
+    if (wrap) {
+        wrap.classList.toggle('narrating', phase === 'narr');
+        wrap.classList.toggle('talking', phase === 'dialog');
+    }
+    if (badge) {
+        const show = phase === 'narr' || phase === 'dialog';
+        badge.classList.toggle('on', show);
+        badge.querySelector('.vw-badge-txt').textContent = phase === 'dialog' ? speaker : narratorLabel();
+    }
+    const b = document.getElementById('vw-bubble');
+    if (b) b.classList.toggle('speaking', phase === 'dialog');
+}
+function narratorLabel() {
+    return ({ fairy: '🧚 Conteuse', granny: '👵 Grand-mère', magic: '✨ Narrateur', lively: '🎈 Conteur', neutral: '📖 Narrateur' })[voiceCfg.narratorStyle] || '📖 Narrateur';
+}
+
+// Surlignage mot à mot : par les événements du moteur de voix quand ils existent, sinon par une estimation
+function setWord(k) {
+    anim.wordIdx = k;
+    const cap = document.getElementById('vw-caption');
+    if (cap) cap.querySelectorAll('.w').forEach((w, i) => { w.classList.toggle('on', i === k); w.classList.toggle('read', i < k); });
+}
+function makeWordTimeline(text, onWordIdx) {
+    const words = [];
+    text.replace(/\S+/g, (w, i) => { words.push({ w, i }); return w; });
+    let timers = [], fromEngine = false;
+    return {
+        words,
+        boundary(charIndex) {
+            fromEngine = true;
+            timers.forEach(clearTimeout); timers = [];
+            let k = 0;
+            while (k + 1 < words.length && words[k + 1].i <= charIndex) k++;
+            onWordIdx(k);
+        },
+        start(durationSec) {
+            if (fromEngine || !words.length || !durationSec) return;
+            timers.forEach(clearTimeout); timers = [];
+            // pondération : longueur du mot + pause après la ponctuation
+            const weights = words.map(o => o.w.length + 2 + (/[.!?…]$/.test(o.w) ? 6 : /[,;:]$/.test(o.w) ? 3 : 0));
+            const total = weights.reduce((a, b) => a + b, 0);
+            let acc = 0;
+            words.forEach((o, k) => {
+                const at = acc / total * durationSec * 1000;
+                timers.push(setTimeout(() => { if (!fromEngine) onWordIdx(k); }, at));
+                acc += weights[k];
+            });
+        },
+        stop() { timers.forEach(clearTimeout); timers = []; }
+    };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2142,8 +2250,10 @@ function renderViewer() {
         const im = sortedImages()[i];
         const sc = sceneOf(im);
         const wrap = document.createElement('div');
-        wrap.className = 'vw-scene';
-        wrap.innerHTML = '<img src="' + esc(im.localUrl || im.url) + '" alt="">' +
+        wrap.className = 'vw-scene kb' + (i % 4);
+        anim.sceneIdx = i; anim.sceneT0 = performance.now(); anim.wordIdx = -1; anim.dialogShown = false;
+        wrap.innerHTML = '<div class="vw-kb"><img src="' + esc(im.localUrl || im.url) + '" alt=""></div>' +
+            '<div class="vw-badge" id="vw-badge"><span class="vw-badge-txt"></span><span class="vw-waves"><i></i><i></i><i></i><i></i></span></div>' +
             (sc.dialogue && sc.dialogue.text && state.mode !== 'photo'
                 ? '<div class="vw-bubble' + (i % 2 ? ' right' : '') + '" id="vw-bubble"><small>' + esc(sc.dialogue.character) + '</small>' + esc(sc.dialogue.text) + '</div>' : '');
         const cap = document.createElement('div');
@@ -2185,34 +2295,47 @@ function highlightWord(charIndex, text) {
 
 function narrate(text, character, narrator, onWord) {
     if (!text) return Promise.resolve();
-    if (!document.getElementById('vw-voice').checked) return sleep(600 + text.length * 45);
-    return speakLine(text, narrator ? '__narrator__' : character, onWord);
+    setPhase(narrator ? 'narr' : 'dialog', character);
+    const tl = onWord ? makeWordTimeline(text, k => { setWord(k); onWord(k); }) : null;
+    const done = () => { if (tl) tl.stop(); };
+    if (!document.getElementById('vw-voice').checked) {
+        const d = 0.6 + text.length * 0.045;
+        if (tl) tl.start(d);
+        return sleep(d * 1000).then(done);
+    }
+    return speakLine(text, narrator ? '__narrator__' : character, tl ? ci => tl.boundary(ci) : null, { onStart: d => tl && tl.start(d) }).then(done);
 }
 
-// Lit une scène : le narrateur lit la description, puis le personnage dit son dialogue
+// Lit une scène : le narrateur lit la description (image animée, mots surlignés), puis le personnage parle
 async function readScene(sc, token, withCaption) {
     music.duck(true);
     if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') prefetchLine(sc.dialogue.text, sc.dialogue.character);
     if (sc.description) {
-        await narrate(sc.description, null, true, withCaption ? ci => highlightWord(ci, sc.description) : null);
+        await narrate(sc.description, null, true, withCaption ? () => {} : null);
         if (token !== viewer.token) return;
+        markAllWordsRead();
     }
     if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') {
-        const b = document.getElementById('vw-bubble');
-        if (b) b.classList.add('speaking');
-        await sleep(250);
+        const wrap = document.querySelector('.vw-scene');
+        if (wrap) wrap.classList.add('has-spoken');
+        await sleep(300);
         await narrate(sc.dialogue.text, sc.dialogue.character, false);
-        if (b) b.classList.remove('speaking');
+        if (token !== viewer.token) return;
     }
-    const cap = document.getElementById('vw-caption');
-    if (cap) cap.querySelectorAll('.w.on').forEach(w => w.classList.remove('on'));
+    setPhase('idle');
     music.duck(false);
+}
+function markAllWordsRead() {
+    anim.wordIdx = 9999;
+    const cap = document.getElementById('vw-caption');
+    if (cap) cap.querySelectorAll('.w').forEach(w => { w.classList.remove('on'); w.classList.add('read'); });
 }
 
 async function startReading() {
     if (viewer.playing) return stopReading();
     viewer.playing = true;
     const token = ++viewer.token;
+    document.getElementById('viewer').classList.add('reading');
     document.getElementById('vw-play').textContent = '⏸ Pause';
     if (document.getElementById('vw-music').checked) music.start(document.getElementById('vw-music-style').value);
     while (viewer.playing && token === viewer.token) {
@@ -2247,6 +2370,7 @@ async function startReading() {
     }
     if (token === viewer.token) {
         viewer.playing = false;
+        document.getElementById('viewer').classList.remove('reading');
         document.getElementById('vw-play').textContent = '▶ Lecture audio';
         music.fadeOutAndStop(2.5);
     }
@@ -2255,78 +2379,375 @@ async function startReading() {
 function stopReading() {
     viewer.token++;
     viewer.playing = false;
+    document.getElementById('viewer').classList.remove('reading');
     _speakToken++;
     stopAllSpeech();
     music.stop();
+    setPhase('idle');
     const b = document.getElementById('vw-play');
     if (b) b.textContent = '▶ Lecture audio';
 }
 
-// Musique de fond générée en direct (Web Audio) : mélodies originales, aucun fichier externe
+// ── Bus audio commun : musique + voix IA passent ici, ce qui permet aussi l'enregistrement vidéo ──
+const audioHub = {
+    ctx: null, out: null, recDest: null,
+    get() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.out = this.ctx.createGain();
+            this.out.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        return this.ctx;
+    },
+    startRecording() {
+        this.get();
+        this.recDest = this.ctx.createMediaStreamDestination();
+        this.out.connect(this.recDest);
+        return this.recDest.stream;
+    },
+    stopRecording() {
+        if (this.recDest) { try { this.out.disconnect(this.recDest); } catch (e) {} this.recDest = null; }
+    }
+};
+
+// Musique de fond générée en direct (Web Audio) : mélodies originales, aucun fichier externe.
+// melody : degrés de la gamme (null = silence), une valeur par croche ; chords : degré de l'accord par mesure.
+const MUSIC_STYLES = {
+    lullaby:  { name: 'Berceuse',            bpm: 60,  meter: 6, root: 60, scale: [0, 2, 4, 5, 7, 9, 11], lead: 'box',
+                melody: [4, null, 2, 3, null, 1, 2, null, 0, 1, null, null, 4, null, 5, 4, null, 2, 3, 2, 1, 0, null, null],
+                chords: [0, 4, 5, 0], pad: true, gain: 0.10 },
+    happy:    { name: 'Joyeuse',             bpm: 112, meter: 8, root: 67, scale: [0, 2, 4, 5, 7, 9, 11], lead: 'triangle',
+                melody: [0, 2, 4, 2, 5, 4, 2, 1, 2, 4, 6, 4, 7, 6, 4, null, 4, 5, 4, 2, 3, 2, 1, 0, 1, 2, 4, 1, 0, null, 0, null],
+                chords: [0, 3, 4, 0], bassEvery: 4, gain: 0.10 },
+    adventure:{ name: 'Aventure',            bpm: 100, meter: 8, root: 62, scale: [0, 2, 3, 5, 7, 8, 10], lead: 'saw',
+                melody: [0, null, 4, 3, 4, null, 6, 7, 6, 4, 3, null, 2, 3, 4, null, 0, null, 4, 5, 6, 7, 8, 7, 6, 4, 3, 4, 2, null, 0, null],
+                chords: [0, 5, 3, 4], bassEvery: 2, drums: 'march', gain: 0.06 },
+    magic:    { name: 'Magique',             bpm: 76,  meter: 8, root: 72, scale: [0, 2, 4, 6, 7, 9, 11], lead: 'bell',
+                melody: [0, 4, 6, 4, 9, 7, 6, 4, 2, 6, 4, 1, 2, null, null, null, 4, 7, 9, 7, 11, 9, 7, 6, 4, 6, 7, 4, 0, null, null, null],
+                chords: [0, 1, 5, 4], pad: true, sparkle: true, gain: 0.07 },
+    musicbox: { name: 'Boîte à musique',     bpm: 132, meter: 6, root: 76, scale: [0, 2, 4, 5, 7, 9, 11], lead: 'box',
+                melody: [0, 2, 4, 7, 4, 2, 3, 5, 7, 9, 7, 5, 4, 2, 0, 2, 4, 2, 1, 2, 3, 1, 0, null],
+                chords: [0, 3, 4, 0], gain: 0.08 },
+    waltz:    { name: 'Valse',               bpm: 150, meter: 6, root: 65, scale: [0, 2, 4, 5, 7, 9, 11], lead: 'triangle',
+                melody: [4, null, null, 5, 4, null, 2, null, null, 4, 2, null, 1, null, null, 2, 3, null, 4, null, null, null, null, null],
+                chords: [0, 4, 4, 0], waltzBass: true, gain: 0.09 },
+    nursery:  { name: 'Comptine',            bpm: 120, meter: 8, root: 64, scale: [0, 2, 4, 5, 7, 9, 11], lead: 'square',
+                melody: [0, 0, 4, 4, 5, 5, 4, null, 3, 3, 2, 2, 1, 1, 0, null, 4, 4, 3, 3, 2, 2, 1, null, 4, 4, 3, 3, 2, 2, 1, null],
+                chords: [0, 3, 0, 4], bassEvery: 4, drums: 'claps', gain: 0.05 },
+    forest:   { name: 'Forêt enchantée',     bpm: 84,  meter: 8, root: 62, scale: [0, 2, 4, 7, 9], lead: 'flute',
+                melody: [2, null, 3, 4, null, 3, 2, null, 1, null, 0, null, null, null, null, null, 3, null, 4, 5, null, 4, 3, null, 2, 1, 2, null, null, null, null, null],
+                chords: [0, 3, 1, 4], pad: true, birds: true, gain: 0.08 },
+    ocean:    { name: 'Rêverie océane',      bpm: 56,  meter: 8, root: 57, scale: [0, 2, 4, 7, 9], lead: 'sine',
+                melody: [4, null, null, null, 3, null, 2, null, 1, null, null, null, 2, null, null, null, 4, null, 5, null, 4, null, 3, null, 2, null, null, null, null, null, null, null],
+                chords: [0, 3, 2, 4], pad: true, waves: true, gain: 0.09 },
+    party:    { name: 'Fête',                bpm: 124, meter: 8, root: 65, scale: [0, 2, 4, 5, 7, 9, 10], lead: 'square',
+                melody: [0, null, 4, 0, 5, 4, 2, null, 0, null, 4, 0, 6, 5, 4, null, 3, null, 5, 3, 4, 2, 1, null, 2, 4, 2, 1, 0, null, 7, null],
+                chords: [0, 3, 4, 0], bassEvery: 2, drums: 'dance', gain: 0.05 },
+    mystery:  { name: 'Mystère',             bpm: 70,  meter: 8, root: 57, scale: [0, 2, 3, 5, 7, 8, 11], lead: 'sine',
+                melody: [0, null, 2, null, 3, null, 2, null, 6, null, null, 4, 3, null, null, null, 0, null, 3, null, 4, null, 5, 4, 3, null, 2, null, 0, null, null, null],
+                chords: [0, 5, 3, 4], pad: true, gain: 0.08 },
+    winter:   { name: 'Flocons d\'hiver',    bpm: 92,  meter: 8, root: 74, scale: [0, 2, 4, 5, 7, 9, 11], lead: 'bell',
+                melody: [4, 4, 4, null, 4, 4, 4, null, 4, 6, 2, 3, 4, null, null, null, 5, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 4, 3, null, 6, null],
+                chords: [0, 3, 0, 4], pad: true, sparkle: true, gain: 0.06 }
+};
+
 const music = (() => {
-    let ctx = null, master = null, timer = null, step = 0, ducked = false, style = 'happy';
-    const STYLES = {
-        lullaby:   { bpm: 66,  wave: 'sine',     scale: [0, 2, 4, 7, 9],        root: 60, pattern: [0, 2, 4, 2, 3, 2, 1, 2], bass: [0, 0, 3, 2] },
-        happy:     { bpm: 112, wave: 'triangle', scale: [0, 2, 4, 5, 7, 9, 11], root: 67, pattern: [0, 2, 4, 2, 5, 4, 2, 1], bass: [0, 3, 4, 0] },
-        adventure: { bpm: 96,  wave: 'square',   scale: [0, 2, 3, 5, 7, 8, 10], root: 62, pattern: [0, 4, 3, 4, 6, 4, 3, 2], bass: [0, 5, 3, 4] },
-        magic:     { bpm: 80,  wave: 'sine',     scale: [0, 2, 4, 6, 7, 9, 11], root: 72, pattern: [0, 4, 6, 4, 2, 6, 4, 1], bass: [0, 4, 2, 5] }
-    };
+    let master = null, timer = null, step = 0, ducked = false, style = 'happy', extras = [];
+    let noiseBuf = null;
     const freq = m => 440 * Math.pow(2, (m - 69) / 12);
     const vol = () => parseInt(document.getElementById('vw-music-vol').value) / 100;
-    const level = () => vol() * (ducked ? 0.25 : 1) * 0.6;   // la musique baisse pendant la voix
-    function note(midi, t, dur, g0, wave) {
-        const o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = wave; o.frequency.value = freq(midi);
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(g0, t + 0.03);
-        g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-        o.connect(g); g.connect(master);
-        o.start(t); o.stop(t + dur + 0.05);
+    const level = () => vol() * (ducked ? 0.22 : 1) * 0.7;   // la musique baisse pendant la voix
+    const ctx = () => audioHub.ctx;
+    function noise() {
+        if (noiseBuf) return noiseBuf;
+        const c = ctx(), b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        return (noiseBuf = b);
     }
-    const deg2midi = (S, d) => S.root + S.scale[((d % S.scale.length) + S.scale.length) % S.scale.length] + 12 * Math.floor(d / S.scale.length);
+    function env(g, t, a, peak, dur) {
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(peak, t + a);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    }
+    function tone(midi, t, dur, peak, type, attack) {
+        const c = ctx(), o = c.createOscillator(), g = c.createGain();
+        o.type = type; o.frequency.value = freq(midi);
+        env(g, t, attack || 0.02, peak, dur);
+        o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
+    }
+    // Timbres
+    const LEADS = {
+        sine:     (m, t, b, p) => tone(m, t, b * 1.9, p, 'sine', 0.04),
+        triangle: (m, t, b, p) => tone(m, t, b * 1.6, p, 'triangle'),
+        square:   (m, t, b, p) => tone(m, t, b * 0.9, p * 0.6, 'square'),
+        saw:      (m, t, b, p) => tone(m, t, b * 1.4, p * 0.6, 'sawtooth'),
+        box:      (m, t, b, p) => { tone(m, t, b * 3, p, 'sine', 0.003); tone(m + 24, t, b * 1.2, p * 0.25, 'sine', 0.003); },
+        bell:     (m, t, b, p) => { tone(m, t, b * 4, p, 'sine', 0.002); tone(m + 19, t, b * 2, p * 0.3, 'sine', 0.002); tone(m + 28, t, b, p * 0.12, 'sine', 0.002); },
+        flute:    (m, t, b, p) => {
+            const c = ctx(), o = c.createOscillator(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+            o.type = 'sine'; o.frequency.value = freq(m); lfo.frequency.value = 5; lg.gain.value = 4;
+            lfo.connect(lg); lg.connect(o.frequency);
+            env(g, t, 0.08, p, b * 2.2); o.connect(g); g.connect(master);
+            o.start(t); lfo.start(t); o.stop(t + b * 2.3); lfo.stop(t + b * 2.3);
+        }
+    };
+    function drum(kind, t) {
+        const c = ctx();
+        if (kind === 'kick') {
+            const o = c.createOscillator(), g = c.createGain();
+            o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.15);
+            env(g, t, 0.005, 0.35, 0.22); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.25);
+        } else {
+            const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+            s.buffer = noise(); f.type = kind === 'clap' ? 'bandpass' : 'highpass'; f.frequency.value = kind === 'clap' ? 1500 : 7000;
+            env(g, t, 0.002, kind === 'clap' ? 0.25 : 0.08, kind === 'clap' ? 0.12 : 0.05);
+            s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + 0.15);
+        }
+    }
+    function bird(t) {
+        const c = ctx(), o = c.createOscillator(), g = c.createGain();
+        const f0 = 2400 + Math.random() * 1500;
+        o.type = 'sine';
+        o.frequency.setValueAtTime(f0, t);
+        o.frequency.exponentialRampToValueAtTime(f0 * 1.4, t + 0.06);
+        o.frequency.exponentialRampToValueAtTime(f0 * 0.9, t + 0.12);
+        env(g, t, 0.01, 0.025, 0.14); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.16);
+    }
+    function startWaves() {
+        const c = ctx(), s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+        s.buffer = noise(); s.loop = true; f.type = 'lowpass'; f.frequency.value = 500;
+        g.gain.value = 0.05; lfo.frequency.value = 0.12; lg.gain.value = 0.045;
+        lfo.connect(lg); lg.connect(g.gain); s.connect(f); f.connect(g); g.connect(master);
+        s.start(); lfo.start();
+        extras.push(s, lfo);
+    }
+    const deg = (S, d) => S.root + S.scale[((d % S.scale.length) + S.scale.length) % S.scale.length] + 12 * Math.floor(d / S.scale.length);
     function tick() {
         if (!master) return;
-        const S = STYLES[style];
-        const beat = 60 / S.bpm / 2;
-        const t = ctx.currentTime + 0.05;
-        const bar = Math.floor(step / 8) % S.bass.length;
-        const d = S.pattern[step % 8] + S.bass[bar];
-        note(deg2midi(S, d), t, beat * 1.8, S.wave === 'square' ? 0.04 : 0.11, S.wave);
-        if (step % 4 === 0) note(deg2midi(S, S.bass[bar]) - 24, t, beat * 3.5, 0.13, 'sine');
-        if (style === 'magic' && step % 8 === 7) note(deg2midi(S, d) + 12, t + beat / 2, beat * 3, 0.05, 'sine');
+        const S = MUSIC_STYLES[style] || MUSIC_STYLES.happy;
+        const b = 60 / S.bpm / 2;                               // durée d'une croche
+        const t = ctx().currentTime + 0.06;
+        const posInBar = step % S.meter;
+        const bar = Math.floor(step / S.meter);
+        const chord = S.chords[bar % S.chords.length];
+        const m = S.melody[step % S.melody.length];
+        if (m != null) (LEADS[S.lead] || LEADS.sine)(deg(S, m), t, b, S.gain);
+        // basse
+        if (S.waltzBass) {
+            if (posInBar === 0) tone(deg(S, chord) - 24, t, b * 2, 0.14, 'sine');
+            else if (posInBar % 2 === 0) { tone(deg(S, chord + 2) - 12, t, b, 0.05, 'triangle'); tone(deg(S, chord + 4) - 12, t, b, 0.05, 'triangle'); }
+        } else if (S.bassEvery && posInBar % S.bassEvery === 0) tone(deg(S, chord) - 24, t, b * S.bassEvery * 0.9, 0.13, 'sine');
+        // nappe d'accord tenue
+        if (S.pad && posInBar === 0) [0, 2, 4].forEach(k => tone(deg(S, chord + k) - 12, t, b * S.meter * 1.1, 0.035, 'sine', 0.4));
+        // percussions
+        if (S.drums === 'dance') { if (posInBar % 4 === 0) drum('kick', t); if (posInBar % 2 === 1) drum('hat', t); }
+        if (S.drums === 'march') { if (posInBar === 0 || posInBar === 4) drum('kick', t); if (posInBar === 6 || posInBar === 7) drum('hat', t); }
+        if (S.drums === 'claps' && (posInBar === 2 || posInBar === 6)) drum('clap', t);
+        if (S.sparkle && step % S.meter === S.meter - 1 && Math.random() < 0.6) tone(deg(S, 7 + Math.floor(Math.random() * 5)), t + b / 2, b * 3, 0.03, 'sine', 0.002);
+        if (S.birds && Math.random() < 0.08) { bird(t + Math.random() * b); if (Math.random() < 0.5) bird(t + b * 0.6); }
         step++;
-        timer = setTimeout(tick, beat * 1000);
+        timer = setTimeout(tick, b * 1000);
     }
     return {
+        styles: MUSIC_STYLES,
         start(st) {
             this.stop();
             style = st || 'happy';
             try {
-                ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
-                if (ctx.state === 'suspended') ctx.resume();
-                master = ctx.createGain();
+                const c = audioHub.get();
+                master = c.createGain();
                 master.gain.value = level();
-                master.connect(ctx.destination);
-                step = 0; tick();
+                master.connect(audioHub.out);
+                step = 0;
+                if ((MUSIC_STYLES[style] || {}).waves) startWaves();
+                tick();
             } catch (e) { logConsole('Musique indisponible sur ce navigateur', 'warn'); }
         },
         stop() {
             clearTimeout(timer); timer = null;
+            extras.forEach(n => { try { n.stop(); } catch (e) {} }); extras = [];
             if (master) { try { master.disconnect(); } catch (e) {} master = null; }
         },
         fadeOutAndStop(sec) {
-            if (!master || !ctx) return;
+            if (!master) return;
             const m = master;
-            m.gain.setTargetAtTime(0, ctx.currentTime, sec / 3);
+            m.gain.setTargetAtTime(0.0001, ctx().currentTime, sec / 3);
             setTimeout(() => { if (master === m) this.stop(); }, sec * 1000);
         },
         duck(on) {
             ducked = on;
-            if (master && ctx) master.gain.setTargetAtTime(level(), ctx.currentTime, 0.25);
+            if (master) master.gain.setTargetAtTime(level(), ctx().currentTime, 0.25);
         },
-        setVolume() { this.duck(ducked); }
+        setVolume() { this.duck(ducked); },
+        preview(st) { this.start(st); setTimeout(() => { if (!viewer.playing) this.fadeOutAndStop(1.5); }, 6000); }
     };
 })();
+
+// ══════════════════════════════════════════════════════════════════
+// ENREGISTREMENT VIDÉO DE LA LECTURE (canvas animé + musique + voix IA)
+// ══════════════════════════════════════════════════════════════════
+const rec = { active: false, recorder: null, chunks: [], raf: 0, canvas: null, imgs: [], fade: null };
+
+function pickRecorderMime() {
+    const list = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    return list.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) || '';
+}
+
+function drawRecFrame() {
+    const c = rec.canvas, ctx = c.getContext('2d');
+    const W = c.width, H = c.height, now = performance.now();
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#1b1530'); g.addColorStop(1, '#0b0b12');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+
+    const list = sortedImages();
+    const i = Math.max(0, Math.min(viewer.index, list.length - 1));
+    const im = rec.imgs[i];
+    const sc = sceneOf(list[i]);
+    const side = 960, x0 = (W - side) / 2, y0 = 70;
+    const age = (now - anim.sceneT0) / 1000;
+
+    // titre discret
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'; ctx.font = '600 30px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText((state.scenario && state.scenario.title) || '', W / 2, 38, W - 80);
+
+    // image avec effet Ken Burns (zoom + travelling lents, direction alternée selon la scène)
+    ctx.save();
+    roundRect(ctx, x0, y0, side, side, 28); ctx.clip();
+    if (im) {
+        const p = Math.min(1, age / 14);
+        const ease = 1 - Math.pow(1 - p, 2);
+        const z = 1.04 + 0.12 * ease + (anim.phase === 'dialog' ? 0.012 * Math.sin(now / 120) : 0);
+        const dir = i % 4;
+        const dx = (dir === 0 ? -1 : dir === 1 ? 1 : dir === 2 ? -0.5 : 0.5) * 40 * ease;
+        const dy = (dir < 2 ? -1 : 1) * 25 * ease;
+        const s = side * z;
+        ctx.globalAlpha = Math.min(1, age / 0.6);              // fondu d'entrée de scène
+        ctx.drawImage(im, x0 + (side - s) / 2 + dx, y0 + (side - s) / 2 + dy, s, s);
+        ctx.globalAlpha = 1;
+    } else { ctx.fillStyle = '#333'; ctx.fillRect(x0, y0, side, side); }
+    ctx.restore();
+
+    // bulle : apparaît quand le personnage prend la parole
+    if (state.mode !== 'photo' && anim.dialogShown && sc.dialogue && sc.dialogue.text) {
+        ctx.save();
+        if (anim.phase === 'dialog') { const k = 1 + 0.015 * Math.sin(now / 160); ctx.translate(x0 + side / 2, y0 + 60); ctx.scale(k, k); ctx.translate(-(x0 + side / 2), -(y0 + 60)); }
+        drawBubble(ctx, x0, y0, side, sc.dialogue, i % 2 === 1);
+        ctx.restore();
+    }
+
+    // badge de la voix qui parle (petit, dans le coin de l'image)
+    if (anim.phase === 'narr' || anim.phase === 'dialog') {
+        const label = anim.phase === 'dialog' ? anim.speaker : narratorLabel();
+        ctx.font = 'bold 26px sans-serif';
+        const tw = ctx.measureText(label).width;
+        const bw = tw + 110, bx = x0 + side - bw - 22, by = y0 + side - 70;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)'; roundRect(ctx, bx, by, bw, 50, 25); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.fillText(label, bx + 22, by + 26);
+        for (let k = 0; k < 4; k++) {                          // ondes sonores animées
+            const h = 10 + 14 * Math.abs(Math.sin(now / 140 + k * 1.3));
+            ctx.fillStyle = '#ff6b9d'; ctx.fillRect(bx + bw - 70 + k * 12, by + 25 - h / 2, 6, h);
+        }
+    }
+
+    // texte de la scène, mot courant surligné
+    const txt = sc.description || '';
+    if (txt) {
+        ctx.font = '40px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+        const words = txt.split(/\s+/).filter(Boolean);
+        const lines = []; let line = [], lw = 0;
+        const maxW = W - 140, space = ctx.measureText(' ').width;
+        words.forEach((w, k) => {
+            const ww = ctx.measureText(w).width;
+            if (lw + ww > maxW && line.length) { lines.push({ line, lw }); line = []; lw = 0; }
+            line.push({ w, k, ww }); lw += ww + space;
+        });
+        if (line.length) lines.push({ line, lw });
+        const top = y0 + side + 50;
+        lines.slice(0, 4).forEach((L, li) => {
+            let x = (W - (L.lw - space)) / 2;
+            L.line.forEach(o => {
+                ctx.fillStyle = o.k === anim.wordIdx ? '#ff6b9d' : o.k < anim.wordIdx ? '#ffffff' : 'rgba(255,255,255,0.72)';
+                ctx.fillText(o.w, x, top + li * 54);
+                x += o.ww + space;
+            });
+        });
+    }
+
+    // barre de progression fine
+    const prog = (i + 1) / Math.max(1, list.length);
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(60, H - 30, W - 120, 6);
+    ctx.fillStyle = '#ff6b9d'; ctx.fillRect(60, H - 30, (W - 120) * prog, 6);
+
+    rec.raf = requestAnimationFrame(drawRecFrame);
+}
+
+async function recordVideo() {
+    if (rec.active) { stopReading(); return; }
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+        showToast('Enregistrement vidéo non pris en charge par ce navigateur', 'error', 4000); return;
+    }
+    if (voiceCfg.engine === 'browser' && document.getElementById('vw-voice').checked) {
+        const ok = confirm('La voix de l\'appareil ne peut pas être enregistrée dans une vidéo (limite des navigateurs).\n\n' +
+            'Pour avoir la narration dans la vidéo, choisissez une voix IA (Puter) dans « 🎙️ Voix de la lecture ».\n\n' +
+            'Continuer quand même ? La vidéo aura la musique, l\'animation et le texte, sans la voix.');
+        if (!ok) return;
+    }
+    setStatus('Préparation de l\'enregistrement…');
+    stopReading();
+    if (viewer.mode !== 'story') await setViewerMode('story');
+    const loaded = await loadBoardImages(sortedImages());
+    setStatus(null);
+    if (loaded.some(im => im && im._tainted)) {
+        showToast('Le serveur d\'images bloque l\'enregistrement. Enregistrez le projet 💾 puis rouvrez-le depuis la bibliothèque.', 'error', 6000);
+        return;
+    }
+    rec.imgs = loaded;
+    rec.canvas = document.createElement('canvas');
+    rec.canvas.width = 1080; rec.canvas.height = 1350;   // format 4:5 (réseaux sociaux, téléphone)
+
+    const stream = rec.canvas.captureStream(30);
+    audioHub.startRecording().getAudioTracks().forEach(t => stream.addTrack(t));
+    const mime = pickRecorderMime();
+    try { rec.recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 5e6 } : undefined); }
+    catch (e) { audioHub.stopRecording(); showToast('Enregistrement impossible : ' + e.message, 'error'); return; }
+    rec.chunks = [];
+    rec.recorder.ondataavailable = e => { if (e.data && e.data.size) rec.chunks.push(e.data); };
+    const stopped = new Promise(r => { rec.recorder.onstop = r; });
+
+    rec.active = true;
+    viewer.index = 0; renderViewer();
+    document.getElementById('viewer').classList.add('recording');
+    document.getElementById('vw-rec').textContent = '⏹ Arrêter l\'enregistrement';
+    drawRecFrame();
+    rec.recorder.start(1000);
+    logConsole('Enregistrement vidéo démarré (' + (mime || 'format par défaut') + ')', 'info');
+
+    await startReading();                     // lit toute l'histoire (ou jusqu'à l'arrêt)
+    await sleep(2500);                        // laisse la musique s'éteindre
+    rec.recorder.stop();
+    await stopped;
+    cancelAnimationFrame(rec.raf);
+    audioHub.stopRecording();
+    stream.getTracks().forEach(t => t.stop());
+    rec.active = false;
+    document.getElementById('viewer').classList.remove('recording');
+    document.getElementById('vw-rec').textContent = '⏺ Enregistrer en vidéo';
+
+    const type = (rec.recorder.mimeType || mime || 'video/webm').split(';')[0];
+    const blob = new Blob(rec.chunks, { type });
+    if (!blob.size) { showToast('Vidéo vide : enregistrement interrompu', 'warn'); return; }
+    const ext = type.includes('mp4') ? 'mp4' : 'webm';
+    const name = ((state.scenario && state.scenario.title) || 'histoire').replace(/[^\w\-]+/g, '_') + '_lecture.' + ext;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 20000);
+    const mb = (blob.size / 1048576).toFixed(1);
+    logConsole('Vidéo enregistrée : ' + name + ' (' + mb + ' Mo)', 'success');
+    showToast('Vidéo enregistrée (' + mb + ' Mo)', 'success', 3500);
+}
 
 // Impression page par page avec la même mise en page que le PDF (marche même si CORS bloque l'export)
 async function printBoard(prebuilt) {
@@ -2454,7 +2875,7 @@ async function downloadClip(index) {
         showToast('Clip ' + (index + 1) + ' téléchargé', 'success');
     } catch (e) {
         window.open(v.url, '_blank');
-        showToast('Ouvert dans un onglet — enregistrez-le depuis là', 'warn', 3500);
+        showToast('Ouvert dans un nouvel onglet : enregistrez-le depuis celui-ci', 'warn', 3500);
     }
 }
 
@@ -2613,6 +3034,17 @@ function stopAllVideos() {
     document.getElementById('voice-auto-btn').addEventListener('click', () => { autoAssignVoices(true); renderVoicePanel(); showToast('Voix réattribuées', 'success'); });
 
     // ── Aperçu plein écran ──
+    document.getElementById('vw-music-style').innerHTML = Object.entries(MUSIC_STYLES)
+        .map(([k, v]) => '<option value="' + k + '"' + (k === 'happy' ? ' selected' : '') + '>' + v.name + '</option>').join('');
+    document.getElementById('vw-music-test').addEventListener('click', () => music.preview(document.getElementById('vw-music-style').value));
+    document.getElementById('vw-rec').addEventListener('click', recordVideo);
+    document.getElementById('vw-settings-btn').addEventListener('click', e => {
+        const panel = document.getElementById('vw-settings');
+        const open = panel.classList.toggle('hidden') === false;
+        e.currentTarget.setAttribute('aria-expanded', open);
+    });
+    const syncAnim = () => document.getElementById('viewer').classList.toggle('anim-on', document.getElementById('vw-anim').checked);
+    document.getElementById('vw-anim').addEventListener('change', syncAnim); syncAnim();
     document.getElementById('board-full-btn').addEventListener('click', () => openViewer());
     document.getElementById('board-wrap').addEventListener('click', () => openViewer());
     document.getElementById('vw-close').addEventListener('click', closeViewer);

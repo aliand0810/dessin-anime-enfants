@@ -229,6 +229,40 @@
         body.printing-pages #print-pages canvas:last-child { page-break-after: auto; break-after: auto; }
         body.printing-pages { background: #fff; padding: 0; }
     }
+    .board-wrap { cursor: zoom-in; }
+    .viewer { position: fixed; inset: 0; z-index: 2000; background: #07070a; display: flex; flex-direction: column; color: #fff; }
+    .vw-top { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 1rem; background: rgba(255,255,255,0.04); }
+    .vw-title { flex: 1; font-weight: 800; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .vw-tabs { display: flex; background: rgba(255,255,255,0.08); border-radius: 9px; padding: 3px; }
+    .vw-tabs button { border: none; background: none; color: #bbb; font: inherit; font-size: 0.78rem; font-weight: 700; padding: 0.4rem 0.8rem; border-radius: 7px; cursor: pointer; }
+    .vw-tabs button.active { background: #fff; color: #111; }
+    .vw-close { width: 38px; height: 38px; border-radius: 50%; border: none; background: rgba(255,255,255,0.1); color: #fff; font-size: 1.1rem; cursor: pointer; }
+    .vw-stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 0.8rem 3.5rem; }
+    .vw-content { max-width: 100%; max-height: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
+    .vw-content > canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.6); background: #fff; border-radius: 4px; }
+    .vw-scene { position: relative; height: min(66vh, 92vw); aspect-ratio: 1/1; max-width: 100%; }
+    .vw-scene img { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); animation: vwIn 0.5s ease; }
+    .vw-bubble { position: absolute; top: 4%; left: 4%; max-width: 70%; background: #fff; color: #111; border: 3px solid #111; border-radius: 22px; padding: 0.6rem 1rem; font: bold clamp(0.9rem, 2.4vw, 1.4rem) "Comic Sans MS", "Chalkboard SE", sans-serif; transition: transform 0.3s, box-shadow 0.3s; }
+    .vw-bubble small { display: block; color: #e94560; font-size: 0.7em; }
+    .vw-bubble.right { left: auto; right: 4%; }
+    .vw-bubble.speaking { transform: scale(1.06); box-shadow: 0 0 0 5px rgba(255,107,157,0.6); }
+    .vw-caption { max-width: min(900px, 100%); text-align: center; font-size: clamp(1rem, 2.2vw, 1.35rem); line-height: 1.5; color: #eee; padding: 0 1rem; }
+    .vw-caption .w { transition: color 0.15s; }
+    .vw-caption .w.on { color: #ff6b9d; }
+    .vw-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 46px; height: 46px; border-radius: 50%; border: none; background: rgba(255,255,255,0.12); color: #fff; font-size: 1.8rem; cursor: pointer; z-index: 2; }
+    .vw-nav.prev { left: 0.6rem; } .vw-nav.next { right: 0.6rem; }
+    .vw-nav:disabled { opacity: 0.2; }
+    .vw-bottom { padding: 0.5rem 1rem 0.9rem; background: rgba(255,255,255,0.04); }
+    .vw-progress { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-bottom: 0.6rem; }
+    .vw-progress-fill { height: 100%; width: 0; background: linear-gradient(90deg, #ff6b9d, #4a6cf7); transition: width 0.4s; }
+    .vw-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem 1rem; justify-content: center; }
+    .vw-play { padding: 0.65rem 1.3rem; border-radius: 22px; border: none; background: linear-gradient(135deg, #ff6b9d, #4a6cf7); color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+    .vw-counter { font-size: 0.8rem; color: #aaa; font-variant-numeric: tabular-nums; min-width: 4.5rem; text-align: center; }
+    .vw-opt { font-size: 0.78rem; color: #ccc; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .vw-opt select, .vw-sel { width: auto; padding: 0.3rem 1.8rem 0.3rem 0.6rem; font-size: 0.75rem; background-color: #15151c; }
+    #vw-music-vol { width: 90px; accent-color: #ff6b9d; }
+    @keyframes vwIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
+    @media (max-width: 640px) { .vw-stage { padding: 0.4rem; } .vw-nav { width: 38px; height: 38px; font-size: 1.4rem; background: rgba(0,0,0,0.45); } .vw-tabs button { padding: 0.35rem 0.55rem; } }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -405,7 +439,7 @@
         <span class="chevron">▼</span>
     </div>
     <div class="section-body"><div class="section-content">
-        <div class="board-wrap"><canvas id="board-canvas"></canvas></div>
+        <div class="board-wrap" id="board-wrap" title="Ouvrir en plein écran"><canvas id="board-canvas"></canvas></div>
         <label class="board-check"><input type="checkbox" id="opt-bubbles" checked> Bulles de dialogue</label>
         <label class="board-check"><input type="checkbox" id="opt-captions" checked> Légendes de scène</label>
         <label class="board-check"><input type="checkbox" id="opt-titlebar" checked> Titre en haut</label>
@@ -457,6 +491,7 @@
             <button type="button" id="board-pdf-btn">📄 PDF</button>
             <button type="button" id="board-print-btn">🖨 Imprimer</button>
             <button type="button" id="board-save-btn">💾 Enregistrer</button>
+            <button type="button" id="board-full-btn">⛶ Plein écran</button>
             <button type="button" id="board-animate-btn">🎬 Animer en vidéo</button>
         </div>
     </div></div>
@@ -498,6 +533,42 @@
 <div class="toast" id="toast"><span class="toast-icon" id="toast-icon">✓</span><span id="toast-text">Message</span></div>
 
 <div id="print-pages"></div>
+
+<div class="viewer hidden" id="viewer" role="dialog" aria-label="Aperçu plein écran">
+    <div class="vw-top">
+        <div class="vw-title" id="vw-title"></div>
+        <div class="vw-tabs">
+            <button type="button" data-vmode="story" class="active">📖 Histoire</button>
+            <button type="button" data-vmode="pages">📄 Pages</button>
+        </div>
+        <button type="button" class="vw-close" id="vw-close" title="Fermer (Échap)">✕</button>
+    </div>
+    <div class="vw-stage" id="vw-stage">
+        <button type="button" class="vw-nav prev" id="vw-prev" title="Précédent (←)">‹</button>
+        <div class="vw-content" id="vw-content"></div>
+        <button type="button" class="vw-nav next" id="vw-next" title="Suivant (→)">›</button>
+    </div>
+    <div class="vw-bottom">
+        <div class="vw-progress"><div class="vw-progress-fill" id="vw-progress"></div></div>
+        <div class="vw-controls">
+            <button type="button" class="vw-play" id="vw-play">▶ Lecture audio</button>
+            <span class="vw-counter" id="vw-counter"></span>
+            <label class="vw-opt"><input type="checkbox" id="vw-voice" checked> 🗣 Voix</label>
+            <label class="vw-opt">Vitesse
+                <select id="vw-rate"><option value="0.75">Lente</option><option value="0.9" selected>Normale</option><option value="1.1">Rapide</option></select>
+            </label>
+            <label class="vw-opt"><input type="checkbox" id="vw-music" checked> 🎵 Musique</label>
+            <select id="vw-music-style" class="vw-sel">
+                <option value="lullaby">Berceuse</option>
+                <option value="happy" selected>Joyeuse</option>
+                <option value="adventure">Aventure</option>
+                <option value="magic">Magique</option>
+            </select>
+            <input type="range" id="vw-music-vol" min="0" max="100" value="40" title="Volume de la musique">
+            <label class="vw-opt"><input type="checkbox" id="vw-auto" checked> ⏭ Suivant auto</label>
+        </div>
+    </div>
+</div>
 <canvas id="noSleepCanvas" width="2" height="2"></canvas>
 <video id="noSleepVideo" playsinline muted loop></video>
 
@@ -1673,6 +1744,248 @@ async function exportPDF() {
     setStatus(null);
 }
 
+// ══════════════════════════════════════════════════════════════════
+// APERÇU PLEIN ÉCRAN + LECTURE AUDIO (narration + musique de fond)
+// ══════════════════════════════════════════════════════════════════
+const viewer = { open: false, mode: 'story', index: 0, pages: [], pageScenes: [], playing: false, token: 0 };
+function sortedImages() { return state.images.slice().sort((a, b) => a.sceneIndex - b.sceneIndex); }
+function sceneOf(im) { return (state.scenario && state.scenario.scenes[im.sceneIndex]) || im.scene || {}; }
+
+async function openViewer(mode) {
+    if (!state.images.length) { showToast('Aucune image à afficher', 'warn'); return; }
+    viewer.open = true;
+    viewer.index = 0;
+    const el = document.getElementById('viewer');
+    el.classList.remove('hidden');
+    document.getElementById('vw-title').textContent = (state.scenario && state.scenario.title) || 'Mon histoire';
+    try { if (el.requestFullscreen) await el.requestFullscreen(); else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); } catch (e) {}
+    await setViewerMode(mode || viewer.mode);
+}
+
+async function setViewerMode(mode) {
+    stopReading();
+    if (viewer.mode !== mode) viewer.index = 0;
+    viewer.mode = mode;
+    document.querySelectorAll('[data-vmode]').forEach(b => b.classList.toggle('active', b.dataset.vmode === mode));
+    if (mode === 'pages') {
+        document.getElementById('vw-content').innerHTML = '<div style="color:#888">Mise en page…</div>';
+        const res = await buildPages();
+        viewer.pages = res ? res.pages : [];
+        // scènes contenues dans chaque page (pour la lecture audio page par page)
+        const L = layoutSettings(), imgs = sortedImages();
+        viewer.pageScenes = viewer.pages.map(() => []);
+        let pi = L.cover ? 1 : 0;
+        for (let i = 0; i < imgs.length; i += L.perPage) viewer.pageScenes[pi++] = imgs.slice(i, i + L.perPage);
+    }
+    renderViewer();
+}
+
+function viewerCount() { return viewer.mode === 'pages' ? viewer.pages.length : state.images.length; }
+
+function renderViewer() {
+    const box = document.getElementById('vw-content');
+    const n = viewerCount();
+    const i = Math.max(0, Math.min(viewer.index, n - 1));
+    viewer.index = i;
+    box.innerHTML = '';
+    if (viewer.mode === 'pages') {
+        if (viewer.pages[i]) box.appendChild(viewer.pages[i]);
+    } else {
+        const im = sortedImages()[i];
+        const sc = sceneOf(im);
+        const wrap = document.createElement('div');
+        wrap.className = 'vw-scene';
+        wrap.innerHTML = '<img src="' + esc(im.localUrl || im.url) + '" alt="">' +
+            (sc.dialogue && sc.dialogue.text && state.mode !== 'photo'
+                ? '<div class="vw-bubble' + (i % 2 ? ' right' : '') + '" id="vw-bubble"><small>' + esc(sc.dialogue.character) + '</small>' + esc(sc.dialogue.text) + '</div>' : '');
+        const cap = document.createElement('div');
+        cap.className = 'vw-caption';
+        cap.id = 'vw-caption';
+        cap.innerHTML = (sc.description || '').split(/\s+/).filter(Boolean).map(w => '<span class="w">' + esc(w) + '</span>').join(' ');
+        box.appendChild(wrap);
+        box.appendChild(cap);
+    }
+    document.getElementById('vw-counter').textContent = (i + 1) + ' / ' + n;
+    document.getElementById('vw-progress').style.width = ((i + 1) / n * 100) + '%';
+    document.getElementById('vw-prev').disabled = i === 0;
+    document.getElementById('vw-next').disabled = i >= n - 1;
+}
+
+function viewerGo(delta, keepReading) {
+    const ni = viewer.index + delta;
+    if (ni < 0 || ni >= viewerCount()) return false;
+    if (!keepReading) stopReading();
+    viewer.index = ni;
+    renderViewer();
+    return true;
+}
+
+function closeViewer() {
+    stopReading();
+    viewer.open = false;
+    document.getElementById('viewer').classList.add('hidden');
+    try { if (document.fullscreenElement) document.exitFullscreen(); else if (document.webkitFullscreenElement) document.webkitExitFullscreen(); } catch (e) {}
+}
+
+// Surlignage mot à mot de la légende pendant la narration (si le navigateur fournit onboundary)
+function highlightWord(charIndex, text) {
+    const cap = document.getElementById('vw-caption');
+    if (!cap) return;
+    const before = text.slice(0, charIndex).split(/\s+/).filter(Boolean).length;
+    cap.querySelectorAll('.w').forEach((w, k) => w.classList.toggle('on', k === before));
+}
+
+function narrate(text, character, narrator, onWord) {
+    return new Promise(resolve => {
+        if (!text) return resolve();
+        if (!speechSynth || !document.getElementById('vw-voice').checked) return setTimeout(resolve, 600 + text.length * 45);
+        speechSynth.cancel();
+        const rate = parseFloat(document.getElementById('vw-rate').value);
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'fr-FR'; u.rate = rate;
+        u.pitch = narrator ? 1.0 : (isFemaleCharacter(character) ? 1.4 : 1.15);
+        const fr = speechSynth.getVoices().filter(v => v.lang && v.lang.startsWith('fr'));
+        if (fr.length) {
+            const female = fr.find(v => /amelie|marie|audrey|female|denise|julie/i.test(v.name));
+            const male = fr.find(v => /thomas|nicolas|male|henri|paul/i.test(v.name));
+            u.voice = narrator ? (fr.find(v => /google|audrey|thomas/i.test(v.name)) || fr[0])
+                               : ((isFemaleCharacter(character) ? female : male) || fr[0]);
+        }
+        if (onWord) u.onboundary = e => { if (e.charIndex != null) onWord(e.charIndex); };
+        let done = false;
+        const finish = () => { if (!done) { done = true; resolve(); } };
+        u.onend = u.onerror = finish;
+        speechSynth.speak(u);
+        setTimeout(finish, 3000 + text.length * 110 / rate);
+    });
+}
+
+// Lit une scène : le narrateur lit la description, puis le personnage dit son dialogue
+async function readScene(sc, token, withCaption) {
+    music.duck(true);
+    if (sc.description) {
+        await narrate(sc.description, null, true, withCaption ? ci => highlightWord(ci, sc.description) : null);
+        if (token !== viewer.token) return;
+    }
+    if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') {
+        const b = document.getElementById('vw-bubble');
+        if (b) b.classList.add('speaking');
+        await sleep(250);
+        await narrate(sc.dialogue.text, sc.dialogue.character, false);
+        if (b) b.classList.remove('speaking');
+    }
+    const cap = document.getElementById('vw-caption');
+    if (cap) cap.querySelectorAll('.w.on').forEach(w => w.classList.remove('on'));
+    music.duck(false);
+}
+
+async function startReading() {
+    if (viewer.playing) return stopReading();
+    viewer.playing = true;
+    const token = ++viewer.token;
+    document.getElementById('vw-play').textContent = '⏸ Pause';
+    if (document.getElementById('vw-music').checked) music.start(document.getElementById('vw-music-style').value);
+    while (viewer.playing && token === viewer.token) {
+        if (viewer.mode === 'pages') {
+            const scenes = viewer.pageScenes[viewer.index] || [];
+            if (!scenes.length) await sleep(2500);            // couverture / page Fin
+            for (const im of scenes) {
+                if (token !== viewer.token) return;
+                await readScene(sceneOf(im), token, false);
+                await sleep(300);
+            }
+        } else {
+            await sleep(400);
+            if (token !== viewer.token) return;
+            await readScene(sceneOf(sortedImages()[viewer.index]), token, true);
+        }
+        if (token !== viewer.token) return;
+        await sleep(900);
+        if (!document.getElementById('vw-auto').checked) break;
+        if (!viewerGo(1, true)) break;
+    }
+    if (token === viewer.token) {
+        viewer.playing = false;
+        document.getElementById('vw-play').textContent = '▶ Lecture audio';
+        music.fadeOutAndStop(2.5);
+    }
+}
+
+function stopReading() {
+    viewer.token++;
+    viewer.playing = false;
+    if (speechSynth) speechSynth.cancel();
+    music.stop();
+    const b = document.getElementById('vw-play');
+    if (b) b.textContent = '▶ Lecture audio';
+}
+
+// Musique de fond générée en direct (Web Audio) : mélodies originales, aucun fichier externe
+const music = (() => {
+    let ctx = null, master = null, timer = null, step = 0, ducked = false, style = 'happy';
+    const STYLES = {
+        lullaby:   { bpm: 66,  wave: 'sine',     scale: [0, 2, 4, 7, 9],        root: 60, pattern: [0, 2, 4, 2, 3, 2, 1, 2], bass: [0, 0, 3, 2] },
+        happy:     { bpm: 112, wave: 'triangle', scale: [0, 2, 4, 5, 7, 9, 11], root: 67, pattern: [0, 2, 4, 2, 5, 4, 2, 1], bass: [0, 3, 4, 0] },
+        adventure: { bpm: 96,  wave: 'square',   scale: [0, 2, 3, 5, 7, 8, 10], root: 62, pattern: [0, 4, 3, 4, 6, 4, 3, 2], bass: [0, 5, 3, 4] },
+        magic:     { bpm: 80,  wave: 'sine',     scale: [0, 2, 4, 6, 7, 9, 11], root: 72, pattern: [0, 4, 6, 4, 2, 6, 4, 1], bass: [0, 4, 2, 5] }
+    };
+    const freq = m => 440 * Math.pow(2, (m - 69) / 12);
+    const vol = () => parseInt(document.getElementById('vw-music-vol').value) / 100;
+    const level = () => vol() * (ducked ? 0.25 : 1) * 0.6;   // la musique baisse pendant la voix
+    function note(midi, t, dur, g0, wave) {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = wave; o.frequency.value = freq(midi);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(g0, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+        o.connect(g); g.connect(master);
+        o.start(t); o.stop(t + dur + 0.05);
+    }
+    const deg2midi = (S, d) => S.root + S.scale[((d % S.scale.length) + S.scale.length) % S.scale.length] + 12 * Math.floor(d / S.scale.length);
+    function tick() {
+        if (!master) return;
+        const S = STYLES[style];
+        const beat = 60 / S.bpm / 2;
+        const t = ctx.currentTime + 0.05;
+        const bar = Math.floor(step / 8) % S.bass.length;
+        const d = S.pattern[step % 8] + S.bass[bar];
+        note(deg2midi(S, d), t, beat * 1.8, S.wave === 'square' ? 0.04 : 0.11, S.wave);
+        if (step % 4 === 0) note(deg2midi(S, S.bass[bar]) - 24, t, beat * 3.5, 0.13, 'sine');
+        if (style === 'magic' && step % 8 === 7) note(deg2midi(S, d) + 12, t + beat / 2, beat * 3, 0.05, 'sine');
+        step++;
+        timer = setTimeout(tick, beat * 1000);
+    }
+    return {
+        start(st) {
+            this.stop();
+            style = st || 'happy';
+            try {
+                ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') ctx.resume();
+                master = ctx.createGain();
+                master.gain.value = level();
+                master.connect(ctx.destination);
+                step = 0; tick();
+            } catch (e) { logConsole('Musique indisponible sur ce navigateur', 'warn'); }
+        },
+        stop() {
+            clearTimeout(timer); timer = null;
+            if (master) { try { master.disconnect(); } catch (e) {} master = null; }
+        },
+        fadeOutAndStop(sec) {
+            if (!master || !ctx) return;
+            const m = master;
+            m.gain.setTargetAtTime(0, ctx.currentTime, sec / 3);
+            setTimeout(() => { if (master === m) this.stop(); }, sec * 1000);
+        },
+        duck(on) {
+            ducked = on;
+            if (master && ctx) master.gain.setTargetAtTime(level(), ctx.currentTime, 0.25);
+        },
+        setVolume() { this.duck(ducked); }
+    };
+})();
+
 // Impression page par page avec la même mise en page que le PDF (marche même si CORS bloque l'export)
 async function printBoard(prebuilt) {
     if (!state.images.length) { showToast('Aucune image à imprimer', 'warn'); return; }
@@ -1819,14 +2132,14 @@ function isFemaleCharacter(name) {
     const n = name.toLowerCase();
     return state.femaleCharacters.some(f => f && (n.includes(f) || f.includes(n)));
 }
-function speakText(text, characterName) {
+function speakText(text, characterName, opts = {}) {
     return new Promise(resolve => {
-        if (!speechSynth) return resolve();
+        if (!speechSynth || !text) return resolve();
         speechSynth.cancel();
         setTimeout(() => {
             const u = new SpeechSynthesisUtterance(text);
             u.lang = 'fr-FR';
-            u.rate = 0.9;
+            u.rate = opts.rate || 0.9;
             u.pitch = isFemaleCharacter(characterName) ? 1.4 : 1.1;
             const frVoices = speechSynth.getVoices().filter(v => v.lang && v.lang.startsWith('fr'));
             if (frVoices.length) {
@@ -1834,9 +2147,12 @@ function speakText(text, characterName) {
                 const male = frVoices.find(v => /thomas|nicolas|male|henri|paul/i.test(v.name));
                 u.voice = (isFemaleCharacter(characterName) ? female : male) || frVoices[0];
             }
-            u.onend = u.onerror = () => resolve();
+            let done = false;
+            const finish = () => { if (!done) { done = true; resolve(); } };
+            u.onend = u.onerror = finish;
             speechSynth.speak(u);
-            setTimeout(resolve, 8000); // sécurité si onend ne se déclenche pas
+            // sécurité si onend ne se déclenche pas : durée estimée du texte
+            setTimeout(finish, 2500 + text.length * 95 / (u.rate || 1));
         }, 100);
     });
 }
@@ -1940,6 +2256,38 @@ function stopAllVideos() {
         setTimeout(() => inp.focus(), 300);
     });
     renderLibrary();
+
+    // ── Aperçu plein écran ──
+    document.getElementById('board-full-btn').addEventListener('click', () => openViewer());
+    document.getElementById('board-wrap').addEventListener('click', () => openViewer());
+    document.getElementById('vw-close').addEventListener('click', closeViewer);
+    document.getElementById('vw-prev').addEventListener('click', () => viewerGo(-1));
+    document.getElementById('vw-next').addEventListener('click', () => viewerGo(1));
+    document.getElementById('vw-play').addEventListener('click', startReading);
+    document.querySelectorAll('[data-vmode]').forEach(b => b.addEventListener('click', () => setViewerMode(b.dataset.vmode)));
+    document.getElementById('vw-music-vol').addEventListener('input', () => music.setVolume());
+    document.getElementById('vw-music').addEventListener('change', e => {
+        if (!viewer.playing) return;
+        if (e.target.checked) music.start(document.getElementById('vw-music-style').value); else music.stop();
+    });
+    document.getElementById('vw-music-style').addEventListener('change', e => {
+        if (viewer.playing && document.getElementById('vw-music').checked) music.start(e.target.value);
+    });
+    document.addEventListener('keydown', e => {
+        if (!viewer.open) return;
+        if (e.key === 'Escape') closeViewer();
+        else if (e.key === 'ArrowRight') viewerGo(1);
+        else if (e.key === 'ArrowLeft') viewerGo(-1);
+        else if (e.key === ' ') { e.preventDefault(); startReading(); }
+    });
+    let touchX = null;
+    const stage = document.getElementById('vw-stage');
+    stage.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; }, { passive: true });
+    stage.addEventListener('touchend', e => {
+        if (touchX == null) return;
+        const dx = e.changedTouches[0].clientX - touchX; touchX = null;
+        if (Math.abs(dx) > 50) viewerGo(dx < 0 ? 1 : -1);
+    });
 
     // ── Application installable (PWA) ──
     let deferredInstall = null;

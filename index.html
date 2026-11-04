@@ -289,7 +289,12 @@
     @keyframes kb3 { from { transform: scale(1.04); } to { transform: scale(1.15) translate(2%, 3%); } }
     .viewer.anim-on .vw-scene.talking .vw-kb { animation: talk 0.5s ease-in-out infinite alternate; }
     @keyframes talk { from { transform: translateY(0) scale(1); } to { transform: translateY(-4px) scale(1.006); } }
-    .viewer.reading.anim-on .vw-scene:not(.has-spoken) .vw-bubble { opacity: 0; transform: scale(0.85); }
+    .vw-bubbles { position: absolute; top: 3%; left: 3%; right: 3%; display: flex; flex-direction: column; gap: 0.35rem; align-items: flex-start; pointer-events: none; }
+    .vw-bubbles .vw-bubble { position: relative; top: auto; left: auto; right: auto; max-width: 72%; }
+    .vw-bubbles .vw-bubble.right { align-self: flex-end; }
+    .vw-bubbles.n3 .vw-bubble { font-size: clamp(0.8rem, 2vw, 1.15rem); padding: 0.45rem 0.85rem; }
+    .vw-bubbles.n4 .vw-bubble, .vw-bubbles.n5 .vw-bubble, .vw-bubbles.n6 .vw-bubble { font-size: clamp(0.72rem, 1.7vw, 1rem); padding: 0.35rem 0.75rem; border-width: 2px; }
+    .viewer.reading.anim-on .vw-bubbles .vw-bubble:not(.said) { opacity: 0; transform: translateY(-6px) scale(0.85); }
     .vw-bubble { transition: opacity 0.35s, transform 0.35s, box-shadow 0.3s; }
     .vw-badge { position: absolute; right: 3%; bottom: 3%; display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0.7rem; border-radius: 20px; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); font-size: 0.78rem; font-weight: 700; opacity: 0; transform: translateY(6px); transition: opacity 0.3s, transform 0.3s; pointer-events: none; }
     .vw-badge.on { opacity: 1; transform: none; }
@@ -567,6 +572,10 @@
     .bk-set input { padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: ui-monospace, monospace; font-size: 0.8rem; }
     .bk-steps { font-size: 0.76rem; color: var(--ink-dim); line-height: 1.6; padding-left: 1.2rem; margin: 0 0 0.9rem; }
     .bk-steps code, .bk-set code { background: var(--bg); padding: 0.05rem 0.35rem; border-radius: 4px; color: var(--ink); font-size: 0.72rem; }
+    .sc-dlg { margin-top: 0.35rem; display: flex; flex-direction: column; gap: 0.2rem; }
+    .sc-line { font-style: italic; color: var(--accent-child); font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 10px; background: rgba(255,107,157,0.07); max-width: 92%; }
+    .sc-line.r { align-self: flex-end; background: rgba(74,108,247,0.1); color: #a9b8ff; }
+    .sc-line b { font-style: normal; margin-right: 0.2rem; }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -691,6 +700,17 @@
                 <option value="30">30 scènes</option>
                 <option value="40">40 scènes</option>
                 <option value="50">50 scènes (maximum)</option>
+            </select>
+        </div>
+        <div class="control-row">
+            <label class="control-label">Échanges entre personnages (par scène)</label>
+            <select id="dialog-count-select">
+                <option value="1">1 réplique (un seul personnage parle)</option>
+                <option value="2" selected>2 répliques — question / réponse</option>
+                <option value="3">3 répliques — petit échange</option>
+                <option value="4">4 répliques — vraie conversation</option>
+                <option value="6">6 répliques — longue conversation</option>
+                <option value="var">Variable — selon ce qui se passe dans la scène</option>
             </select>
         </div>
         <div class="control-row" id="row-duration">
@@ -1009,9 +1029,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.14.1';
+const APP_VERSION = '3.15.0';
 const APP_DATE = '04/11/2026';
 const CHANGELOG = [
+    ['3.15.0', 'Vrais échanges entre personnages : 1 à 6 répliques par scène (ou variable), bulles empilées, voix et bulles au fil de la conversation'],
     ['3.14.1', 'GitHub : diagnostic précis des droits du jeton (dépôt, lecture, écriture), aide pas à pas et liens directs'],
     ['3.14.0', 'Sauvegardes : Google Drive pour les fichiers (projets, images, vidéos, voix, portraits) et GitHub pour les paramètres, avec restauration et mode automatique'],
     ['3.13.1', 'Bouton « ▶ Lire la BD en plein écran » en haut, à côté de « Créer » : ouvre l\'histoire et lance la lecture'],
@@ -1029,6 +1050,21 @@ const CHANGELOG = [
     ['3.2.0', 'Vidéo MP4 aux formats TikTok, YouTube, Instagram et carré'],
     ['3.1.0', 'Narrateur conte de fées, voix par personnage, 12 mélodies']
 ];
+// Consigne de dialogue selon le nombre d'échanges choisi
+function dialogRule() {
+    const v = (document.getElementById('dialog-count-select') || {}).value || '2';
+    const ex = n => '[' + Array.from({ length: n }, (_, k) => '{ "character": "' + (k % 2 ? 'Nom du personnage 2' : 'Nom du personnage 1') + '", "text": "' + (k % 2 ? 'Réponse courte' : k ? 'Réaction courte' : 'Question ou phrase courte') + '" }').join(', ') + ']';
+    if (v === '1') return { n: 1, example: ex(1),
+        rules: '- Dialogues : dans chaque scène, UNE seule réplique (« dialogues » contient 1 élément), très courte (max 8 mots), dite par un personnage présent dans la scène' };
+    const common = '\n- Les personnages SE RÉPONDENT : chaque réplique réagit à la précédente (question → réponse, proposition → accord ou refus, surprise → explication), selon le contexte de la scène' +
+        '\n- Alterne les personnages qui parlent ; seuls les personnages présents dans la scène parlent ; 2 personnages ou plus selon la scène (3 si c\'est naturel)' +
+        '\n- Chaque réplique fait au maximum 10 mots, adaptée aux enfants ; le nom dans « character » est exactement celui de la liste des personnages' +
+        '\n- L\'histoire compte au moins 2 personnages qui parlent, et « image_prompt » montre les personnages qui échangent dans la scène';
+    if (v === 'var') return { n: 0, example: ex(3),
+        rules: '- Dialogues : un échange entre personnages dans chaque scène, de 1 à 4 répliques selon ce qui se passe (dispute, découverte, jeu…)' + common };
+    const n = +v;
+    return { n, example: ex(n), rules: '- Dialogues : un ÉCHANGE de exactement ' + n + ' répliques entre les personnages dans chaque scène (« dialogues » contient ' + n + ' éléments)' + common };
+}
 const BATCH_SCENES = 6;    // scènes demandées par appel texte (au-delà, l'histoire est écrite en plusieurs fois)
 
 const STYLES = {
@@ -1333,6 +1369,12 @@ function parseJsonLoose(raw) {
     if (repaired) { logConsole('Réponse tronquée : ' + repaired.scenes.length + ' scène(s) récupérée(s)', 'warn'); return repaired; }
     throw new Error('JSON illisible (début : ' + s.slice(0, 80).replace(/\s+/g, ' ') + '…)');
 }
+// Répliques d'une scène (nouveau format « dialogues » ; ancien format « dialogue » unique accepté)
+function dialoguesOf(sc) {
+    if (!sc) return [];
+    const raw = Array.isArray(sc.dialogues) && sc.dialogues.length ? sc.dialogues : Array.isArray(sc.dialogue) ? sc.dialogue : sc.dialogue ? [sc.dialogue] : [];
+    return raw.filter(d => d && d.text && String(d.text).trim()).map(d => ({ character: String(d.character || d.personnage || d.name || '').trim() || 'Personnage', text: String(d.text).trim() }));
+}
 function validateScenario(sc) {
     if (!sc || !Array.isArray(sc.scenes) || sc.scenes.length < 2) throw new Error('Scénario incomplet (scènes manquantes)');
     if (!Array.isArray(sc.characters)) sc.characters = [];
@@ -1342,6 +1384,8 @@ function validateScenario(sc) {
         s.description = s.description || s.narration || s.texte || s.text || '';
         s.narration = s.narration || s.description;
         s.image_prompt = s.image_prompt || s.description;
+        s.dialogues = dialoguesOf(s);
+        s.dialogue = s.dialogues[0] || null;   // compatibilité
     });
     return sc;
 }
@@ -1528,10 +1572,12 @@ Personnages : ${scenario.characters.map(c => c.name + ' (' + c.appearance + ')')
 Dernières scènes :
 ${recap}
 
-Écris les scènes ${done + 1} à ${done + n} (exactement ${n} scènes), joyeuses, mêmes personnages, dialogues de 8 mots max. « description » et « dialogue » en français correct, sans faute ; « image_prompt » en anglais.${isEnd ? ' La dernière scène doit conclure l\'histoire avec une fin heureuse.' : ' Ne termine pas encore l\'histoire.'}
+Écris les scènes ${done + 1} à ${done + n} (exactement ${n} scènes), joyeuses, mêmes personnages.
+${dialogRule().rules}
+« description », « narration » et « dialogues » en français correct, sans faute ; « image_prompt » en anglais.${isEnd ? ' La dernière scène doit conclure l\'histoire avec une fin heureuse.' : ' Ne termine pas encore l\'histoire.'}
 
 JSON valide uniquement :
-{ "scenes": [ { "scene_number": ${done + 1}, "description": "...", "narration": "1 ou 2 phrases de conte pour le narrateur", "image_prompt": "prompt en anglais (action + décor)", "dialogue": { "character": "Nom", "text": "..." }, "ambiance": ["vent | explosion | eau | pluie | orage | feu | oiseaux | magie | neige | nuit | fete"] } ] }`;
+{ "scenes": [ { "scene_number": ${done + 1}, "description": "...", "narration": "1 ou 2 phrases de conte pour le narrateur", "image_prompt": "prompt en anglais (action + décor)", "dialogues": ${dialogRule().example}, "ambiance": ["vent | explosion | eau | pluie | orage | feu | oiseaux | magie | neige | nuit | fete"] } ] }`;
         let added = null;
         for (let tryN = 1; tryN <= 2 && !added; tryN++) {
             try {
@@ -1556,7 +1602,8 @@ function buildVideoPrompt(scene, nextScene, isLast) {
     if (scene && scene.description) parts.push('Scene: ' + scene.description + '.');
     if (isLast) parts.push('Gentle idle animation: characters breathe, blink, smile and wave goodbye, subtle camera push-in, happy ending.');
     else if (nextScene && nextScene.description) parts.push('Smoothly transitions toward: ' + nextScene.description + '.');
-    if (scene && scene.dialogue && scene.dialogue.character) parts.push(scene.dialogue.character + ' talks with a cheerful expression and mouth movement.');
+    const speakers = [...new Set(dialoguesOf(scene).map(d => d.character))];
+    if (speakers.length) parts.push(speakers.join(' and ') + (speakers.length > 1 ? ' talk to each other' : ' talks') + ' with cheerful expressions and mouth movement.');
     parts.push('Cute children cartoon animation, soft playful movement, consistent characters, no text, no watermark.');
     return parts.join(' ');
 }
@@ -1599,6 +1646,7 @@ async function runFullPipeline() {
         setStatus('L\'IA écrit l\'histoire…');
 
         const firstBatch = Math.min(state.sceneCount, BATCH_SCENES);
+        const dlgRule = dialogRule();
         const scenarioPrompt = `Tu es un scénariste de dessins animés pour enfants (3-8 ans). Crée une histoire courte à partir de cette idée :
 
 "${idea}"
@@ -1607,8 +1655,8 @@ Contraintes :
 - Public : enfants de 3 à 8 ans
 - Nombre de scènes : exactement ${firstBatch}${state.sceneCount > firstBatch ? ' (début d\'une histoire qui en comptera ' + state.sceneCount + ' au total : ne la termine pas encore)' : ''}
 - Chaque scène doit être visuellement simple et joyeuse, avec le même décor général pour garder une continuité
-- Les dialogues doivent être très courts (max 8 mots) et adaptés aux enfants
-- « title », « description », « narration » et « dialogue » sont rédigés en français correct, sans faute d'orthographe ; seuls « image_prompt » et « appearance » sont en anglais
+${dlgRule.rules}
+- « title », « description », « narration » et « dialogues » sont rédigés en français correct, sans faute d'orthographe ; seuls « image_prompt » et « appearance » sont en anglais
 - Pour chaque personnage, une apparence TRÈS précise et constante (espèce, couleurs exactes, vêtements, accessoire distinctif)
 
 Génère un JSON valide :
@@ -1623,7 +1671,7 @@ Génère un JSON valide :
       "description": "Description visuelle simple et joyeuse",
       "narration": "1 ou 2 phrases de conte lues par le narrateur (style conte de fées, au passé, avec émotion)",
       "image_prompt": "Prompt en anglais décrivant l'action et le décor de la scène, carré 1:1",
-      "dialogue": { "character": "Nom", "text": "Phrase très courte" },
+      "dialogues": ${dlgRule.example},
       "ambiance": ["uniquement ce qui est explicitement dans la scène, parmi : vent, explosion, eau, pluie, orage, feu, oiseaux, magie, neige, nuit, fete ; [] si rien"]
     }
   ]
@@ -1791,9 +1839,8 @@ function displayScenario(scenario) {
     scenario.scenes.forEach(s => {
         html += '<div class="scene-item"><span class="scene-num">Scène ' + s.scene_number + '</span>' + esc(s.description) +
             (s.narration && s.narration !== s.description ? '<div style="margin-top:0.3rem;color:var(--ink-dim);">📖 ' + esc(s.narration) + lineMicBtns('__narrator__', narrationOf(s)) + '</div>' : (narrationOf(s) ? lineMicBtns('__narrator__', narrationOf(s)) : ''));
-        if (s.dialogue && s.dialogue.text) {
-            html += '<div style="margin-top:0.3rem;font-style:italic;color:var(--accent-child);">💬 ' + esc(s.dialogue.character) + ' : « ' + esc(s.dialogue.text) + ' »' + lineMicBtns(s.dialogue.character, s.dialogue.text) + '</div>';
-        }
+        const dl = dialoguesOf(s);
+        if (dl.length) html += '<div class="sc-dlg">' + dl.map((d, k) => '<div class="sc-line ' + (k % 2 ? 'r' : 'l') + '"><b>' + esc(d.character) + '</b> « ' + esc(d.text) + ' »' + lineMicBtns(d.character, d.text) + '</div>').join('') + '</div>';
         html += '<div class="fx-chips" data-i="' + (s.scene_number - 1) + '"></div></div>';
     });
     const disp = document.getElementById('scenario-display');
@@ -1968,8 +2015,8 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // Bulle de dialogue façon BD, alternée gauche/droite
-function drawBubble(ctx, px, py, size, dialogue, alignRight) {
-    const fontSize = Math.round(size * 0.045);
+function drawBubble(ctx, px, py, size, dialogue, alignRight, yStart, scale) {
+    const fontSize = Math.round(size * 0.045 * (scale || 1));
     ctx.font = 'bold ' + fontSize + 'px "Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif';
     const maxW = size * 0.62;
     const name = dialogue.character ? dialogue.character + ' :' : '';
@@ -1982,7 +2029,7 @@ function drawBubble(ctx, px, py, size, dialogue, alignRight) {
     const bh = lines.length * lineH + nameH + pad * 1.6;
     const margin = size * 0.04;
     const bx = alignRight ? px + size - bw - margin : px + margin;
-    const by = py + margin;
+    const by = yStart != null ? yStart : py + margin;
 
     // queue de bulle
     const tailX = alignRight ? bx + bw * 0.7 : bx + bw * 0.3;
@@ -2013,6 +2060,23 @@ function drawBubble(ctx, px, py, size, dialogue, alignRight) {
     ctx.font = 'bold ' + fontSize + 'px "Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif';
     ctx.fillStyle = '#111';
     lines.forEach(l => { ctx.fillText(l, bx + pad, ty); ty += lineH; });
+    return by + bh + fontSize * 1.55;   // bas de la bulle (queue comprise)
+}
+// Échange : bulles alternées gauche/droite, empilées de haut en bas ; texte réduit s'il y a beaucoup de répliques
+function drawBubbles(ctx, px, py, size, list, firstRight, opts = {}) {
+    if (!list.length) return;
+    const scale = list.length <= 2 ? 1 : list.length === 3 ? 0.86 : list.length === 4 ? 0.76 : 0.66;
+    const speakers = [...new Set(list.map(d => d.character))];
+    let y = py + size * 0.04;
+    list.forEach((d, k) => {
+        if (opts.upTo != null && k > opts.upTo) return;
+        // un même personnage garde toujours le même côté
+        const right = ((speakers.indexOf(d.character) % 2) === 1) !== !!firstRight;
+        ctx.save();
+        if (opts.speaking === k) { const z = 1 + 0.015 * Math.sin(performance.now() / 160); const cx = px + size / 2; ctx.translate(cx, y + 20); ctx.scale(z, z); ctx.translate(-cx, -(y + 20)); }
+        y = drawBubble(ctx, px, py, size, d, right, y, scale) + size * 0.005;
+        ctx.restore();
+    });
 }
 
 function getBoardColumns(n) {
@@ -2097,7 +2161,7 @@ function renderBoard(canvas, imgs, loaded, opts) {
         }
         if (border) { ctx.strokeStyle = '#111'; ctx.lineWidth = border; ctx.strokeRect(x, y, panel, panel + captionH); }
         const scene = (state.scenario && state.scenario.scenes[im.sceneIndex]) || im.scene || {};
-        if (isComic && withBubbles && scene.dialogue && scene.dialogue.text) drawBubble(ctx, x, y, panel, scene.dialogue, num % 2 === 0);
+        if (isComic && withBubbles) drawBubbles(ctx, x, y, panel, dialoguesOf(scene), num % 2 === 0);
         if (withCaptions) {
             ctx.fillStyle = isComic ? '#fff3c4' : '#fff';
             ctx.fillRect(x + border / 2, y + panel, panel - border, captionH - border / 2);
@@ -2860,8 +2924,8 @@ function renderVoicePanel() {
         row.querySelector('[data-k=voice]').addEventListener('change', e => { voiceCfg.chars[ch.name][voiceCfg.engine] = e.target.value; saveVoiceCfg(); });
         row.querySelector('[data-k=tone]').addEventListener('change', e => { voiceCfg.chars[ch.name].tone = e.target.value; saveVoiceCfg(); });
         row.querySelector('.vc-test').addEventListener('click', () => {
-            const sc = state.scenario.scenes.find(s => s.dialogue && s.dialogue.character === ch.name);
-            testVoice(sc ? sc.dialogue.text : 'Bonjour, je m\'appelle ' + ch.name + ' !', ch.name);
+            const line = state.scenario.scenes.flatMap(dialoguesOf).find(d => d.character === ch.name);
+            testVoice(line ? line.text : 'Bonjour, je m\'appelle ' + ch.name + ' !', ch.name);
         });
         box.appendChild(row);
     });
@@ -3182,12 +3246,12 @@ async function speakLine(text, role, onWord, hooks = {}) {
 // ══════════════════════════════════════════════════════════════════
 // ANIMATION SYNCHRONISÉE AVEC LA LECTURE (visionneuse + vidéo enregistrée)
 // ══════════════════════════════════════════════════════════════════
-const anim = { phase: 'idle', speaker: '', sceneIdx: -1, sceneT0: 0, wordIdx: -1, dialogShown: false, kbDir: 0 };
+const anim = { phase: 'idle', speaker: '', sceneIdx: -1, sceneT0: 0, wordIdx: -1, dialogIdx: -1, kbDir: 0 };
 
 function setPhase(phase, speaker) {
     anim.phase = phase;
     anim.speaker = speaker || '';
-    if (phase === 'dialog') anim.dialogShown = true;
+
     const wrap = document.querySelector('.vw-scene');
     const badge = document.getElementById('vw-badge');
     if (wrap) {
@@ -3199,8 +3263,13 @@ function setPhase(phase, speaker) {
         badge.classList.toggle('on', show);
         badge.querySelector('.vw-badge-txt').textContent = phase === 'dialog' ? speaker : narratorLabel();
     }
-    const b = document.getElementById('vw-bubble');
-    if (b) b.classList.toggle('speaking', phase === 'dialog');
+    refreshBubbles();
+}
+function refreshBubbles() {
+    document.querySelectorAll('.vw-bubbles .vw-bubble').forEach((b, k) => {
+        b.classList.toggle('speaking', anim.phase === 'dialog' && k === anim.dialogIdx);
+        b.classList.toggle('said', k <= anim.dialogIdx);
+    });
 }
 function narratorLabel() {
     return ({ fairy: '🧚 Conteuse', granny: '👵 Grand-mère', magic: '✨ Narrateur', lively: '🎈 Conteur', neutral: '📖 Narrateur' })[voiceCfg.narratorStyle] || '📖 Narrateur';
@@ -3285,7 +3354,7 @@ function fxDetect(text) {
 // ambiances de l'IA gardées seulement si le texte les confirme, puis réglages manuels de l'utilisateur
 function sceneFx(sc) {
     if (!sc) return [];
-    const txt = [narrationOf(sc), sc.description, sc.dialogue && sc.dialogue.text].filter(Boolean).join(' . ');
+    const txt = [narrationOf(sc), sc.description].concat(dialoguesOf(sc).map(d => d.text)).filter(Boolean).join(' . ');
     const keys = fxDetect(txt);
     if (keys.has('thunder')) keys.add('rain');
     (sc.fxOff || []).forEach(k => keys.delete(k));
@@ -3626,7 +3695,7 @@ function markSceneRead(i) { const d = readDone(); d.add(i); try { localStorage.s
 function readSegments(sc) {
     const segs = [];
     if (narrationOf(sc)) segs.push({ role: '__narrator__', text: narrationOf(sc) });
-    if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') segs.push({ role: sc.dialogue.character, label: sc.dialogue.character, text: sc.dialogue.text });
+    if (state.mode !== 'photo') dialoguesOf(sc).forEach(d => segs.push({ role: d.character, label: d.character, text: d.text }));
     return segs;
 }
 
@@ -4060,7 +4129,7 @@ async function ensureCharacterSheets(scenario) {
 // Personnages présents dans une scène (nommés dans le texte ou qui parlent)
 function sceneRefs(scene) {
     const sc = state.scenario; if (!sc) return [];
-    const txt = [scene.image_prompt, scene.description, narrationOf(scene), scene.dialogue && scene.dialogue.character].filter(Boolean).join(' ').toLowerCase();
+    const txt = [scene.image_prompt, scene.description, narrationOf(scene)].concat(dialoguesOf(scene).map(d => d.character)).filter(Boolean).join(' ').toLowerCase();
     return sc.characters.filter(c => c.refUrl && c.name && txt.includes(c.name.toLowerCase())).slice(0, 3);
 }
 
@@ -4149,7 +4218,7 @@ function storyLines() {
         out.push({ role: '__narrator__', who: narratorLabel(), text: 'Il était une fois…', scene: 0, part: 'intro' });
     scenes.forEach(({ i, sc }) => {
         if (narrationOf(sc)) out.push({ role: '__narrator__', who: narratorLabel(), text: narrationOf(sc), scene: i, part: 'narr' });
-        if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') out.push({ role: sc.dialogue.character, who: sc.dialogue.character, text: sc.dialogue.text, scene: i, part: 'dialog' });
+        if (state.mode !== 'photo') dialoguesOf(sc).forEach((d, k) => out.push({ role: d.character, who: d.character, text: d.text, scene: i, part: 'dialog' + k }));
     });
     out.forEach(l => { l.key = recKey(l.role, l.text); l.has = _recKeys.has(l.key); });
     return out;
@@ -4331,7 +4400,7 @@ const mb = n => (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + ' Mo';
 
 // ── Réglages de l'interface (gardés sur l'appareil, et envoyés sur GitHub) ──
 const UI_KEY = 'da_ui';
-const UI_FIELDS = ['style-select', 'mode-select', 'scene-count-select', 'duration-select', 'columns-select', 'pp-select', 'orient-select', 'format-select', 'margin-select',
+const UI_FIELDS = ['style-select', 'mode-select', 'scene-count-select', 'dialog-count-select', 'duration-select', 'columns-select', 'pp-select', 'orient-select', 'format-select', 'margin-select',
     'opt-bubbles', 'opt-captions', 'opt-titlebar', 'opt-cover', 'opt-endpage', 'opt-pagenum', 'opt-sameface', 'vw-music-style', 'vw-music-vol', 'vw-sfx', 'vw-sfx-vol', 'vw-anim', 'vw-auto', 'vw-rate', 'vw-voice', 'vw-music'];
 function readUiState() {
     const o = {};
@@ -4861,12 +4930,15 @@ function renderViewer() {
         const sc = sceneOf(im);
         const wrap = document.createElement('div');
         wrap.className = 'vw-scene kb' + (i % 4);
-        anim.sceneIdx = i; anim.sceneT0 = performance.now(); anim.wordIdx = -1; anim.dialogShown = false;
+        anim.sceneIdx = i; anim.sceneT0 = performance.now(); anim.wordIdx = -1; anim.dialogIdx = -1;
         fx.setVisual(sceneFx(sc)); _lastFxWord = -1;
         wrap.innerHTML = '<div class="vw-kb"><img src="' + esc(im.localUrl || im.url) + '" alt=""></div><canvas class="vw-fx" id="vw-fx"></canvas>' +
             '<div class="vw-badge" id="vw-badge"><span class="vw-badge-txt"></span><span class="vw-waves"><i></i><i></i><i></i><i></i></span></div>' +
-            (sc.dialogue && sc.dialogue.text && state.mode !== 'photo'
-                ? '<div class="vw-bubble' + (i % 2 ? ' right' : '') + '" id="vw-bubble"><small>' + esc(sc.dialogue.character) + '</small>' + esc(sc.dialogue.text) + '</div>' : '');
+            (state.mode !== 'photo' && dialoguesOf(sc).length ? (() => {
+                const dl = dialoguesOf(sc), sp = [...new Set(dl.map(d => d.character))];
+                return '<div class="vw-bubbles n' + Math.min(dl.length, 6) + '">' + dl.map((d, k) => '<div class="vw-bubble' + (((sp.indexOf(d.character) % 2) === 1) !== !!(i % 2) ? ' right' : '') +
+                    '" data-k="' + k + '"><small>' + esc(d.character) + '</small>' + esc(d.text) + '</div>').join('') + '</div>';
+            })() : '');
         const cap = document.createElement('div');
         cap.className = 'vw-caption';
         cap.id = 'vw-caption';
@@ -4932,17 +5004,21 @@ async function readScene(sc, token, withCaption) {
     fx.start(fxKeys);
     if (!withCaption) fxKeys.filter(k => FX_TYPES[k].oneShot).forEach(k => setTimeout(() => { if (token === viewer.token) fx.trigger(k); }, 1500));
     music.duck(true);
-    if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') prefetchLine(sc.dialogue.text, sc.dialogue.character);
+    const dl = state.mode !== 'photo' ? dialoguesOf(sc) : [];
+    dl.forEach(d => prefetchLine(d.text, d.character));
     if (narrationOf(sc)) {
         await narrate(narrationOf(sc), null, true, withCaption ? () => {} : null);
         if (token !== viewer.token) return;
         markAllWordsRead();
     }
-    if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') {
+    // l'échange : chaque personnage parle à son tour, sa bulle apparaît quand il prend la parole
+    for (let k = 0; k < dl.length; k++) {
+        anim.dialogIdx = k; anim.phase = 'dialog'; anim.speaker = dl[k].character;
+        refreshBubbles();   // la bulle de celui qui parle s'allume tout de suite
         const wrap = document.querySelector('.vw-scene');
         if (wrap) wrap.classList.add('has-spoken');
-        await sleep(300);
-        await narrate(sc.dialogue.text, sc.dialogue.character, false);
+        await sleep(k ? 220 : 300);
+        await narrate(dl[k].text, dl[k].character, false);
         if (token !== viewer.token) return;
     }
     setPhase('idle');
@@ -4985,7 +5061,7 @@ async function startReading() {
             await sleep(400);
             if (token !== viewer.token) return;
             // préparation dans l'ordre de lecture : intro, scène en cours (narration puis réplique), puis scène suivante
-            const queueScene = im => { if (!im) return; const sc = sceneOf(im); prefetchLine(narrationOf(sc), '__narrator__'); if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') prefetchLine(sc.dialogue.text, sc.dialogue.character); };
+            const queueScene = im => { if (!im) return; const sc = sceneOf(im); prefetchLine(narrationOf(sc), '__narrator__'); if (state.mode !== 'photo') dialoguesOf(sc).forEach(d => prefetchLine(d.text, d.character)); };
             const introNeeded = viewer.index === 0 && voiceCfg.intro && !/^\s*il était une fois/i.test(narrationOf(sceneOf(sortedImages()[0])));
             if (introNeeded) prefetchLine('Il était une fois…', '__narrator__');
             queueScene(sortedImages()[viewer.index]);
@@ -5287,12 +5363,7 @@ function drawRecFrame() {
     ctx.restore();
 
     // bulle : apparaît quand le personnage prend la parole
-    if (state.mode !== 'photo' && anim.dialogShown && sc.dialogue && sc.dialogue.text) {
-        ctx.save();
-        if (anim.phase === 'dialog') { const k = 1 + 0.015 * Math.sin(now / 160); ctx.translate(x0 + side / 2, y0 + 60); ctx.scale(k, k); ctx.translate(-(x0 + side / 2), -(y0 + 60)); }
-        drawBubble(ctx, x0, y0, side, sc.dialogue, i % 2 === 1);
-        ctx.restore();
-    }
+    if (state.mode !== 'photo' && anim.dialogIdx >= 0) drawBubbles(ctx, x0, y0, side, dialoguesOf(sc), i % 2 === 1, { upTo: anim.dialogIdx, speaking: anim.phase === 'dialog' ? anim.dialogIdx : -1 });
 
     // badge de la voix qui parle
     if (anim.phase === 'narr' || anim.phase === 'dialog') {
@@ -5646,7 +5717,8 @@ function replacePendingWithVideo(index, videoUrl, dialogue, sceneNumber) {
         '<video src="' + esc(videoUrl) + '" controls playsinline preload="metadata"></video>' +
         '<div class="gen-label">🎬 Clip ' + sceneNumber + ' <span style="color:var(--success);font-size:0.6rem;">✓</span>' +
         '<a href="#" data-dl="' + index + '" title="Télécharger">⬇</a></div>' +
-        (dialogue && dialogue.text ? '<div class="gen-dialogue">💬 ' + esc(dialogue.character) + ' : « ' + esc(dialogue.text) + ' »</div>' : '');
+        (() => { const sc = state.scenario && state.scenario.scenes[(state.videos[index] || {}).sceneIndex != null ? state.videos[index].sceneIndex : index]; const dl = sc ? dialoguesOf(sc) : (dialogue && dialogue.text ? [dialogue] : []);
+                 return dl.length ? '<div class="gen-dialogue">' + dl.map(d => '💬 ' + esc(d.character) + ' : « ' + esc(d.text) + ' »').join('<br>') + '</div>' : ''; })();
     card.querySelector('[data-dl]').addEventListener('click', e => { e.preventDefault(); downloadClip(index); });
     pending.parentNode.replaceChild(card, pending);
 }
@@ -5752,11 +5824,15 @@ function playVideoAt(index) {
 
     let speechDone = Promise.resolve();
     showSubtitle(null);
-    if (v.dialogue && v.dialogue.text) {
-        speechDone = sleep(500).then(() => {
-            if (!state.isPlayingSequence) return;
-            showSubtitle(v.dialogue.character + ' : « ' + v.dialogue.text + ' »');
-            return speakLine(v.dialogue.text, v.dialogue.character);
+    const lines = dialoguesOf((state.scenario && state.scenario.scenes[v.sceneIndex]) || { dialogue: v.dialogue });
+    if (lines.length) {
+        speechDone = sleep(500).then(async () => {
+            for (const d of lines) {
+                if (!state.isPlayingSequence) return;
+                showSubtitle(d.character + ' : « ' + d.text + ' »');
+                await speakLine(d.text, d.character);
+                await sleep(200);
+            }
         });
     }
     // On attend la fin de la vidéo ET de la voix avant de passer à la scène suivante

@@ -1,5 +1,5 @@
 // Dessin Animé Studio — cache de l'application uniquement (jamais les appels API ni les images générées)
-const CACHE = 'dessin-anime-v21';
+const CACHE = 'dessin-anime-v22';
 const SHELL = ['./', 'index.html', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

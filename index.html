@@ -186,6 +186,11 @@
     .appbar-center { display: flex; gap: 0.5rem; justify-content: center; }
     .appbar-center .btn-primary { width: auto; margin: 0; padding: 0.7rem 1.4rem; font-size: 0.9rem; white-space: nowrap; }
     .appbar-center .btn-stop { width: auto; margin: 0; padding: 0.7rem 1rem; }
+    .btn-read { padding: 0.7rem 1.2rem; border-radius: var(--radius); border: 1px solid var(--border); background: var(--panel-2); color: var(--ink-faint); font: inherit; font-size: 0.9rem; font-weight: 700; white-space: nowrap; cursor: not-allowed; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+    .btn-read.ready { cursor: pointer; color: #222; background: #ffd84d; border-color: #ffd84d; box-shadow: 0 3px 0 #d1a700; }
+    .btn-read.ready:hover { filter: brightness(1.05); }
+    .btn-read.ready:active { transform: translateY(2px); box-shadow: 0 1px 0 #d1a700; }
+    @media (max-width: 640px) { .btn-read { padding: 0.7rem 0.8rem; font-size: 0.82rem; } }
     .appbar-center .btn-stop.visible { display: inline-block; }
     .appbar-right { display: flex; justify-content: flex-end; align-items: center; gap: 0.6rem; }
     .icon-btn { padding: 0.45rem 0.8rem; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); color: var(--ink); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
@@ -579,6 +584,7 @@
     </div>
     <div class="appbar-center">
         <button type="button" class="btn-primary" id="generate-btn" disabled>🎬 Générer le dessin animé</button>
+        <button type="button" class="btn-read" id="read-full-btn" disabled title="Lire l'histoire en plein écran, avec la voix (Espace : pause)">▶ Lire en plein écran</button>
         <button type="button" class="btn-stop" id="stop-btn">⏹ Arrêter</button>
     </div>
     <div class="appbar-right">
@@ -978,9 +984,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.13.0';
+const APP_VERSION = '3.13.1';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.13.1', 'Bouton « ▶ Lire la BD en plein écran » en haut, à côté de « Créer » : ouvre l\'histoire et lance la lecture'],
     ['3.13.0', 'Voix manuelles : studio d\'enregistrement guidé (micro) ou import de fichiers audio, réplique par réplique, utilisées en priorité dans la lecture et les vidéos'],
     ['3.12.0', 'Fiches personnages complètes (histoire, visage, tenue) avec portrait 3D de référence envoyé à chaque illustration : même visage et même tenue dans toutes les BD'],
     ['3.11.0', 'Voix premium Supertonic 3 gratuites et illimitées : 10 voix adultes + voix d\'enfants, grands-parents, géant ; préparation des phrases en avance'],
@@ -1347,6 +1354,17 @@ function updateGenerateBtn() {
     else if (!hasKey) btn.textContent = 'Ajoutez votre clé API';
     else if (!hasIdea) btn.textContent = 'Décrivez votre histoire';
     else btn.textContent = ({ video: '🎬 Générer le dessin animé', comic: '💬 Créer la bande dessinée', photo: '🖼️ Créer la planche photo' })[state.mode] || '🎬 Générer';
+    updateReadBtn();
+}
+function updateReadBtn() {
+    const b = document.getElementById('read-full-btn');
+    if (!b) return;
+    const n = state.images.length;
+    b.disabled = !n;
+    b.textContent = state.mode === 'video' ? '▶ Regarder en plein écran' : state.mode === 'photo' ? '▶ Voir en plein écran' : '▶ Lire la BD en plein écran';
+    b.title = n ? 'Ouvrir l\'histoire en plein écran et lancer la lecture avec la voix (Espace : pause, Échap : fermer)'
+                : 'Disponible dès qu\'une histoire est créée ou ouverte depuis la bibliothèque';
+    b.classList.toggle('ready', !!n && !state.isRunning);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1765,6 +1783,7 @@ function displayScenario(scenario) {
     }
 }
 function displayGeneratedImage(url, label, sceneIndex) {
+    setTimeout(updateReadBtn, 0);
     document.getElementById('section-images').classList.remove('hidden');
     let card = document.getElementById('img-card-' + sceneIndex);
     if (!card) {
@@ -5366,6 +5385,12 @@ function stopAllVideos() {
     const syncAnim = () => document.getElementById('viewer').classList.toggle('anim-on', document.getElementById('vw-anim').checked);
     document.getElementById('vw-anim').addEventListener('change', syncAnim); syncAnim();
     document.getElementById('board-full-btn').addEventListener('click', () => openViewer());
+    document.getElementById('read-full-btn').addEventListener('click', async () => {
+        if (!state.images.length) return;
+        unlockAudio();                                   // le son doit démarrer pendant le clic (iPhone, Safari)
+        await openViewer('story');
+        if (!viewer.playing) startReading();
+    });
     document.getElementById('board-wrap').addEventListener('click', () => openViewer());
     document.getElementById('vw-close').addEventListener('click', closeViewer);
     document.getElementById('vw-prev').addEventListener('click', () => viewerGo(-1));

@@ -556,6 +556,11 @@
     .bk-desc { font-size: 0.7rem; color: var(--ink-dim); margin: 0.25rem 0 0.5rem; line-height: 1.45; }
     .bk-state { font-size: 0.74rem; color: var(--success); margin-bottom: 0.45rem; line-height: 1.45; } .bk-state small { color: var(--ink-faint); }
     .bk-dirty { color: var(--warn); font-weight: 700; }
+    .bk-err { font-size: 0.72rem; color: #ff9a9a; background: rgba(192,57,43,0.12); border: 1px solid rgba(192,57,43,0.35); border-radius: 8px; padding: 0.45rem 0.55rem; margin-bottom: 0.45rem; line-height: 1.45; }
+    .bk-why { font-size: 0.86rem; color: var(--ink); line-height: 1.5; margin-bottom: 0.7rem; }
+    .bk-fix { font-size: 0.8rem; color: var(--ink-dim); line-height: 1.6; background: var(--panel-2); border-radius: 10px; padding: 0.7rem 0.8rem; margin-bottom: 0.7rem; }
+    .bk-links { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.7rem; } .bk-links .btn-mini { text-decoration: none; margin: 0; }
+    .bk-steps a { color: var(--info); }
     .bk-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; } .bk-actions .btn-mini { margin: 0; }
     .bk-card .board-check { margin: 0; font-size: 0.72rem; }
     .bk-set label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.76rem; color: var(--ink-dim); margin-bottom: 0.7rem; }
@@ -1004,9 +1009,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.14.0';
-const APP_DATE = '03/11/2026';
+const APP_VERSION = '3.14.1';
+const APP_DATE = '04/11/2026';
 const CHANGELOG = [
+    ['3.14.1', 'GitHub : diagnostic précis des droits du jeton (dépôt, lecture, écriture), aide pas à pas et liens directs'],
     ['3.14.0', 'Sauvegardes : Google Drive pour les fichiers (projets, images, vidéos, voix, portraits) et GitHub pour les paramètres, avec restauration et mode automatique'],
     ['3.13.1', 'Bouton « ▶ Lire la BD en plein écran » en haut, à côté de « Créer » : ouvre l\'histoire et lance la lecture'],
     ['3.13.0', 'Voix manuelles : studio d\'enregistrement guidé (micro) ou import de fichiers audio, réplique par réplique, utilisées en priorité dans la lecture et les vidéos'],
@@ -4360,16 +4366,84 @@ async function gh(path, opts = {}) {
         headers: Object.assign({ 'Authorization': 'Bearer ' + bk.gh.token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, opts.body ? { 'Content-Type': 'application/json' } : {})
     }));
     const j = res.status === 204 ? {} : await res.json().catch(() => ({}));
-    if (!res.ok) { const e = new Error((j.message || 'HTTP ' + res.status) + (res.status === 401 ? ' (jeton invalide ou expiré)' : res.status === 403 ? ' (droits insuffisants sur le dépôt)' : '')); e.status = res.status; throw e; }
+    if (!res.ok) {
+        const e = new Error((j.message || 'HTTP ' + res.status) + (res.status === 401 ? ' (jeton invalide ou expiré)' : ''));
+        e.status = res.status; e.ghMessage = j.message || ''; e.path = path; e.method = opts.method || 'GET';
+        e.needed = res.headers.get('x-accepted-github-permissions') || '';
+        throw e;
+    }
     return j;
+}
+const ghTokenType = () => /^github_pat_/.test(bk.gh.token || '') ? 'fine' : /^gh[pousr]_/.test(bk.gh.token || '') ? 'classic' : 'inconnu';
+const GH_LINKS = {
+    newRepo: () => 'https://github.com/new?name=' + encodeURIComponent((bk.gh.repo || '/dessin-anime-parametres').split('/')[1]) + '&visibility=private&description=' + encodeURIComponent('Paramètres de Dessin Animé Studio'),
+    tokens: () => ghTokenType() === 'classic' ? 'https://github.com/settings/tokens' : 'https://github.com/settings/personal-access-tokens',
+    repo: () => 'https://github.com/' + bk.gh.repo
+};
+// Explication claire d'une erreur GitHub, avec la marche à suivre
+function ghExplain(e) {
+    const fine = ghTokenType() === 'fine', repo = bk.gh.repo;
+    if (e.status === 401) return { why: 'Le jeton est invalide, expiré ou a été supprimé.', fix: 'Créez un nouveau jeton et collez-le dans les réglages GitHub.', links: [['Mes jetons', GH_LINKS.tokens()]] };
+    if (e.code === 'norepo' || (e.status === 403 && /\/user\/repos/.test(e.path || '')))
+        return { why: 'Le dépôt « ' + repo + ' » n\'existe pas encore, et ce jeton ne peut pas créer de dépôt' + (fine ? ' (un jeton « fine-grained » n\'en a pas le droit)' : '') + '.',
+                 fix: '1. Créez le dépôt privé avec le bouton ci-dessous.\n2. ' + (fine ? 'Dans les réglages du jeton, « Repository access » → ajoutez ce dépôt, et « Contents » → Read and write.' : 'Vérifiez que la case « repo » est cochée sur le jeton.') + '\n3. Revenez ici et cliquez sur « Tester l\'accès ».',
+                 links: [['Créer le dépôt privé', GH_LINKS.newRepo()], ['Réglages du jeton', GH_LINKS.tokens()]] };
+    if (e.status === 404 && /\/repos\//.test(e.path || ''))
+        return { why: fine ? 'Le dépôt « ' + repo + ' » est introuvable pour ce jeton : soit il n\'existe pas, soit il n\'a pas été ajouté au jeton (« Repository access »).' : 'Le dépôt « ' + repo + ' » est introuvable (nom incorrect ou dépôt inexistant).',
+                 fix: 'Vérifiez que le dépôt existe, puis ' + (fine ? 'ajoutez-le dans « Repository access » du jeton.' : 'que le nom saisi est exact (propriétaire/nom).'),
+                 links: [['Créer le dépôt privé', GH_LINKS.newRepo()], ['Réglages du jeton', GH_LINKS.tokens()]] };
+    if (e.status === 403 || (e.status === 404 && e.method === 'PUT'))
+        return { why: 'Le jeton voit le dépôt « ' + repo + ' » mais n\'a pas le droit d\'y écrire' + (e.needed ? ' (permission demandée par GitHub : ' + e.needed + ')' : '') + '.',
+                 fix: fine ? 'Dans les réglages du jeton → « Repository permissions » → « Contents » : choisissez « Read and write », puis enregistrez (le jeton ne change pas).' : 'Recréez un jeton « classic » avec la case « repo » cochée.',
+                 links: [['Réglages du jeton', GH_LINKS.tokens()]] };
+    return { why: e.message, fix: 'Réessayez dans un instant. Si le problème continue, vérifiez le jeton et le dépôt.', links: [['Réglages du jeton', GH_LINKS.tokens()]] };
+}
+function showGhHelp(e) {
+    const x = ghExplain(e);
+    const m = document.getElementById('voice-catalog');
+    m.innerHTML = '<div class="vc-box bk-set"><div class="vc-head"><b>🐙 GitHub : sauvegarde impossible</b><button type="button" class="vc-x" data-x>✕</button></div>' +
+        '<div class="bk-why">' + esc(x.why) + '</div>' +
+        '<div class="bk-fix">' + esc(x.fix).replace(/\n/g, '<br>') + '</div>' +
+        '<div class="bk-links">' + x.links.map(([l, u]) => '<a class="btn-mini" href="' + esc(u) + '" target="_blank" rel="noopener">↗ ' + esc(l) + '</a>').join('') + '</div>' +
+        '<div class="voice-note">Type de jeton : <b>' + (ghTokenType() === 'fine' ? 'fine-grained' : ghTokenType() === 'classic' ? 'classic' : 'inconnu') + '</b> · dépôt : <b>' + esc(bk.gh.repo || '—') + '</b> · réponse GitHub : « ' + esc(e.ghMessage || e.message) + ' »</div>' +
+        '<div class="vw-modal-actions"><button type="button" class="vw-ghost" id="gh-help-set">Modifier les réglages</button><button type="button" class="vw-play" id="gh-help-test">🔍 Tester l\'accès</button></div></div>';
+    m.classList.remove('hidden');
+    m.onclick = ev => { if (ev.target === m || ev.target.closest('[data-x]')) m.classList.add('hidden'); };
+    m.querySelector('#gh-help-set').onclick = () => openBackupSettings('gh');
+    m.querySelector('#gh-help-test').onclick = () => ghDiagnose(true);
+}
+// Diagnostic en 4 étapes : jeton, dépôt, lecture, écriture (avec un fichier de test supprimé ensuite)
+async function ghDiagnose(show) {
+    const steps = [];
+    const add = (ok, t) => steps.push((ok ? '✅ ' : '❌ ') + t);
+    let fail = null;
+    try {
+        const me = await gh('/user'); add(true, 'Jeton valide (' + me.login + ', ' + (ghTokenType() === 'fine' ? 'fine-grained' : ghTokenType()) + ')');
+        try { const r = await gh('/repos/' + bk.gh.repo); add(true, 'Dépôt accessible' + (r.private ? ' (privé)' : ' ⚠️ PUBLIC : vos notes seront visibles de tous')); }
+        catch (e) { if (e.status === 404) e.code = 'norepo'; throw e; }
+        const tp = '/repos/' + bk.gh.repo + '/contents/.test-dessin-anime';
+        let sha; try { sha = (await gh(tp)).sha; } catch (e) { if (e.status !== 404) throw e; }
+        add(true, 'Lecture autorisée');
+        const put = await gh(tp, { method: 'PUT', body: JSON.stringify({ message: 'Test d\'accès Dessin Animé Studio', content: b64enc('ok ' + new Date().toISOString()), sha }) });
+        add(true, 'Écriture autorisée');
+        try { await gh(tp, { method: 'DELETE', body: JSON.stringify({ message: 'Fin du test d\'accès', sha: put.content.sha }) }); } catch (e) {}
+    } catch (e) { fail = e; add(false, ghExplain(e).why); }
+    if (show) {
+        if (fail) showGhHelp(fail);
+        else { showToast('GitHub : tout est en ordre, la sauvegarde va fonctionner', 'success', 4000); document.getElementById('voice-catalog').classList.add('hidden'); }
+    }
+    logConsole('Test GitHub : ' + steps.join(' · '), fail ? 'warn' : 'success');
+    return !fail;
 }
 const ghPath = () => '/repos/' + bk.gh.repo + '/contents/' + encodeURIComponent(bk.gh.file || 'parametres.json');
 async function ghEnsureRepo() {
     try { await gh('/repos/' + bk.gh.repo); return; } catch (e) { if (e.status !== 404) throw e; }
     const [owner, name] = bk.gh.repo.split('/');
     const me = await gh('/user');
-    if (me.login.toLowerCase() !== owner.toLowerCase()) throw new Error('Le dépôt ' + bk.gh.repo + ' n\'existe pas');
-    await gh('/user/repos', { method: 'POST', body: JSON.stringify({ name, private: true, auto_init: true, description: 'Paramètres de Dessin Animé Studio (sauvegarde automatique)' }) });
+    const noRepo = () => { const e = new Error('Le dépôt ' + bk.gh.repo + ' n\'existe pas ou n\'est pas accessible à ce jeton'); e.code = 'norepo'; e.status = 404; e.path = '/repos/' + bk.gh.repo; return e; };
+    if (me.login.toLowerCase() !== owner.toLowerCase() || ghTokenType() === 'fine') throw noRepo();   // un jeton fine-grained ne peut pas créer de dépôt personnel
+    try { await gh('/user/repos', { method: 'POST', body: JSON.stringify({ name, private: true, auto_init: true, description: 'Paramètres de Dessin Animé Studio (sauvegarde automatique)' }) }); }
+    catch (e) { if (e.status === 422) return; throw Object.assign(noRepo(), { ghMessage: e.ghMessage }); }   // 422 : existe déjà
     logConsole('Dépôt privé ' + bk.gh.repo + ' créé pour les paramètres.', 'success');
     await sleep(1500);
 }
@@ -4382,13 +4456,15 @@ async function ghSave(silent) {
         let sha;
         try { sha = (await gh(ghPath())).sha; } catch (e) { if (e.status !== 404) throw e; }
         await gh(ghPath(), { method: 'PUT', body: JSON.stringify({ message: 'Paramètres Dessin Animé Studio — ' + new Date().toLocaleString('fr-FR'), content: b64enc(data), sha }) });
-        bk.gh.last = Date.now(); bk.gh.dirty = false; saveBk();
+        bk.gh.last = Date.now(); bk.gh.dirty = false; bk.gh.error = ''; saveBk();
         logConsole('Paramètres sauvegardés sur GitHub (' + bk.gh.repo + ').', 'success');
         if (!silent) showToast('Paramètres sauvegardés sur GitHub', 'success');
         return true;
     } catch (e) {
-        logConsole('Sauvegarde GitHub impossible : ' + e.message, 'error');
-        if (!silent) showToast('GitHub : ' + e.message, 'error', 5000);
+        const x = ghExplain(e);
+        logConsole('Sauvegarde GitHub impossible : ' + x.why + ' → ' + x.fix.replace(/\n/g, ' '), 'error');
+        bk.gh.error = x.why; saveBk();
+        if (!silent) showGhHelp(e);
         return false;
     } finally { renderBackupPanel(); }
 }
@@ -4415,7 +4491,7 @@ async function ghRestore() {
         showToast('Paramètres restaurés : rechargement…', 'success');
         setTimeout(() => location.reload(), 900);
     } catch (e) {
-        showToast(e.status === 404 ? 'Aucune sauvegarde de paramètres trouvée sur GitHub' : 'GitHub : ' + e.message, 'error', 5000);
+        if (e.status === 404 && /contents/.test(e.path || '')) showToast('Aucune sauvegarde de paramètres trouvée sur GitHub', 'warn', 5000); else showGhHelp(e);
         renderBackupPanel();
     }
 }
@@ -4648,7 +4724,8 @@ function renderBackupPanel() {
         '<div class="bk-card"><div class="bk-title">🐙 GitHub <span>paramètres</span></div>' +
         '<div class="bk-desc">Voix, lecture, mise en page, personnages (fiches) et notes, dans un dépôt privé. Les clés API ne sont jamais envoyées.</div>' +
         (g.token
-            ? '<div class="bk-state" id="bk-gh-state">' + (g.last ? '✓ Dernière sauvegarde : ' + fmtDate(g.last) : 'Pas encore sauvegardé') + (g.dirty ? ' · <b class="bk-dirty">modifications non sauvegardées</b>' : '') + '<br><small>' + esc(g.repo) + ' / ' + esc(g.file || 'parametres.json') + '</small></div>' +
+            ? (g.error ? '<div class="bk-err">⚠️ ' + esc(g.error) + ' <button type="button" class="link-btn" data-bk="gh-test">Diagnostiquer</button></div>' : '') +
+              '<div class="bk-state" id="bk-gh-state">' + (g.last ? '✓ Dernière sauvegarde : ' + fmtDate(g.last) : 'Pas encore sauvegardé') + (g.dirty ? ' · <b class="bk-dirty">modifications non sauvegardées</b>' : '') + '<br><small>' + esc(g.repo) + ' / ' + esc(g.file || 'parametres.json') + '</small></div>' +
               '<div class="bk-actions"><button type="button" class="btn-mini" data-bk="gh-save">☁️ Sauvegarder</button><button type="button" class="btn-mini" data-bk="gh-restore">⬇ Restaurer</button><button type="button" class="link-btn" data-bk="gh-set">Réglages</button></div>' +
               '<label class="board-check"><input type="checkbox" data-bk="gh-auto"' + (g.auto ? ' checked' : '') + '> Sauvegarde automatique à chaque changement</label>'
             : '<button type="button" class="btn-mini" data-bk="gh-set">Configurer GitHub</button>') +
@@ -4665,9 +4742,9 @@ function openBackupSettings(which) {
               '<li>Copiez l\'<b>ID client</b> (se termine par <code>.apps.googleusercontent.com</code>) ci-dessous.</li></ol>' +
               '<label>ID client Google<input type="text" id="bk-cid" value="' + esc(bk.drive.clientId || '') + '" placeholder="123456-abc.apps.googleusercontent.com"></label>' +
               '<div class="voice-note">L\'app n\'a accès qu\'aux fichiers qu\'elle crée elle-même dans votre Drive (autorisation « drive.file »).</div>'
-            : '<ol class="bk-steps"><li>Sur <b>github.com</b> → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.</li>' +
-              '<li>Accès : <b>Only select repositories</b> → le dépôt des paramètres (créez-le d\'abord, privé) ; permission <b>Contents : Read and write</b>.</li>' +
-              '<li>Ou un jeton « classic » avec la case <b>repo</b> : le dépôt est alors créé automatiquement (privé).</li></ol>' +
+            : '<ol class="bk-steps"><li><a href="' + esc(GH_LINKS.newRepo()) + '" target="_blank" rel="noopener">Créez le dépôt <b>privé</b> ↗</a> (par exemple <code>dessin-anime-parametres</code>).</li>' +
+              '<li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Créez un jeton fine-grained ↗</a> : <b>Repository access</b> → <b>Only select repositories</b> → ce dépôt ; <b>Repository permissions</b> → <b>Contents : Read and write</b>.</li>' +
+              '<li>Collez le jeton ci-dessous, puis « Enregistrer et tester » : l\'app vérifie le jeton, le dépôt, la lecture et l\'écriture.</li></ol>' +
               '<label>Jeton GitHub<input type="password" id="bk-tok" value="' + esc(bk.gh.token || '') + '" placeholder="github_pat_… ou ghp_…" autocomplete="off"></label>' +
               '<label>Dépôt (propriétaire/nom)<input type="text" id="bk-repo" value="' + esc(bk.gh.repo || 'aliand0810/dessin-anime-parametres') + '"></label>' +
               '<label>Fichier<input type="text" id="bk-file" value="' + esc(bk.gh.file || 'parametres.json') + '"></label>' +
@@ -4695,8 +4772,8 @@ function openBackupSettings(which) {
             Object.assign(bk.gh, { token: m.querySelector('#bk-tok').value.trim(), repo: m.querySelector('#bk-repo').value.trim().replace(/^https:\/\/github\.com\//, ''), file: m.querySelector('#bk-file').value.trim() || 'parametres.json' });
             if (bk.gh.auto == null) bk.gh.auto = true;
             saveBk();
-            try { const me = await gh('/user'); showToast('GitHub connecté : ' + me.login, 'success'); m.classList.add('hidden'); }
-            catch (er) { showToast('GitHub : ' + er.message, 'error', 6000); }
+            bk.gh.error = ''; saveBk();
+            await ghDiagnose(true);
         }
         e.target.disabled = false; renderBackupPanel();
     };
@@ -4706,7 +4783,7 @@ function initBackup() {
     box.addEventListener('click', e => {
         const b = e.target.closest('[data-bk]'); if (!b || b.tagName === 'INPUT') return;
         ({ 'drive-save': () => driveBackup(false), 'drive-restore': driveRestore, 'drive-set': () => openBackupSettings('drive'),
-           'gh-save': () => ghSave(false), 'gh-restore': ghRestore, 'gh-set': () => openBackupSettings('gh') })[b.dataset.bk]();
+           'gh-save': () => ghSave(false), 'gh-restore': ghRestore, 'gh-set': () => openBackupSettings('gh'), 'gh-test': () => ghDiagnose(true) })[b.dataset.bk]();
     });
     box.addEventListener('change', e => {
         if (e.target.dataset.bk === 'drive-auto') { bk.drive.auto = e.target.checked; saveBk(); }

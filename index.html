@@ -576,6 +576,30 @@
     .sc-line { font-style: italic; color: var(--accent-child); font-size: 0.8rem; padding: 0.2rem 0.55rem; border-radius: 10px; background: rgba(255,107,157,0.07); max-width: 92%; }
     .sc-line.r { align-self: flex-end; background: rgba(74,108,247,0.1); color: #a9b8ff; }
     .sc-line b { font-style: normal; margin-right: 0.2rem; }
+    /* ── Masquer les colonnes ── */
+    .col-toggles { display: inline-flex; gap: 0.25rem; }
+    .col-btn { width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+    .col-btn span { width: 18px; height: 14px; border: 2px solid var(--ink-dim); border-radius: 3px; position: relative; }
+    .col-btn span::after { content: ''; position: absolute; top: 0; bottom: 0; width: 5px; background: var(--accent-child); }
+    .col-btn .cb-l::after { left: 0; } .col-btn .cb-r::after { right: 0; }
+    .col-btn.off span::after { background: transparent; border-right: 1px dashed var(--ink-faint); }
+    .col-btn.off .cb-r::after { border-right: none; border-left: 1px dashed var(--ink-faint); }
+    .col-btn:hover { border-color: var(--accent-child); }
+    body.hide-left .controls-col { display: none !important; }
+    body.hide-right .side-col { display: none !important; }
+    @media (min-width: 1100px) {
+        body.hide-left .layout { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (min-width: 1600px) {
+        body.wide.hide-left .layout { grid-template-columns: minmax(0, 1fr) 380px; }
+        body.wide.hide-right .layout { grid-template-columns: 400px minmax(0, 1fr); }
+        body.wide.hide-left.hide-right .layout { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (min-width: 2200px) {
+        body.wide.hide-left .layout { grid-template-columns: minmax(0, 1fr) 420px; }
+        body.wide.hide-right .layout { grid-template-columns: 440px minmax(0, 1fr); }
+    }
+    @media (max-width: 640px) { .col-toggles { display: none; } body.hide-left .controls-col { display: block !important; } }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -615,6 +639,10 @@
     </div>
     <div class="appbar-right">
         <button type="button" class="icon-btn hidden" id="install-btn" title="Installer l'application">⬇ Installer</button>
+        <span class="col-toggles">
+            <button type="button" class="col-btn" id="tog-left" title="Masquer / afficher la colonne de gauche (réglages)" aria-pressed="true"><span class="cb-l"></span></button>
+            <button type="button" class="col-btn" id="tog-right" title="Masquer / afficher la colonne de droite (personnages, notes, vidéos, bibliothèque)" aria-pressed="true"><span class="cb-r"></span></button>
+        </span>
         <button type="button" class="icon-btn" id="app-fs" title="Afficher l'application sur tout l'écran (F11)">⛶ Plein écran</button>
         <button type="button" class="api-dot" id="api-dot" title="Clé API"></button>
     </div>
@@ -1029,9 +1057,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.15.0';
+const APP_VERSION = '3.15.1';
 const APP_DATE = '04/11/2026';
 const CHANGELOG = [
+    ['3.15.1', 'Boutons pour masquer la colonne de gauche, de droite ou les deux (Alt+1, Alt+2, Alt+0), mémorisé'],
     ['3.15.0', 'Vrais échanges entre personnages : 1 à 6 répliques par scène (ou variable), bulles empilées, voix et bulles au fil de la conversation'],
     ['3.14.1', 'GitHub : diagnostic précis des droits du jeton (dépôt, lecture, écriture), aide pas à pas et liens directs'],
     ['3.14.0', 'Sauvegardes : Google Drive pour les fichiers (projets, images, vidéos, voix, portraits) et GitHub pour les paramètres, avec restauration et mode automatique'],
@@ -6063,7 +6092,32 @@ function stopAllVideos() {
         if (wide) ['section-characters', 'section-notes', 'section-videos-lib', 'section-library', 'section-backup'].forEach(id => document.getElementById(id).classList.add('open'));
     };
     placeSide();
-    let _rz; window.addEventListener('resize', () => { clearTimeout(_rz); _rz = setTimeout(placeSide, 150); });
+    let _rz; window.addEventListener('resize', () => { clearTimeout(_rz); _rz = setTimeout(() => { placeSide(); syncCols(); }, 150); });
+
+    // ── Masquer / afficher les colonnes (mémorisé) ──
+    const COLS_KEY = 'da_cols';
+    let cols = { left: true, right: true };
+    try { Object.assign(cols, JSON.parse(localStorage.getItem(COLS_KEY) || '{}')); } catch (e) {}
+    const syncCols = () => {
+        const wide = document.body.classList.contains('wide');
+        document.body.classList.toggle('hide-left', !cols.left);
+        document.body.classList.toggle('hide-right', !cols.right && wide);
+        const tl = document.getElementById('tog-left'), tr = document.getElementById('tog-right');
+        tl.setAttribute('aria-pressed', cols.left); tl.classList.toggle('off', !cols.left);
+        tr.setAttribute('aria-pressed', cols.right); tr.classList.toggle('off', !cols.right);
+        tr.classList.toggle('hidden', !wide);   // la colonne de droite n'existe que sur grand écran
+    };
+    const setCol = (k, v) => { cols[k] = v; try { localStorage.setItem(COLS_KEY, JSON.stringify(cols)); } catch (e) {} syncCols(); };
+    document.getElementById('tog-left').addEventListener('click', () => setCol('left', !cols.left));
+    document.getElementById('tog-right').addEventListener('click', () => setCol('right', !cols.right));
+    // raccourcis : Alt+1 gauche, Alt+2 droite, Alt+0 les deux
+    document.addEventListener('keydown', e => {
+        if (!e.altKey || viewer.open) return;
+        if (e.key === '1') { e.preventDefault(); setCol('left', !cols.left); }
+        else if (e.key === '2') { e.preventDefault(); setCol('right', !cols.right); }
+        else if (e.key === '0') { e.preventDefault(); const show = !(cols.left || cols.right); cols.left = show; setCol('right', show); }
+    });
+    syncCols();
 })();
 </script>
 </body>

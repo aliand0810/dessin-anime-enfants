@@ -521,6 +521,30 @@
     .note-text:focus, .note-title:focus { outline: none; }
     .note-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; font-size: 0.64rem; color: #8a7a4d; }
     .note-foot .link-btn { color: #6b4ed6; font-size: 0.68rem; }
+    /* ── Voix manuelles ── */
+    .manual-box { margin-top: 0.7rem; padding: 0.6rem 0.7rem; border-radius: 10px; background: rgba(255,107,157,0.08); border: 1px solid rgba(255,107,157,0.25); }
+    .manual-box .board-check { margin: 0; color: var(--ink); font-weight: 700; }
+    .lm { white-space: nowrap; font-style: normal; }
+    .lm-b { border: 1px solid var(--border); background: var(--panel); color: var(--ink-dim); font: inherit; font-size: 0.66rem; padding: 0.05rem 0.4rem; border-radius: 10px; cursor: pointer; margin-left: 0.2rem; }
+    .lm-b.ok { border-color: var(--success); color: #7ee2a0; }
+    .sd-box { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; width: min(760px, 100%); max-height: 92vh; overflow-y: auto; padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.8rem; }
+    .sd-head { display: flex; align-items: center; gap: 0.8rem; } .sd-head b { font-size: 1.05rem; flex: 1; } .sd-prog { font-size: 0.75rem; color: var(--ink-dim); }
+    .sd-bar { height: 6px; border-radius: 3px; background: var(--panel-2); overflow: hidden; } .sd-bar div { height: 100%; background: linear-gradient(90deg, #ff6b9d, #4a6cf7); transition: width 0.3s; }
+    .sd-list { display: flex; flex-wrap: wrap; gap: 4px; }
+    .sd-dot { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel-2); color: var(--ink-dim); font: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer; }
+    .sd-dot.ok { background: rgba(45,138,78,0.25); border-color: var(--success); color: #9ef0bb; } .sd-dot.cur { outline: 2px solid #ffd84d; outline-offset: 1px; }
+    .sd-card { border-radius: 14px; padding: 1.1rem 1.2rem; background: #fffdf4; color: #2b2b2b; }
+    .sd-card.char { background: #fff0f6; }
+    .sd-who { font-weight: 800; color: #7a3df0; font-size: 0.9rem; } .sd-who span { font-weight: 500; color: #999; font-size: 0.75rem; }
+    .sd-text { font-family: 'Andika', 'Comic Sans MS', sans-serif; font-size: clamp(1.25rem, 3vw, 1.75rem); line-height: 1.55; margin: 0.4rem 0; }
+    .sd-tip { font-size: 0.74rem; color: #8a7a6a; }
+    .sd-meter { height: 8px; border-radius: 4px; background: var(--panel-2); overflow: hidden; } .sd-meter div { height: 100%; width: 0; background: linear-gradient(90deg, #4ccb7a, #ffd84d, #ff5d5d); transition: width 0.08s; }
+    .sd-state { font-size: 0.8rem; color: var(--ink-dim); min-height: 1.2em; }
+    .sd-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-items: center; }
+    .sd-actions .vw-ghost[disabled] { opacity: 0.3; }
+    .sd-rec { padding: 0.75rem 1.5rem; border-radius: 26px; border: none; background: #e0344c; color: #fff; font: inherit; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #a51f33; }
+    .sd-rec.on { animation: blink 1s steps(2) infinite; }
+    .sd-file { display: inline-flex; align-items: center; cursor: pointer; }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -670,6 +694,11 @@
             <select id="voice-engine"></select>
             <div class="voice-note" id="voice-engine-note"></div>
             <div class="puter-status hidden" id="puter-status"></div>
+            <div class="manual-box">
+                <label class="board-check"><input type="checkbox" id="voice-manual" checked> 🎙️ Utiliser mes voix enregistrées en priorité</label>
+                <div class="voice-note" id="manual-status"></div>
+                <button type="button" class="btn-secondary" id="studio-btn" style="margin:0.4rem 0 0;padding:0.6rem">🎙️ Studio : enregistrer ma voix réplique par réplique</button>
+            </div>
             <button type="button" class="btn-secondary" id="voice-catalog-btn" style="margin:0.6rem 0 0;padding:0.6rem">📚 Catalogue des voix — écouter, favoris, autres moteurs</button>
         </div>
         <div class="control-row">
@@ -891,6 +920,7 @@
 <div id="print-pages"></div>
 <div class="video-modal hidden" id="video-modal"></div>
 <div class="video-modal hidden" id="voice-catalog"></div>
+<div class="video-modal hidden" id="studio"></div>
 
 <div class="viewer hidden" id="viewer" role="dialog" aria-label="Aperçu plein écran">
     <div class="vw-top">
@@ -948,9 +978,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.12.0';
+const APP_VERSION = '3.13.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.13.0', 'Voix manuelles : studio d\'enregistrement guidé (micro) ou import de fichiers audio, réplique par réplique, utilisées en priorité dans la lecture et les vidéos'],
     ['3.12.0', 'Fiches personnages complètes (histoire, visage, tenue) avec portrait 3D de référence envoyé à chaque illustration : même visage et même tenue dans toutes les BD'],
     ['3.11.0', 'Voix premium Supertonic 3 gratuites et illimitées : 10 voix adultes + voix d\'enfants, grands-parents, géant ; préparation des phrases en avance'],
     ['3.10.0', 'Voix neuronales Piper gratuites et illimitées (dans le navigateur) ; bascule automatique si les crédits Puter sont épuisés'],
@@ -991,12 +1022,13 @@ const state = {
 const DB_NAME = 'dessin_anime_db', DB_STORE = 'projects';
 function openDB() {
     return new Promise((res, rej) => {
-        const r = indexedDB.open(DB_NAME, 3);
+        const r = indexedDB.open(DB_NAME, 4);
         r.onupgradeneeded = () => {
             const db = r.result;
             if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE, { keyPath: 'id' });
             if (!db.objectStoreNames.contains('videos')) db.createObjectStore('videos', { keyPath: 'id' });
             if (!db.objectStoreNames.contains('characters')) db.createObjectStore('characters', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('recordings')) db.createObjectStore('recordings', { keyPath: 'id' });
         };
         r.onsuccess = () => res(r.result);
         r.onerror = () => rej(r.error);
@@ -1694,6 +1726,12 @@ async function runVideoStage() {
 // ══════════════════════════════════════════════════════════════════
 // AFFICHAGE
 // ══════════════════════════════════════════════════════════════════
+function lineMicBtns(role, text) {
+    if (typeof recKey !== 'function') return '';
+    const k = recKey(role, text), has = _recKeys.has(k);
+    return ' <span class="lm" data-k="' + esc(k) + '">' + (has ? '<button type="button" class="lm-b ok" data-lm="play" title="Écouter ma voix">▶ ma voix</button>' : '') +
+        '<button type="button" class="lm-b" data-lm="rec" title="' + (has ? 'Refaire' : 'Enregistrer ma voix') + '">🎙' + (has ? ' ✓' : '') + '</button></span>';
+}
 function displayScenario(scenario) {
     const section = document.getElementById('section-scenario');
     section.classList.remove('hidden');
@@ -1706,9 +1744,9 @@ function displayScenario(scenario) {
         }).join(' ') + '</div>';
     scenario.scenes.forEach(s => {
         html += '<div class="scene-item"><span class="scene-num">Scène ' + s.scene_number + '</span>' + esc(s.description) +
-            (s.narration && s.narration !== s.description ? '<div style="margin-top:0.3rem;color:var(--ink-dim);">📖 ' + esc(s.narration) + '</div>' : '');
+            (s.narration && s.narration !== s.description ? '<div style="margin-top:0.3rem;color:var(--ink-dim);">📖 ' + esc(s.narration) + lineMicBtns('__narrator__', narrationOf(s)) + '</div>' : (narrationOf(s) ? lineMicBtns('__narrator__', narrationOf(s)) : ''));
         if (s.dialogue && s.dialogue.text) {
-            html += '<div style="margin-top:0.3rem;font-style:italic;color:var(--accent-child);">💬 ' + esc(s.dialogue.character) + ' : « ' + esc(s.dialogue.text) + ' »</div>';
+            html += '<div style="margin-top:0.3rem;font-style:italic;color:var(--accent-child);">💬 ' + esc(s.dialogue.character) + ' : « ' + esc(s.dialogue.text) + ' »' + lineMicBtns(s.dialogue.character, s.dialogue.text) + '</div>';
         }
         html += '<div class="fx-chips" data-i="' + (s.scene_number - 1) + '"></div></div>';
     });
@@ -1720,6 +1758,8 @@ function displayScenario(scenario) {
         disp.addEventListener('click', e => {
             const b = e.target.closest('[data-rm]'); if (b) editSceneFx(+b.closest('.fx-chips').dataset.i, b.dataset.rm, false);
             const c = e.target.closest('[data-addchar]'); if (c) addCharToCatalog(c.dataset.addchar);
+            const lm = e.target.closest('[data-lm]');
+            if (lm) { const k = lm.closest('.lm').dataset.k; if (lm.dataset.lm === 'play') { unlockAudio(); stopAllSpeech(); playManual(k); } else openStudio(k); }
         });
         disp.addEventListener('change', e => { if (e.target.classList.contains('fx-add') && e.target.value) editSceneFx(+e.target.closest('.fx-chips').dataset.i, e.target.value, true); });
     }
@@ -3050,6 +3090,10 @@ function switchToPiper(reason) {
 }
 async function speakLine(text, role, onWord, hooks = {}) {
     if (!text) return;
+    if (manualOn()) {
+        const k = recKey(role, text);
+        if (_recKeys.has(k)) { if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} } if (await playManual(k, hooks)) return; }
+    }
     if (_currentAudio) { try { _currentAudio.pause(); } catch (e) {} _currentAudio = null; }
     const eng = voiceCfg.engine;
     if (isLocalNeural(eng)) {
@@ -4033,6 +4077,198 @@ function initNotes() {
         }
     });
     renderNotes();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// VOIX MANUELLES : vos propres enregistrements (micro ou fichier audio), réplique par réplique.
+// Pendant la lecture, la vidéo et le mode Lire, un enregistrement remplace la voix de synthèse.
+// ══════════════════════════════════════════════════════════════════
+const dbAllRecs = () => dbOp('readonly', st => st.getAllKeys(), 'recordings');
+const dbGetRec = k => dbOp('readonly', st => st.get(k), 'recordings');
+const dbPutRec = r => dbOp('readwrite', st => st.put(r), 'recordings');
+const dbDelRec = k => dbOp('readwrite', st => st.delete(k), 'recordings');
+const _recKeys = new Set();
+const recKey = (role, text) => role + '|' + String(text || '').trim().replace(/\s+/g, ' ');
+const manualOn = () => voiceCfg.manual !== false;
+async function loadRecKeys() { try { (await dbAllRecs()).forEach(k => _recKeys.add(k)); } catch (e) {} }
+
+// Toutes les répliques de l'histoire, dans l'ordre de lecture
+function storyLines() {
+    const out = [];
+    if (!state.scenario) return out;
+    const scenes = state.images.length ? sortedImages().map(im => ({ i: im.sceneIndex, sc: sceneOf(im) })) : state.scenario.scenes.map((sc, i) => ({ i, sc }));
+    if (voiceCfg.intro && scenes[0] && !/^\s*il était une fois/i.test(narrationOf(scenes[0].sc)))
+        out.push({ role: '__narrator__', who: narratorLabel(), text: 'Il était une fois…', scene: 0, part: 'intro' });
+    scenes.forEach(({ i, sc }) => {
+        if (narrationOf(sc)) out.push({ role: '__narrator__', who: narratorLabel(), text: narrationOf(sc), scene: i, part: 'narr' });
+        if (sc.dialogue && sc.dialogue.text && state.mode !== 'photo') out.push({ role: sc.dialogue.character, who: sc.dialogue.character, text: sc.dialogue.text, scene: i, part: 'dialog' });
+    });
+    out.forEach(l => { l.key = recKey(l.role, l.text); l.has = _recKeys.has(l.key); });
+    return out;
+}
+
+async function saveRecording(line, blob, source) {
+    const duration = await new Promise(r => { const a = new Audio(); a.preload = 'metadata'; a.onloadedmetadata = () => r(isFinite(a.duration) ? a.duration : 0); a.onerror = () => r(0); a.src = URL.createObjectURL(blob); setTimeout(() => r(0), 4000); });
+    await dbPutRec({ id: line.key, role: line.role, text: line.text, blob, type: blob.type, duration, source, project: (state.scenario && state.scenario.title) || '', createdAt: Date.now() });
+    _recKeys.add(line.key);
+    if (state.scenario) displayScenario(state.scenario);
+    updateManualStatus();
+}
+async function deleteRecording(key) { await dbDelRec(key); _recKeys.delete(key); if (state.scenario) displayScenario(state.scenario); updateManualStatus(); }
+
+// Lecture d'un enregistrement (passe par le bus audio pendant l'enregistrement vidéo)
+async function playManual(key, hooks = {}) {
+    const rec0 = await dbGetRec(key).catch(() => null);
+    if (!rec0 || !rec0.blob) { _recKeys.delete(key); return false; }
+    await new Promise(resolve => {
+        const a = new Audio();
+        if (rec.active) { try { audioHub.get().createMediaElementSource(a).connect(audioHub.out); } catch (e) {} }
+        a.src = URL.createObjectURL(rec0.blob);
+        _currentAudio = a;
+        a.addEventListener('playing', () => { if (hooks.onStart) hooks.onStart(isFinite(a.duration) && a.duration ? a.duration : rec0.duration || 3); }, { once: true });
+        let done = false; const fin = () => { if (!done) { done = true; if (_currentAudio === a) _currentAudio = null; URL.revokeObjectURL(a.src); resolve(); } };
+        a.onended = a.onerror = fin;
+        a.play().catch(fin);
+        setTimeout(fin, ((rec0.duration || 30) + 3) * 1000);
+    });
+    return true;
+}
+
+// ── Micro ──
+const mic = { stream: null, recorder: null, chunks: [], t0: 0, timer: 0, raf: 0, analyser: null };
+function pickMicMime() {
+    return ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+}
+async function micStart(onLevel) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('micro non disponible dans ce navigateur');
+    if (!mic.stream) mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const mime = pickMicMime();
+    mic.recorder = new MediaRecorder(mic.stream, mime ? { mimeType: mime, audioBitsPerSecond: 128000 } : undefined);
+    mic.chunks = [];
+    mic.recorder.ondataavailable = e => { if (e.data && e.data.size) mic.chunks.push(e.data); };
+    mic.recorder.start(250);
+    mic.t0 = Date.now();
+    try {   // vu-mètre
+        const ctx = audioHub.get();
+        const src = ctx.createMediaStreamSource(mic.stream); mic.analyser = ctx.createAnalyser(); mic.analyser.fftSize = 512; src.connect(mic.analyser);
+        const data = new Uint8Array(mic.analyser.fftSize);
+        const loop = () => { mic.analyser.getByteTimeDomainData(data); let m = 0; for (const v of data) m = Math.max(m, Math.abs(v - 128)); onLevel && onLevel(Math.min(1, m / 90)); mic.raf = requestAnimationFrame(loop); };
+        loop();
+    } catch (e) {}
+}
+function micStop() {
+    return new Promise(resolve => {
+        cancelAnimationFrame(mic.raf);
+        if (!mic.recorder || mic.recorder.state === 'inactive') return resolve(null);
+        mic.recorder.onstop = () => resolve(new Blob(mic.chunks, { type: mic.recorder.mimeType || 'audio/webm' }));
+        mic.recorder.stop();
+    });
+}
+function micRelease() { cancelAnimationFrame(mic.raf); if (mic.stream) mic.stream.getTracks().forEach(t => t.stop()); mic.stream = null; }
+
+// ── Studio d'enregistrement guidé ──
+let _studio = { i: 0, lines: [], recording: false, pending: null };
+function openStudio(startKey) {
+    if (!state.scenario) { showToast('Créez ou ouvrez d\'abord une histoire', 'warn'); return; }
+    stopReading && stopReading();
+    _studio.lines = storyLines();
+    if (!_studio.lines.length) { showToast('Aucune réplique à enregistrer', 'warn'); return; }
+    const fromKey = startKey ? _studio.lines.findIndex(l => l.key === startKey) : _studio.lines.findIndex(l => !l.has);
+    _studio.i = Math.max(0, fromKey);
+    document.getElementById('studio').classList.remove('hidden');
+    renderStudio();
+}
+function closeStudio() {
+    if (_studio.recording) micStop();
+    _studio.recording = false; _studio.pending = null;
+    micRelease(); stopAllSpeech();
+    document.getElementById('studio').classList.add('hidden');
+}
+function renderStudio() {
+    const box = document.getElementById('studio');
+    const L = _studio.lines, l = L[_studio.i];
+    const done = L.filter(x => _recKeys.has(x.key)).length;
+    const isNarr = l.role === '__narrator__';
+    box.innerHTML = '<div class="sd-box">' +
+        '<div class="sd-head"><b>🎙️ Studio d\'enregistrement</b><span class="sd-prog">' + done + ' / ' + L.length + ' répliques enregistrées</span><button type="button" class="vc-x" data-sd="close">✕</button></div>' +
+        '<div class="sd-bar"><div style="width:' + Math.round(done / L.length * 100) + '%"></div></div>' +
+        '<div class="sd-list">' + L.map((x, k) => '<button type="button" class="sd-dot' + (k === _studio.i ? ' cur' : '') + (_recKeys.has(x.key) ? ' ok' : '') + '" data-go="' + k + '" title="' + esc(x.who + ' : ' + x.text) + '">' + (k + 1) + '</button>').join('') + '</div>' +
+        '<div class="sd-card ' + (isNarr ? 'narr' : 'char') + '">' +
+            '<div class="sd-who">' + (isNarr ? esc(l.who) : (characterGender(l.role) === 'f' ? '👧 ' : '👦 ') + esc(l.who)) + ' <span>· scène ' + (l.scene + 1) + (l.part === 'intro' ? ' · introduction' : '') + '</span></div>' +
+            '<div class="sd-text">' + esc(l.text) + '</div>' +
+            '<div class="sd-tip">' + (isNarr ? 'Lisez lentement, comme un conte, avec des pauses aux virgules.' : 'Jouez le personnage' + (charCfg(l.role).tone ? ' (' + ((TONES[charCfg(l.role).tone] || {}).label || '') + ')' : '') + ' avec l\'émotion de la réplique.') + '</div>' +
+        '</div>' +
+        '<div class="sd-meter"><div id="sd-level"></div></div>' +
+        '<div class="sd-state" id="sd-state">' + (_studio.pending ? 'Écoutez votre prise, puis gardez-la ou recommencez.' : _recKeys.has(l.key) ? '✓ Déjà enregistrée — vous pouvez l\'écouter ou la refaire.' : 'Prêt : appuyez sur ⏺ puis lisez la réplique.') + '</div>' +
+        '<div class="sd-actions">' +
+            '<button type="button" class="vw-ghost" data-sd="prev"' + (_studio.i === 0 ? ' disabled' : '') + '>⏮</button>' +
+            (_studio.recording ? '<button type="button" class="sd-rec on" data-sd="stop">⏹ Arrêter</button>'
+                : _studio.pending ? '<button type="button" class="vw-ghost" data-sd="listen-take">▶ Écouter la prise</button><button type="button" class="vw-ghost" data-sd="redo">↺ Recommencer</button><button type="button" class="vw-play" data-sd="keep">✓ Garder et continuer</button>'
+                : '<button type="button" class="sd-rec" data-sd="rec">⏺ Enregistrer</button>' +
+                  (_recKeys.has(l.key) ? '<button type="button" class="vw-ghost" data-sd="listen">▶ Écouter</button><button type="button" class="vw-ghost" data-sd="del">🗑</button>' : '<button type="button" class="vw-ghost" data-sd="tts" title="Écouter la voix de synthèse pour s\'inspirer">🔈 Modèle</button>') +
+                  '<label class="vw-ghost sd-file" title="Importer un fichier audio (MP3, WAV, M4A…)">⬆ Fichier<input type="file" accept="audio/*" hidden data-sd="file"></label>') +
+            '<button type="button" class="vw-ghost" data-sd="next"' + (_studio.i >= L.length - 1 ? ' disabled' : '') + '>⏭</button>' +
+        '</div></div>';
+}
+async function studioAction(act, el) {
+    const l = _studio.lines[_studio.i];
+    const st0 = document.getElementById('sd-state');
+    try {
+        if (act === 'close') return closeStudio();
+        if (act === 'prev') { _studio.i--; _studio.pending = null; return renderStudio(); }
+        if (act === 'next') { _studio.i++; _studio.pending = null; return renderStudio(); }
+        if (act === 'go') { _studio.i = +el.dataset.go; _studio.pending = null; return renderStudio(); }
+        if (act === 'rec') {
+            unlockAudio(); stopAllSpeech();
+            await micStart(v => { const b = document.getElementById('sd-level'); if (b) b.style.width = Math.round(v * 100) + '%'; });
+            _studio.recording = true; renderStudio();
+            const tick = () => { const s = document.getElementById('sd-state'); if (s && _studio.recording) s.textContent = '● Enregistrement… ' + ((Date.now() - mic.t0) / 1000).toFixed(1) + ' s'; };
+            mic.timer = setInterval(tick, 100);
+            return;
+        }
+        if (act === 'stop') {
+            clearInterval(mic.timer);
+            const blob = await micStop();
+            _studio.recording = false;
+            if (!blob || blob.size < 1500) { _studio.pending = null; renderStudio(); document.getElementById('sd-state').textContent = 'Prise trop courte, recommencez.'; return; }
+            _studio.pending = blob; renderStudio();
+            return studioAction('listen-take');
+        }
+        if (act === 'redo') { _studio.pending = null; renderStudio(); return studioAction('rec'); }
+        if (act === 'listen-take') { stopAllSpeech(); const a = new Audio(URL.createObjectURL(_studio.pending)); _currentAudio = a; a.play().catch(() => {}); return; }
+        if (act === 'keep') {
+            await saveRecording(l, _studio.pending, 'micro');
+            _studio.pending = null; _studio.lines = storyLines();
+            if (_studio.i < _studio.lines.length - 1) _studio.i++;
+            renderStudio();
+            if (_studio.lines.every(x => _recKeys.has(x.key))) showToast('Toutes les répliques sont enregistrées 🎉', 'success', 4000);
+            return;
+        }
+        if (act === 'listen') { stopAllSpeech(); return playManual(l.key); }
+        if (act === 'del') { await deleteRecording(l.key); _studio.lines = storyLines(); return renderStudio(); }
+        if (act === 'tts') { unlockAudio(); const was = voiceCfg.manual; voiceCfg.manual = false; try { await speakLine(l.text, l.role); } finally { voiceCfg.manual = was; } return; }
+    } catch (e) {
+        _studio.recording = false; clearInterval(mic.timer);
+        const msg = /Permission|NotAllowed/i.test(e.name + e.message) ? 'Accès au micro refusé : autorisez le micro pour ce site (icône 🔒 dans la barre d\'adresse).' : 'Erreur : ' + (e.message || e);
+        renderStudio(); const s = document.getElementById('sd-state'); if (s) s.textContent = msg;
+        showToast(msg, 'error', 5000);
+    }
+}
+async function importAudioFile(line, file) {
+    if (!file) return;
+    if (!/^audio\//.test(file.type) && !/\.(mp3|wav|m4a|ogg|webm|aac|flac)$/i.test(file.name)) { showToast('Choisissez un fichier audio', 'warn'); return; }
+    if (file.size > 25 * 1048576) { showToast('Fichier trop lourd (25 Mo maximum par réplique)', 'warn'); return; }
+    await saveRecording(line, file, 'fichier');
+    showToast('Audio importé pour « ' + line.text.slice(0, 30) + '… »', 'success');
+}
+
+function updateManualStatus() {
+    const box = document.getElementById('manual-status');
+    if (!box) return;
+    const L = storyLines(), n = L.filter(l => _recKeys.has(l.key)).length;
+    box.innerHTML = state.scenario
+        ? (n ? '<b>' + n + ' / ' + L.length + '</b> répliques de cette histoire ont votre voix.' : 'Aucune réplique enregistrée pour cette histoire.') + ' Total sur l\'appareil : ' + _recKeys.size + '.'
+        : 'Ouvrez une histoire pour enregistrer ses répliques.';
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -5052,6 +5288,28 @@ function stopAllVideos() {
     renderVideoLibrary();
     renderCharCatalog();
     initNotes();
+    loadRecKeys().then(() => { updateManualStatus(); if (state.scenario) displayScenario(state.scenario); });
+    document.getElementById('voice-manual').checked = manualOn();
+    document.getElementById('voice-manual').addEventListener('change', e => { voiceCfg.manual = e.target.checked; saveVoiceCfg(); });
+    document.getElementById('studio-btn').addEventListener('click', () => openStudio());
+    const sd = document.getElementById('studio');
+    sd.addEventListener('click', e => {
+        if (e.target === sd) return closeStudio();
+        const b = e.target.closest('[data-sd], [data-go]'); if (!b || b.tagName === 'INPUT') return;
+        studioAction(b.dataset.go != null ? 'go' : b.dataset.sd, b);
+    });
+    sd.addEventListener('change', async e => {
+        if (e.target.dataset.sd !== 'file') return;
+        await importAudioFile(_studio.lines[_studio.i], e.target.files[0]);
+        _studio.lines = storyLines(); if (_studio.i < _studio.lines.length - 1) _studio.i++; renderStudio();
+    });
+    document.addEventListener('keydown', e => {
+        if (sd.classList.contains('hidden') || e.target.closest('input, textarea, select')) return;
+        if (e.key === 'Escape') closeStudio();
+        else if (e.key === ' ') { e.preventDefault(); studioAction(_studio.recording ? 'stop' : _studio.pending ? 'keep' : 'rec'); }
+        else if (e.key === 'ArrowRight' && !_studio.recording) studioAction('next');
+        else if (e.key === 'ArrowLeft' && !_studio.recording && _studio.i > 0) studioAction('prev');
+    });
     document.getElementById('voice-catalog-btn').addEventListener('click', openVoiceCatalog);
     document.getElementById('char-list').addEventListener('click', async e => {
         if (e.target.closest('#char-new')) return editCharDialog(null);
@@ -5081,6 +5339,7 @@ function stopAllVideos() {
 
     // ── Voix ──
     renderVoicePanel();
+    setTimeout(updateManualStatus, 0);
     if (speechSynth) speechSynth.addEventListener && speechSynth.addEventListener('voiceschanged', renderVoicePanel);
     document.getElementById('voice-engine').addEventListener('change', e => { voiceCfg.engine = e.target.value; _cloudWarned = false; saveVoiceCfg(); renderVoicePanel(); if (e.target.value !== 'browser') loadPuter().then(updateCloudStatus).catch(() => {}); });
     document.getElementById('voice-narrator').addEventListener('change', e => { voiceCfg.narrator[voiceCfg.engine] = e.target.value; saveVoiceCfg(); });

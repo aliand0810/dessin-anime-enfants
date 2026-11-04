@@ -550,6 +550,18 @@
     .sd-rec { padding: 0.75rem 1.5rem; border-radius: 26px; border: none; background: #e0344c; color: #fff; font: inherit; font-size: 1rem; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #a51f33; }
     .sd-rec.on { animation: blink 1s steps(2) infinite; }
     .sd-file { display: inline-flex; align-items: center; cursor: pointer; }
+    /* ── Sauvegardes ── */
+    .bk-card { background: var(--panel-2); border-radius: 10px; padding: 0.7rem 0.8rem; margin-bottom: 0.6rem; }
+    .bk-title { font-weight: 800; font-size: 0.88rem; } .bk-title span { font-weight: 600; font-size: 0.66rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-left: 0.3rem; }
+    .bk-desc { font-size: 0.7rem; color: var(--ink-dim); margin: 0.25rem 0 0.5rem; line-height: 1.45; }
+    .bk-state { font-size: 0.74rem; color: var(--success); margin-bottom: 0.45rem; line-height: 1.45; } .bk-state small { color: var(--ink-faint); }
+    .bk-dirty { color: var(--warn); font-weight: 700; }
+    .bk-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-bottom: 0.4rem; } .bk-actions .btn-mini { margin: 0; }
+    .bk-card .board-check { margin: 0; font-size: 0.72rem; }
+    .bk-set label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.76rem; color: var(--ink-dim); margin-bottom: 0.7rem; }
+    .bk-set input { padding: 0.6rem 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-family: ui-monospace, monospace; font-size: 0.8rem; }
+    .bk-steps { font-size: 0.76rem; color: var(--ink-dim); line-height: 1.6; padding-left: 1.2rem; margin: 0 0 0.9rem; }
+    .bk-steps code, .bk-set code { background: var(--bg); padding: 0.05rem 0.35rem; border-radius: 4px; color: var(--ink); font-size: 0.72rem; }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -765,6 +777,14 @@
     <div class="section-body"><div class="section-content">
         <div id="video-list"><div class="lib-empty">Chargement…</div></div>
     </div></div>
+</div>
+
+<div class="section" id="section-backup">
+    <div class="section-header" data-toggle="section-backup">
+        <span class="section-title">☁️ Sauvegardes</span>
+        <span class="chevron">▼</span>
+    </div>
+    <div class="section-body"><div class="section-content"><div id="backup-panel"></div></div></div>
 </div>
 
 <div class="section open" id="section-library">
@@ -984,9 +1004,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.13.1';
+const APP_VERSION = '3.14.0';
 const APP_DATE = '03/11/2026';
 const CHANGELOG = [
+    ['3.14.0', 'Sauvegardes : Google Drive pour les fichiers (projets, images, vidéos, voix, portraits) et GitHub pour les paramètres, avec restauration et mode automatique'],
     ['3.13.1', 'Bouton « ▶ Lire la BD en plein écran » en haut, à côté de « Créer » : ouvre l\'histoire et lance la lecture'],
     ['3.13.0', 'Voix manuelles : studio d\'enregistrement guidé (micro) ou import de fichiers audio, réplique par réplique, utilisées en priorité dans la lecture et les vidéos'],
     ['3.12.0', 'Fiches personnages complètes (histoire, visage, tenue) avec portrait 3D de référence envoyé à chaque illustration : même visage et même tenue dans toutes les BD'],
@@ -1095,6 +1116,7 @@ async function saveToLibrary(silent) {
         if (saved < state.images.length) logConsole('Les images non copiées restent des liens Agnes et peuvent expirer.', 'warn');
         if (!silent) showToast('Projet enregistré 💾', 'success');
         renderLibrary();
+        scheduleDriveBackup();
     } catch (e) {
         logConsole('Enregistrement impossible : ' + e.message, 'error');
         if (!silent) showToast('Enregistrement impossible', 'error');
@@ -3516,6 +3538,7 @@ async function saveVideoToLibrary(r, thumb) {
         };
         await dbPutVideo(v);
         renderVideoLibrary();
+        scheduleDriveBackup();
         logConsole('Vidéo enregistrée dans « Mes vidéos » : ' + r.name, 'success');
         return true;
     } catch (e) {
@@ -3799,7 +3822,7 @@ function stopReadMode(keepPosition) {
 // Le portrait est envoyé à Agnes avec chaque illustration : même visage, même tenue d'une BD à l'autre.
 // ══════════════════════════════════════════════════════════════════
 const dbAllChars = () => dbOp('readonly', st => st.getAll(), 'characters');
-const dbPutChar = c => dbOp('readwrite', st => st.put(c), 'characters');
+const dbPutChar = c => { setTimeout(() => { try { markSettingsDirty(); scheduleDriveBackup(); } catch (e) {} }, 0); return dbOp('readwrite', st => st.put(c), 'characters'); };
 const dbDelChar = id => dbOp('readwrite', st => st.delete(id), 'characters');
 const CHAR_PICK_KEY = 'da_chars_selected';
 const pickedChars = () => { try { return new Set(JSON.parse(localStorage.getItem(CHAR_PICK_KEY) || '[]')); } catch (e) { return new Set(); } };
@@ -4130,6 +4153,7 @@ async function saveRecording(line, blob, source) {
     const duration = await new Promise(r => { const a = new Audio(); a.preload = 'metadata'; a.onloadedmetadata = () => r(isFinite(a.duration) ? a.duration : 0); a.onerror = () => r(0); a.src = URL.createObjectURL(blob); setTimeout(() => r(0), 4000); });
     await dbPutRec({ id: line.key, role: line.role, text: line.text, blob, type: blob.type, duration, source, project: (state.scenario && state.scenario.title) || '', createdAt: Date.now() });
     _recKeys.add(line.key);
+    scheduleDriveBackup();
     if (state.scenario) displayScenario(state.scenario);
     updateManualStatus();
 }
@@ -4288,6 +4312,419 @@ function updateManualStatus() {
     box.innerHTML = state.scenario
         ? (n ? '<b>' + n + ' / ' + L.length + '</b> répliques de cette histoire ont votre voix.' : 'Aucune réplique enregistrée pour cette histoire.') + ' Total sur l\'appareil : ' + _recKeys.size + '.'
         : 'Ouvrez une histoire pour enregistrer ses répliques.';
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SAUVEGARDES : Google Drive (fichiers) + GitHub (paramètres)
+// ══════════════════════════════════════════════════════════════════
+const BK_KEY = 'da_backup_cfg';
+const bk = (() => { try { return Object.assign({ drive: {}, gh: {} }, JSON.parse(localStorage.getItem(BK_KEY) || '{}')); } catch (e) { return { drive: {}, gh: {} }; } })();
+const saveBk = () => { try { localStorage.setItem(BK_KEY, JSON.stringify(bk)); } catch (e) {} };
+const fmtDate = t => t ? new Date(t).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'jamais';
+const mb = n => (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + ' Mo';
+
+// ── Réglages de l'interface (gardés sur l'appareil, et envoyés sur GitHub) ──
+const UI_KEY = 'da_ui';
+const UI_FIELDS = ['style-select', 'mode-select', 'scene-count-select', 'duration-select', 'columns-select', 'pp-select', 'orient-select', 'format-select', 'margin-select',
+    'opt-bubbles', 'opt-captions', 'opt-titlebar', 'opt-cover', 'opt-endpage', 'opt-pagenum', 'opt-sameface', 'vw-music-style', 'vw-music-vol', 'vw-sfx', 'vw-sfx-vol', 'vw-anim', 'vw-auto', 'vw-rate', 'vw-voice', 'vw-music'];
+function readUiState() {
+    const o = {};
+    UI_FIELDS.forEach(id => { const el = document.getElementById(id); if (el) o[id] = el.type === 'checkbox' ? el.checked : el.value; });
+    return o;
+}
+function applyUiState(o) {
+    if (!o) return;
+    UI_FIELDS.forEach(id => {
+        const el = document.getElementById(id); if (!el || !(id in o)) return;
+        if (el.type === 'checkbox') el.checked = !!o[id]; else el.value = o[id];
+    });
+    updateModeUI();
+}
+function saveUiState() { try { localStorage.setItem(UI_KEY, JSON.stringify(readUiState())); } catch (e) {} markSettingsDirty(); }
+
+// ══════════════ GitHub : paramètres ══════════════
+// Jamais de clé API dans la sauvegarde (Agnes, OpenAI, ElevenLabs, ImgBB, jeton GitHub, client Google)
+const SETTINGS_KEYS = [VOICE_KEY, READ_KEY, NOTES_KEY, CHAR_PICK_KEY, UI_KEY];
+async function collectSettings() {
+    const ls = {};
+    SETTINGS_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) ls[k] = v; });
+    Object.keys(localStorage).filter(k => k.startsWith('da_read_done_')).forEach(k => { ls[k] = localStorage.getItem(k); });
+    let chars = [];
+    try { chars = (await dbAllChars()).map(c => { const o = Object.assign({}, c); delete o.portraitBlob; return o; }); } catch (e) {}
+    return { app: 'Dessin Animé Studio', version: APP_VERSION, savedAt: new Date().toISOString(), device: navigator.platform || '', localStorage: ls, characters: chars };
+}
+const b64enc = s => btoa(unescape(encodeURIComponent(s)));
+const b64dec = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
+async function gh(path, opts = {}) {
+    const res = await fetch('https://api.github.com' + path, Object.assign({}, opts, {
+        headers: Object.assign({ 'Authorization': 'Bearer ' + bk.gh.token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, opts.body ? { 'Content-Type': 'application/json' } : {})
+    }));
+    const j = res.status === 204 ? {} : await res.json().catch(() => ({}));
+    if (!res.ok) { const e = new Error((j.message || 'HTTP ' + res.status) + (res.status === 401 ? ' (jeton invalide ou expiré)' : res.status === 403 ? ' (droits insuffisants sur le dépôt)' : '')); e.status = res.status; throw e; }
+    return j;
+}
+const ghPath = () => '/repos/' + bk.gh.repo + '/contents/' + encodeURIComponent(bk.gh.file || 'parametres.json');
+async function ghEnsureRepo() {
+    try { await gh('/repos/' + bk.gh.repo); return; } catch (e) { if (e.status !== 404) throw e; }
+    const [owner, name] = bk.gh.repo.split('/');
+    const me = await gh('/user');
+    if (me.login.toLowerCase() !== owner.toLowerCase()) throw new Error('Le dépôt ' + bk.gh.repo + ' n\'existe pas');
+    await gh('/user/repos', { method: 'POST', body: JSON.stringify({ name, private: true, auto_init: true, description: 'Paramètres de Dessin Animé Studio (sauvegarde automatique)' }) });
+    logConsole('Dépôt privé ' + bk.gh.repo + ' créé pour les paramètres.', 'success');
+    await sleep(1500);
+}
+async function ghSave(silent) {
+    if (!bk.gh.token || !bk.gh.repo) { if (!silent) openBackupSettings('gh'); return false; }
+    try {
+        setBkState('gh', '⏳ Envoi…');
+        await ghEnsureRepo();
+        const data = JSON.stringify(await collectSettings(), null, 2);
+        let sha;
+        try { sha = (await gh(ghPath())).sha; } catch (e) { if (e.status !== 404) throw e; }
+        await gh(ghPath(), { method: 'PUT', body: JSON.stringify({ message: 'Paramètres Dessin Animé Studio — ' + new Date().toLocaleString('fr-FR'), content: b64enc(data), sha }) });
+        bk.gh.last = Date.now(); bk.gh.dirty = false; saveBk();
+        logConsole('Paramètres sauvegardés sur GitHub (' + bk.gh.repo + ').', 'success');
+        if (!silent) showToast('Paramètres sauvegardés sur GitHub', 'success');
+        return true;
+    } catch (e) {
+        logConsole('Sauvegarde GitHub impossible : ' + e.message, 'error');
+        if (!silent) showToast('GitHub : ' + e.message, 'error', 5000);
+        return false;
+    } finally { renderBackupPanel(); }
+}
+async function ghRestore() {
+    if (!bk.gh.token || !bk.gh.repo) return openBackupSettings('gh');
+    try {
+        setBkState('gh', '⏳ Lecture…');
+        const f = await gh(ghPath());
+        const data = JSON.parse(b64dec(f.content));
+        if (!confirm('Restaurer les paramètres sauvegardés le ' + new Date(data.savedAt).toLocaleString('fr-FR') + ' (version ' + data.version + ') ?\n\n' +
+            'Voix, lecture, mise en page, personnages et notes seront remplacés. Les notes et personnages de cet appareil qui n\'existent pas dans la sauvegarde sont conservés.')) { renderBackupPanel(); return; }
+        Object.entries(data.localStorage || {}).forEach(([k, v]) => {
+            if (k === NOTES_KEY) {   // fusion des notes : la plus récente gagne
+                const mine = loadNotes(), theirs = JSON.parse(v || '[]'), byId = new Map(mine.map(n => [n.id, n]));
+                theirs.forEach(n => { const m = byId.get(n.id); if (!m || (n.updatedAt || 0) > (m.updatedAt || 0)) byId.set(n.id, n); });
+                localStorage.setItem(k, JSON.stringify([...byId.values()]));
+            } else localStorage.setItem(k, v);
+        });
+        for (const c of data.characters || []) {
+            const cur = _charsCache.find(x => x.id === c.id);
+            if (!cur || (c.updatedAt || 0) >= (cur.updatedAt || 0)) await dbPutChar(Object.assign({}, cur || {}, c, cur && cur.portraitBlob ? { portraitBlob: cur.portraitBlob } : {}));
+        }
+        bk.gh.dirty = false; saveBk();
+        showToast('Paramètres restaurés : rechargement…', 'success');
+        setTimeout(() => location.reload(), 900);
+    } catch (e) {
+        showToast(e.status === 404 ? 'Aucune sauvegarde de paramètres trouvée sur GitHub' : 'GitHub : ' + e.message, 'error', 5000);
+        renderBackupPanel();
+    }
+}
+// Sauvegarde automatique : 20 s après le dernier changement de paramètre
+let _ghTimer = null;
+function markSettingsDirty() {
+    if (!bk.gh || !bk.gh.token) return;
+    bk.gh.dirty = true; saveBk();
+    if (!bk.gh.auto) { renderBackupPanel(); return; }
+    clearTimeout(_ghTimer); _ghTimer = setTimeout(() => ghSave(true), 20000);
+}
+
+// ══════════════ Google Drive : fichiers ══════════════
+const DRIVE_FOLDER = 'Dessin Animé Studio';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';   // l'app ne voit que les fichiers qu'elle a créés
+const drv = { token: '', exp: 0, tokenClient: null, folder: null, sub: {}, busy: false };
+function loadGis() {
+    if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+    return new Promise((res, rej) => {
+        const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client';
+        s.onload = res; s.onerror = () => rej(new Error('connexion Google impossible'));
+        document.head.appendChild(s);
+    });
+}
+async function driveToken(interactive) {
+    if (drv.token && Date.now() < drv.exp - 60000) return drv.token;
+    if (!bk.drive.clientId) { openBackupSettings('drive'); throw new Error('ID client Google manquant'); }
+    await loadGis();
+    return new Promise((resolve, reject) => {
+        drv.tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: bk.drive.clientId, scope: DRIVE_SCOPE,
+            callback: r => {
+                if (r.error) return reject(new Error(r.error_description || r.error));
+                drv.token = r.access_token; drv.exp = Date.now() + (r.expires_in || 3600) * 1000;
+                bk.drive.connected = true; saveBk(); resolve(drv.token);
+            },
+            error_callback: e => reject(new Error(e && e.type === 'popup_closed' ? 'fenêtre de connexion fermée' : 'connexion Google refusée'))
+        });
+        drv.tokenClient.requestAccessToken({ prompt: interactive && !bk.drive.connected ? 'consent' : '' });
+    });
+}
+async function dfetch(url, opts = {}) {
+    const token = await driveToken(true);
+    const res = await fetch(url, Object.assign({}, opts, { headers: Object.assign({ Authorization: 'Bearer ' + token }, opts.headers || {}) }));
+    if (res.status === 401) { drv.token = ''; throw new Error('session Google expirée, réessayez'); }
+    if (!res.ok) { let m = ''; try { const j = await res.json(); m = j.error && j.error.message; } catch (e) {} throw new Error('Drive : ' + (m || 'HTTP ' + res.status)); }
+    return res;
+}
+const DAPI = 'https://www.googleapis.com/drive/v3/files';
+async function driveFind(name, parent, folder) {
+    const q = "name='" + name.replace(/'/g, "\\'") + "' and trashed=false" + (parent ? " and '" + parent + "' in parents" : '') + (folder ? " and mimeType='application/vnd.google-apps.folder'" : '');
+    const j = await (await dfetch(DAPI + '?q=' + encodeURIComponent(q) + '&fields=files(id,name,modifiedTime,size)&spaces=drive')).json();
+    return j.files && j.files[0];
+}
+async function driveFolder(name, parent) {
+    const found = await driveFind(name, parent, true);
+    if (found) return found.id;
+    const j = await (await dfetch(DAPI, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: parent ? [parent] : undefined }) })).json();
+    return j.id;
+}
+async function driveFolders() {
+    if (drv.folder) return;
+    drv.folder = await driveFolder(DRIVE_FOLDER);
+    for (const n of ['projets', 'images', 'videos', 'voix', 'personnages']) drv.sub[n] = await driveFolder(n, drv.folder);
+}
+// Envoi d'un fichier (nouveau ou mise à jour) ; envoi « reprenable » au-delà de 4 Mo (vidéos)
+async function driveUpload(blob, name, parent, existingId) {
+    const meta = existingId ? { name } : { name, parents: [parent] };
+    const type = blob.type || 'application/octet-stream';
+    const base = existingId ? 'https://www.googleapis.com/upload/drive/v3/files/' + existingId : 'https://www.googleapis.com/upload/drive/v3/files';
+    if (blob.size <= 4 * 1048576) {
+        const fd = new FormData();
+        fd.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+        fd.append('file', blob);
+        return (await (await dfetch(base + '?uploadType=multipart&fields=id', { method: existingId ? 'PATCH' : 'POST', body: fd })).json()).id;
+    }
+    const init = await dfetch(base + '?uploadType=resumable&fields=id', { method: existingId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type, 'X-Upload-Content-Length': String(blob.size) }, body: JSON.stringify(meta) });
+    const loc = init.headers.get('Location');
+    if (!loc) throw new Error('Drive : envoi reprenable refusé');
+    const res = await fetch(loc, { method: 'PUT', headers: { 'Content-Type': type }, body: blob });
+    if (!res.ok) throw new Error('Drive : envoi interrompu (HTTP ' + res.status + ')');
+    return (await res.json()).id;
+}
+const jsonBlob = o => new Blob([JSON.stringify(o)], { type: 'application/json' });
+const extOf = b => ({ 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'video/mp4': 'mp4', 'video/webm': 'webm', 'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/ogg': 'ogg' })[(b.type || '').split(';')[0]] || 'bin';
+const safeName = s => String(s || 'sans_titre').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w\-]+/g, '_').slice(0, 50);
+
+// Sauvegarde incrémentale : seuls les éléments nouveaux ou modifiés sont envoyés
+async function driveBackup(silent) {
+    if (drv.busy) return;
+    if (!bk.drive.clientId) { if (!silent) openBackupSettings('drive'); return; }
+    drv.busy = true;
+    const map = bk.drive.map || (bk.drive.map = {});
+    let sent = 0, bytes = 0, skipped = 0;
+    const step = t => { setStatus('Google Drive : ' + t); setBkState('drive', '⏳ ' + t); };
+    const put = async (key, sig, blob, name, folder) => {
+        const cur = map[key];
+        if (cur && cur.sig === sig) { skipped++; return cur.id; }
+        const id = await driveUpload(blob, name, drv.sub[folder], cur && cur.id);
+        map[key] = { id, sig }; sent++; bytes += blob.size; saveBk();
+        return id;
+    };
+    try {
+        step('connexion…');
+        await driveToken(!silent);
+        await driveFolders();
+        const manifest = { app: 'Dessin Animé Studio', version: APP_VERSION, savedAt: new Date().toISOString(), projects: [], videos: [], recordings: [], characters: [] };
+        const projects = await dbGetAll();
+        for (const [n, p] of projects.entries()) {
+            step('projet ' + (n + 1) + '/' + projects.length + '…');
+            const images = {};
+            for (const [idx, b] of Object.entries(p.blobs || {})) {
+                if (b && b.blob) images[idx] = await put('img:' + p.id + ':' + idx, b.url + '|' + b.blob.size, b.blob, safeName(p.title) + '_scene' + (+idx + 1) + '.' + extOf(b.blob), 'images');
+            }
+            const meta = Object.assign({}, p); delete meta.blobs;
+            const jsonId = await put('proj:' + p.id, String(p.savedAt), jsonBlob(meta), safeName(p.title) + '_' + p.id + '.json', 'projets');
+            manifest.projects.push({ id: p.id, title: p.title, json: jsonId, images, imageUrls: Object.fromEntries(Object.entries(p.blobs || {}).map(([k, b]) => [k, b.url])) });
+        }
+        const videos = await dbAllVideos();
+        for (const [n, v] of videos.entries()) {
+            step('vidéo ' + (n + 1) + '/' + videos.length + ' (' + mb(v.size) + ')…');
+            const fileId = await put('vid:' + v.id, String(v.createdAt), v.blob, v.name || safeName(v.title) + '.mp4', 'videos');
+            const meta = Object.assign({}, v); delete meta.blob;
+            manifest.videos.push(Object.assign(meta, { file: fileId }));
+        }
+        const recKeys = await dbAllRecs();
+        for (const [n, k] of recKeys.entries()) {
+            step('voix ' + (n + 1) + '/' + recKeys.length + '…');
+            const r = await dbGetRec(k); if (!r || !r.blob) continue;
+            const fileId = await put('rec:' + k, String(r.createdAt), r.blob, safeName((r.role === '__narrator__' ? 'narrateur' : r.role) + '_' + r.text.slice(0, 30)) + '.' + extOf(r.blob), 'voix');
+            const meta = Object.assign({}, r); delete meta.blob;
+            manifest.recordings.push(Object.assign(meta, { file: fileId }));
+        }
+        const chars = await dbAllChars();
+        for (const c of chars) {
+            const meta = Object.assign({}, c); delete meta.portraitBlob;
+            if (c.portraitBlob) meta.portraitFile = await put('char:' + c.id, String(c.portrait && c.portrait.at) + '|' + c.portraitBlob.size, c.portraitBlob, safeName(c.name) + '_portrait.' + extOf(c.portraitBlob), 'personnages');
+            manifest.characters.push(meta);
+        }
+        step('index…');
+        // l'index est à la racine du dossier pour être retrouvé depuis un autre appareil
+        const mid = map.manifestRoot && map.manifestRoot.id;
+        map.manifestRoot = { id: await driveUpload(jsonBlob(manifest), 'sauvegarde.json', drv.folder, mid), sig: manifest.savedAt };
+        bk.drive.last = Date.now(); bk.drive.lastInfo = manifest.projects.length + ' projets · ' + manifest.videos.length + ' vidéos · ' + manifest.recordings.length + ' voix · ' + manifest.characters.length + ' personnages';
+        saveBk();
+        logConsole('Google Drive : sauvegarde terminée — ' + sent + ' fichier(s) envoyé(s) (' + mb(bytes) + '), ' + skipped + ' inchangé(s).', 'success');
+        if (!silent) showToast('Sauvegarde Google Drive terminée (' + sent + ' envoi' + (sent > 1 ? 's' : '') + ')', 'success', 3500);
+    } catch (e) {
+        logConsole('Google Drive : ' + e.message, 'error');
+        if (!silent) showToast('Google Drive : ' + e.message, 'error', 5000);
+        if (/expir|401/.test(e.message)) drv.token = '';
+    } finally { drv.busy = false; setStatus(null); renderBackupPanel(); }
+}
+
+async function driveRestore() {
+    if (!bk.drive.clientId) return openBackupSettings('drive');
+    if (drv.busy) return;
+    drv.busy = true;
+    const step = t => { setStatus('Google Drive : ' + t); setBkState('drive', '⏳ ' + t); };
+    try {
+        step('connexion…');
+        await driveToken(true);
+        drv.folder = null; await driveFolders();
+        const mf = await driveFind('sauvegarde.json', drv.folder);
+        if (!mf) throw new Error('aucune sauvegarde trouvée dans « ' + DRIVE_FOLDER + ' »');
+        const manifest = await (await dfetch(DAPI + '/' + mf.id + '?alt=media')).json();
+        const counts = manifest.projects.length + ' projets, ' + manifest.videos.length + ' vidéos, ' + manifest.recordings.length + ' voix, ' + manifest.characters.length + ' personnages';
+        if (!confirm('Restaurer la sauvegarde Google Drive du ' + new Date(manifest.savedAt).toLocaleString('fr-FR') + ' ?\n\n' + counts + '.\n\nLes éléments déjà présents sur cet appareil sont conservés ; ceux de la sauvegarde sont ajoutés ou mis à jour.')) return;
+        const get = async id => (await dfetch(DAPI + '/' + id + '?alt=media')).blob();
+        const map = bk.drive.map || (bk.drive.map = {});
+        let n = 0;
+        for (const p of manifest.projects) {
+            step('projet ' + (++n) + '/' + manifest.projects.length + '…');
+            const meta = JSON.parse(await (await get(p.json)).text());
+            const blobs = {};
+            for (const [idx, fid] of Object.entries(p.images || {})) { blobs[idx] = { url: (p.imageUrls || {})[idx] || '', blob: await get(fid) }; map['img:' + p.id + ':' + idx] = { id: fid, sig: blobs[idx].url + '|' + blobs[idx].blob.size }; }
+            await dbPut(Object.assign(meta, { blobs }));
+            map['proj:' + p.id] = { id: p.json, sig: String(meta.savedAt) };
+        }
+        n = 0;
+        for (const v of manifest.videos) {
+            step('vidéo ' + (++n) + '/' + manifest.videos.length + '…');
+            const o = Object.assign({}, v); delete o.file; o.blob = await get(v.file); await dbPutVideo(o);
+            map['vid:' + v.id] = { id: v.file, sig: String(v.createdAt) };
+        }
+        n = 0;
+        for (const r of manifest.recordings) {
+            step('voix ' + (++n) + '/' + manifest.recordings.length + '…');
+            const o = Object.assign({}, r); delete o.file; o.blob = await get(r.file); await dbPutRec(o); _recKeys.add(o.id);
+            map['rec:' + r.id] = { id: r.file, sig: String(r.createdAt) };
+        }
+        for (const c of manifest.characters) {
+            const o = Object.assign({}, c); delete o.portraitFile;
+            if (c.portraitFile) { o.portraitBlob = await get(c.portraitFile); map['char:' + c.id] = { id: c.portraitFile, sig: String(c.portrait && c.portrait.at) + '|' + o.portraitBlob.size }; }
+            await dbPutChar(o);
+        }
+        saveBk();
+        renderLibrary(); renderVideoLibrary(); renderCharCatalog(); updateManualStatus();
+        if (state.scenario) displayScenario(state.scenario);
+        logConsole('Google Drive : restauration terminée (' + counts + ').', 'success');
+        showToast('Restauration terminée : ' + counts, 'success', 5000);
+    } catch (e) {
+        logConsole('Google Drive : ' + e.message, 'error');
+        showToast('Google Drive : ' + e.message, 'error', 5000);
+    } finally { drv.busy = false; setStatus(null); renderBackupPanel(); }
+}
+// Sauvegarde automatique Drive après chaque création enregistrée (regroupée sur 30 s)
+let _driveTimer = null;
+function scheduleDriveBackup() {
+    if (!bk.drive.auto || !bk.drive.clientId || !bk.drive.connected) return;
+    clearTimeout(_driveTimer); _driveTimer = setTimeout(() => driveBackup(true), 30000);
+}
+
+// ══════════════ Panneau « Sauvegardes » ══════════════
+function setBkState(which, t) { const el = document.getElementById('bk-' + which + '-state'); if (el) el.textContent = t; }
+function renderBackupPanel() {
+    const box = document.getElementById('backup-panel'); if (!box) return;
+    const d = bk.drive, g = bk.gh;
+    box.innerHTML =
+        '<div class="bk-card"><div class="bk-title">🗂️ Google Drive <span>fichiers</span></div>' +
+        '<div class="bk-desc">Projets, images, vidéos, voix enregistrées et portraits, dans le dossier « ' + DRIVE_FOLDER + ' » de votre Drive.</div>' +
+        (d.clientId
+            ? '<div class="bk-state" id="bk-drive-state">' + (d.last ? '✓ Dernière sauvegarde : ' + fmtDate(d.last) + (d.lastInfo ? '<br><small>' + esc(d.lastInfo) + '</small>' : '') : 'Pas encore sauvegardé') + '</div>' +
+              '<div class="bk-actions"><button type="button" class="btn-mini" data-bk="drive-save">☁️ Sauvegarder</button><button type="button" class="btn-mini" data-bk="drive-restore">⬇ Restaurer</button><button type="button" class="link-btn" data-bk="drive-set">Réglages</button></div>' +
+              '<label class="board-check"><input type="checkbox" data-bk="drive-auto"' + (d.auto ? ' checked' : '') + '> Sauvegarde automatique après chaque création</label>'
+            : '<button type="button" class="btn-mini" data-bk="drive-set">Configurer Google Drive</button>') +
+        '</div>' +
+        '<div class="bk-card"><div class="bk-title">🐙 GitHub <span>paramètres</span></div>' +
+        '<div class="bk-desc">Voix, lecture, mise en page, personnages (fiches) et notes, dans un dépôt privé. Les clés API ne sont jamais envoyées.</div>' +
+        (g.token
+            ? '<div class="bk-state" id="bk-gh-state">' + (g.last ? '✓ Dernière sauvegarde : ' + fmtDate(g.last) : 'Pas encore sauvegardé') + (g.dirty ? ' · <b class="bk-dirty">modifications non sauvegardées</b>' : '') + '<br><small>' + esc(g.repo) + ' / ' + esc(g.file || 'parametres.json') + '</small></div>' +
+              '<div class="bk-actions"><button type="button" class="btn-mini" data-bk="gh-save">☁️ Sauvegarder</button><button type="button" class="btn-mini" data-bk="gh-restore">⬇ Restaurer</button><button type="button" class="link-btn" data-bk="gh-set">Réglages</button></div>' +
+              '<label class="board-check"><input type="checkbox" data-bk="gh-auto"' + (g.auto ? ' checked' : '') + '> Sauvegarde automatique à chaque changement</label>'
+            : '<button type="button" class="btn-mini" data-bk="gh-set">Configurer GitHub</button>') +
+        '</div>';
+}
+function openBackupSettings(which) {
+    const m = document.getElementById('voice-catalog');
+    const isD = which === 'drive';
+    m.innerHTML = '<div class="vc-box bk-set"><div class="vc-head"><b>' + (isD ? '🗂️ Google Drive' : '🐙 GitHub') + ' — réglages</b><button type="button" class="vc-x" data-x>✕</button></div>' +
+        (isD
+            ? '<ol class="bk-steps"><li>Ouvrez <b>console.cloud.google.com</b> → votre projet (ou un nouveau) → <b>API et services</b> → activez <b>Google Drive API</b>.</li>' +
+              '<li><b>Identifiants</b> → <b>Créer des identifiants</b> → <b>ID client OAuth</b> → type <b>Application Web</b>.</li>' +
+              '<li>Dans <b>Origines JavaScript autorisées</b>, ajoutez : <code>' + esc(location.origin) + '</code></li>' +
+              '<li>Copiez l\'<b>ID client</b> (se termine par <code>.apps.googleusercontent.com</code>) ci-dessous.</li></ol>' +
+              '<label>ID client Google<input type="text" id="bk-cid" value="' + esc(bk.drive.clientId || '') + '" placeholder="123456-abc.apps.googleusercontent.com"></label>' +
+              '<div class="voice-note">L\'app n\'a accès qu\'aux fichiers qu\'elle crée elle-même dans votre Drive (autorisation « drive.file »).</div>'
+            : '<ol class="bk-steps"><li>Sur <b>github.com</b> → <b>Settings</b> → <b>Developer settings</b> → <b>Personal access tokens</b> → <b>Fine-grained tokens</b> → <b>Generate new token</b>.</li>' +
+              '<li>Accès : <b>Only select repositories</b> → le dépôt des paramètres (créez-le d\'abord, privé) ; permission <b>Contents : Read and write</b>.</li>' +
+              '<li>Ou un jeton « classic » avec la case <b>repo</b> : le dépôt est alors créé automatiquement (privé).</li></ol>' +
+              '<label>Jeton GitHub<input type="password" id="bk-tok" value="' + esc(bk.gh.token || '') + '" placeholder="github_pat_… ou ghp_…" autocomplete="off"></label>' +
+              '<label>Dépôt (propriétaire/nom)<input type="text" id="bk-repo" value="' + esc(bk.gh.repo || 'aliand0810/dessin-anime-parametres') + '"></label>' +
+              '<label>Fichier<input type="text" id="bk-file" value="' + esc(bk.gh.file || 'parametres.json') + '"></label>' +
+              '<div class="voice-note">🔒 Le jeton reste sur cet appareil. Utilisez un dépôt <b>privé</b> : vos notes et personnages y sont stockés.</div>') +
+        '<div class="vw-modal-actions">' + ((isD ? bk.drive.clientId : bk.gh.token) ? '<button type="button" class="vw-ghost" id="bk-forget">Déconnecter</button>' : '') +
+        '<button type="button" class="vw-ghost" data-x>Annuler</button><button type="button" class="vw-play" id="bk-ok">' + (isD ? 'Enregistrer et se connecter' : 'Enregistrer et tester') + '</button></div></div>';
+    m.classList.remove('hidden');
+    m.onclick = e => { if (e.target === m || e.target.closest('[data-x]')) m.classList.add('hidden'); };
+    const forget = m.querySelector('#bk-forget');
+    if (forget) forget.onclick = () => {
+        if (isD) { if (drv.token && window.google) try { google.accounts.oauth2.revoke(drv.token); } catch (e) {} bk.drive = {}; drv.token = ''; drv.folder = null; }
+        else bk.gh = {};
+        saveBk(); m.classList.add('hidden'); renderBackupPanel();
+    };
+    m.querySelector('#bk-ok').onclick = async e => {
+        e.target.disabled = true;
+        if (isD) {
+            const cid = m.querySelector('#bk-cid').value.trim();
+            if (!/\.apps\.googleusercontent\.com$/.test(cid)) { showToast('ID client invalide (il doit finir par .apps.googleusercontent.com)', 'warn', 4500); e.target.disabled = false; return; }
+            if (cid !== bk.drive.clientId) { bk.drive = { clientId: cid, auto: true }; drv.token = ''; drv.folder = null; }
+            saveBk();
+            try { await driveToken(true); m.classList.add('hidden'); showToast('Google Drive connecté', 'success'); }
+            catch (er) { showToast('Connexion Google : ' + er.message, 'error', 6000); }
+        } else {
+            Object.assign(bk.gh, { token: m.querySelector('#bk-tok').value.trim(), repo: m.querySelector('#bk-repo').value.trim().replace(/^https:\/\/github\.com\//, ''), file: m.querySelector('#bk-file').value.trim() || 'parametres.json' });
+            if (bk.gh.auto == null) bk.gh.auto = true;
+            saveBk();
+            try { const me = await gh('/user'); showToast('GitHub connecté : ' + me.login, 'success'); m.classList.add('hidden'); }
+            catch (er) { showToast('GitHub : ' + er.message, 'error', 6000); }
+        }
+        e.target.disabled = false; renderBackupPanel();
+    };
+}
+function initBackup() {
+    const box = document.getElementById('backup-panel');
+    box.addEventListener('click', e => {
+        const b = e.target.closest('[data-bk]'); if (!b || b.tagName === 'INPUT') return;
+        ({ 'drive-save': () => driveBackup(false), 'drive-restore': driveRestore, 'drive-set': () => openBackupSettings('drive'),
+           'gh-save': () => ghSave(false), 'gh-restore': ghRestore, 'gh-set': () => openBackupSettings('gh') })[b.dataset.bk]();
+    });
+    box.addEventListener('change', e => {
+        if (e.target.dataset.bk === 'drive-auto') { bk.drive.auto = e.target.checked; saveBk(); }
+        if (e.target.dataset.bk === 'gh-auto') { bk.gh.auto = e.target.checked; saveBk(); if (e.target.checked && bk.gh.dirty) markSettingsDirty(); }
+    });
+    // réglages de l'interface : restaurés au démarrage, puis suivis
+    try { applyUiState(JSON.parse(localStorage.getItem(UI_KEY) || 'null')); } catch (e) {}
+    UI_FIELDS.forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('change', saveUiState); });
+    // toute modification des paramètres (voix, lecture, notes, personnages) déclenche la sauvegarde GitHub automatique
+    const watched = new Set(SETTINGS_KEYS);
+    const _set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+        const w = this === localStorage && (watched.has(k) || k.startsWith('da_read_done_'));
+        const old = w ? this.getItem(k) : null;
+        _set.call(this, k, v);
+        if (w && old !== String(v)) markSettingsDirty();
+    };
+    renderBackupPanel();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -5307,6 +5744,7 @@ function stopAllVideos() {
     renderVideoLibrary();
     renderCharCatalog();
     initNotes();
+    initBackup();
     loadRecKeys().then(() => { updateManualStatus(); if (state.scenario) displayScenario(state.scenario); });
     document.getElementById('voice-manual').checked = manualOn();
     document.getElementById('voice-manual').addEventListener('change', e => { voiceCfg.manual = e.target.checked; saveVoiceCfg(); });
@@ -5463,13 +5901,13 @@ function stopAllVideos() {
     if (!document.documentElement.requestFullscreen) fsBtn.classList.add('hidden');
 
     // ── Disposition ordinateur : 3e colonne (bibliothèque, vidéos) sur grand écran ──
-    const sideIds = ['restore-btn', 'section-characters', 'section-notes', 'section-videos-lib', 'section-library'];
+    const sideIds = ['restore-btn', 'section-characters', 'section-notes', 'section-videos-lib', 'section-library', 'section-backup'];
     const placeSide = () => {
         const wide = window.innerWidth >= 1600;
         const target = document.getElementById(wide ? 'side-col' : 'controls-col');
         sideIds.forEach(id => { const el = document.getElementById(id); if (el && el.parentNode !== target) target.appendChild(el); });
         document.body.classList.toggle('wide', wide);
-        if (wide) ['section-characters', 'section-notes', 'section-videos-lib', 'section-library'].forEach(id => document.getElementById(id).classList.add('open'));
+        if (wide) ['section-characters', 'section-notes', 'section-videos-lib', 'section-library', 'section-backup'].forEach(id => document.getElementById(id).classList.add('open'));
     };
     placeSide();
     let _rz; window.addEventListener('resize', () => { clearTimeout(_rz); _rz = setTimeout(placeSide, 150); });

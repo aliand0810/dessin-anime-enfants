@@ -600,6 +600,11 @@
         body.wide.hide-right .layout { grid-template-columns: 440px minmax(0, 1fr); }
     }
     @media (max-width: 640px) { .col-toggles { display: none; } body.hide-left .controls-col { display: block !important; } }
+    .claude-box { margin-top: 0.6rem; border-top: 1px solid var(--border); padding-top: 0.5rem; }
+    .claude-box summary { cursor: pointer; font-size: 0.8rem; font-weight: 700; color: var(--ink); padding: 0.2rem 0; }
+    .claude-box summary span { font-weight: 600; font-size: 0.7rem; color: var(--ink-faint); margin-left: 0.3rem; } .claude-box summary span.ok { color: var(--success); }
+    .claude-box[open] summary { margin-bottom: 0.5rem; }
+    .claude-box select { margin-bottom: 0.6rem; }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -657,6 +662,13 @@
         <span class="status-dot"></span>
         <span id="api-status-text">Aucune clé API enregistrée</span>
     </div>
+    <details class="claude-box" id="claude-box">
+        <summary>🤖 Claude (Anthropic) <span id="claude-state">non configuré</span></summary>
+        <input type="password" class="api-key-input" id="claude-key-input" placeholder="Clé API Anthropic (sk-ant-…)" autocomplete="off" spellcheck="false">
+        <select id="claude-model"></select>
+        <button type="button" class="api-save-btn" id="claude-save-btn">Enregistrer la clé Claude</button>
+        <div class="voice-note">Clé à créer sur <b>console.anthropic.com</b> → API Keys (facturé à l'usage sur votre compte Anthropic). Elle reste sur cet appareil et n'est envoyée qu'à Anthropic.</div>
+    </details>
 </div>
 
 <div class="section open" id="section-idea">
@@ -702,6 +714,14 @@
                 <option value="video" selected>🎬 Dessin animé (vidéo)</option>
                 <option value="comic">💬 Bande dessinée (sans vidéo)</option>
                 <option value="photo">🖼️ Planche photo (images assemblées)</option>
+                <option value="claude">🤖 Dessin animé Claude (scènes animées dessinées par Claude)</option>
+            </select>
+        </div>
+        <div class="control-row">
+            <label class="control-label">Écrire l'histoire avec</label>
+            <select id="text-engine">
+                <option value="agnes">Agnes</option>
+                <option value="claude">🤖 Claude (meilleur français, dialogues plus naturels)</option>
             </select>
         </div>
         <div class="control-row" id="row-columns">
@@ -1057,9 +1077,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.15.1';
-const APP_DATE = '04/11/2026';
+const APP_VERSION = '3.16.0';
+const APP_DATE = '11/11/2026';
 const CHANGELOG = [
+    ['3.16.0', 'Claude : dessin animé dessiné et animé par Claude (personnages identiques dans chaque scène, décors animés), enregistrable en MP4 ; Claude peut aussi écrire l\'histoire'],
     ['3.15.1', 'Boutons pour masquer la colonne de gauche, de droite ou les deux (Alt+1, Alt+2, Alt+0), mémorisé'],
     ['3.15.0', 'Vrais échanges entre personnages : 1 à 6 répliques par scène (ou variable), bulles empilées, voix et bulles au fil de la conversation'],
     ['3.14.1', 'GitHub : diagnostic précis des droits du jeton (dépôt, lecture, écriture), aide pas à pas et liens directs'],
@@ -1203,10 +1224,13 @@ function applyProject(p, blobs) {
     document.getElementById('style-select').value = state.selectedStyle;
     if (p.mode) { document.getElementById('mode-select').value = p.mode; updateModeUI(); }
     state.femaleCharacters = p.femaleCharacters || [];
+    state.claudeCast = p.scenario.claudeCast || null;
     setTimeout(renderVoicePanel, 0);
     state.images = (p.images || []).map(im => {
         const b = blobs && blobs[im.sceneIndex];
-        return { ...im, scene: p.scenario.scenes[im.sceneIndex], localUrl: b && b.blob ? URL.createObjectURL(b.blob) : null };
+        const sc = p.scenario.scenes[im.sceneIndex];
+        const local = b && b.blob ? URL.createObjectURL(b.blob) : sc && sc.svg ? svgUrl(sc.svg) : null;
+        return { ...im, scene: sc, url: sc && sc.svg && /^blob:/.test(im.url) ? local : im.url, localUrl: local };
     });
     state.videos = (p.videos || []).map(v => v ? { ...v, dialogue: (p.scenario.scenes[v.sceneIndex] || {}).dialogue } : null);
 
@@ -1448,13 +1472,13 @@ function updateApiPanel() {
 }
 function updateGenerateBtn() {
     const btn = document.getElementById('generate-btn');
-    const hasKey = !!getApiKey();
+    const hasKey = (document.getElementById('mode-select') || {}).value === 'claude' ? !!getClaudeKey() : !!getApiKey();
     const hasIdea = document.getElementById('idea-input').value.trim().length > 10;
     btn.disabled = !hasKey || !hasIdea || state.isRunning;
     if (state.isRunning) btn.textContent = 'Génération en cours…';
-    else if (!hasKey) btn.textContent = 'Ajoutez votre clé API';
+    else if (!hasKey) btn.textContent = (document.getElementById('mode-select') || {}).value === 'claude' ? 'Ajoutez votre clé Claude' : 'Ajoutez votre clé API';
     else if (!hasIdea) btn.textContent = 'Décrivez votre histoire';
-    else btn.textContent = ({ video: '🎬 Générer le dessin animé', comic: '💬 Créer la bande dessinée', photo: '🖼️ Créer la planche photo' })[state.mode] || '🎬 Générer';
+    else btn.textContent = ({ video: '🎬 Générer le dessin animé', comic: '💬 Créer la bande dessinée', photo: '🖼️ Créer la planche photo', claude: '🤖 Créer le dessin animé avec Claude' })[state.mode] || '🎬 Générer';
     updateReadBtn();
 }
 function updateReadBtn() {
@@ -1462,7 +1486,7 @@ function updateReadBtn() {
     if (!b) return;
     const n = state.images.length;
     b.disabled = !n;
-    b.textContent = state.mode === 'video' ? '▶ Regarder en plein écran' : state.mode === 'photo' ? '▶ Voir en plein écran' : '▶ Lire la BD en plein écran';
+    b.textContent = state.mode === 'video' || state.mode === 'claude' ? '▶ Regarder en plein écran' : state.mode === 'photo' ? '▶ Voir en plein écran' : '▶ Lire la BD en plein écran';
     b.title = n ? 'Ouvrir l\'histoire en plein écran et lancer la lecture avec la voix (Espace : pause, Échap : fermer)'
                 : 'Disponible dès qu\'une histoire est créée ou ouverte depuis la bibliothèque';
     b.classList.toggle('ready', !!n && !state.isRunning);
@@ -1504,6 +1528,11 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3, label = 'API') 
 // APPELS API
 // ══════════════════════════════════════════════════════════════════
 async function callTextAPI(messages, options = {}) {
+    if (useClaudeText()) {
+        const sys = messages.filter(m => m.role === 'system').map(m => m.content).join('\n');
+        const user = messages.filter(m => m.role !== 'system').map(m => m.content).join('\n\n');
+        return callClaude(sys, user, { maxTokens: Math.max(options.maxTokens || 4096, 6000), temperature: options.temperature, label: 'histoire' });
+    }
     logConsole('Requête texte → ' + MODEL_TEXT, 'info');
     const res = await fetchWithRetry(API_BASE + '/chat/completions', {
         method: 'POST',
@@ -1638,13 +1667,244 @@ function buildVideoPrompt(scene, nextScene, isLast) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// CLAUDE (Anthropic) : écrit l'histoire et DESSINE des scènes animées (SVG vectoriel)
+// Les personnages sont dessinés une seule fois, puis réutilisés à l'identique dans chaque scène.
+// ══════════════════════════════════════════════════════════════════
+const CLAUDE_KEY = 'anthropic_api_key', CLAUDE_MODEL_KEY = 'claude_model';
+const CLAUDE_MODELS = [['claude-sonnet-5-5', 'Claude Sonnet 5.5 — recommandé'], ['claude-opus-5-5', 'Claude Opus 5.5 — dessins les plus soignés'], ['claude-haiku-5-5', 'Claude Haiku 5.5 — le plus rapide et économique']];
+const getClaudeKey = () => { try { return (localStorage.getItem(CLAUDE_KEY) || '').trim(); } catch (e) { return ''; } };
+const getClaudeModel = () => { try { return localStorage.getItem(CLAUDE_MODEL_KEY) || CLAUDE_MODELS[0][0]; } catch (e) { return CLAUDE_MODELS[0][0]; } };
+const isClaudeMode = () => state.mode === 'claude';
+const useClaudeText = () => !!getClaudeKey() && (isClaudeMode() || (document.getElementById('text-engine') || {}).value === 'claude');
+
+async function callClaude(system, user, opts = {}) {
+    const key = getClaudeKey();
+    if (!key) throw new Error('clé Claude manquante');
+    const model = opts.model || getClaudeModel();
+    logConsole('Requête → ' + model + (opts.label ? ' (' + opts.label + ')' : ''), 'info');
+    for (let attempt = 0; attempt < 3; attempt++) {
+        if (state.stopRequested) throw new Error('Arrêt demandé');
+        const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), opts.timeout || 240000);
+        let res;
+        try {
+            res = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST', signal: ctl.signal,
+                headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true', 'content-type': 'application/json' },
+                body: JSON.stringify({ model, max_tokens: opts.maxTokens || 4096, system, messages: [{ role: 'user', content: user }], temperature: opts.temperature ?? 0.8 })
+            });
+        } catch (e) {
+            clearTimeout(t);
+            if (attempt < 2) { logConsole('Claude : ' + (e.name === 'AbortError' ? 'délai dépassé' : 'réseau') + ', nouvel essai…', 'warn'); await sleep(3000 * (attempt + 1)); continue; }
+            throw new Error('Claude injoignable (' + e.message + ')');
+        }
+        clearTimeout(t);
+        if ([429, 500, 502, 503, 529].includes(res.status) && attempt < 2) {
+            const wait = res.status === 429 ? 20000 : 5000 * (attempt + 1);
+            logConsole('Claude : ' + (res.status === 529 || res.status === 503 ? 'surchargé' : res.status === 429 ? 'trop de requêtes' : 'erreur ' + res.status) + ', nouvel essai dans ' + Math.round(wait / 1000) + ' s…', 'warn');
+            await sleep(wait); continue;
+        }
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            const m = (j.error && j.error.message) || 'HTTP ' + res.status;
+            throw new Error(res.status === 401 ? 'clé Claude invalide' : res.status === 400 && /credit|balance/i.test(m) ? 'crédit Anthropic insuffisant' : 'Claude : ' + m);
+        }
+        const text = (j.content || []).filter(c => c.type === 'text').map(c => c.text).join('');
+        if (!text) throw new Error('réponse vide de Claude');
+        if (j.stop_reason === 'max_tokens') logConsole('Claude : réponse coupée (limite de longueur atteinte).', 'warn');
+        return text;
+    }
+}
+
+// ── Sécurité : le SVG produit ne doit contenir que du dessin (aucun script, aucun lien externe) ──
+function sanitizeSvg(code) {
+    const m = String(code).match(/<svg[\s\S]*<\/svg>/i);
+    if (!m) throw new Error('aucun dessin SVG dans la réponse');
+    const doc = new DOMParser().parseFromString(m[0], 'image/svg+xml');
+    if (doc.querySelector('parsererror')) throw new Error('dessin SVG mal formé');
+    const svg = doc.documentElement;
+    svg.querySelectorAll('script, foreignObject, iframe, object, embed, audio, video, image[href^="http"], a').forEach(el => el.remove());
+    [svg, ...svg.querySelectorAll('*')].forEach(el => [...el.attributes].forEach(a => {   // la balise <svg> elle-même comprise
+        const n = a.name.toLowerCase(), v = a.value.trim();
+        if (n.startsWith('on')) el.removeAttribute(a.name);
+        if ((n === 'href' || n === 'xlink:href') && !v.startsWith('#') && !/^data:image\/(png|jpe?g|gif|webp);/i.test(v)) el.removeAttribute(a.name);
+        if (n === 'style' && /url\(\s*['"]?(?!#)/i.test(v)) el.removeAttribute(a.name);
+    }));
+    svg.querySelectorAll('style').forEach(st => { st.textContent = st.textContent.replace(/@import[^;]+;/gi, '').replace(/url\(\s*['"]?(?!#)[^)]*\)/gi, 'none'); });
+    return svg;
+}
+
+// Animations prêtes à l'emploi (Claude choisit les classes, l'app fournit le mouvement)
+const SVG_ANIM_CSS = `
+.char *{transform-box:fill-box}
+.anim-bounce{animation:da-bounce 1.3s ease-in-out infinite}
+@keyframes da-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.anim-walk{animation:da-walk .55s ease-in-out infinite alternate}
+@keyframes da-walk{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-7px) rotate(3deg)}}
+.anim-across{animation:da-across 9s ease-in-out infinite alternate}
+@keyframes da-across{from{transform:translateX(-50px)}to{transform:translateX(50px)}}
+.anim-jump{animation:da-jump 1.1s cubic-bezier(.3,0,.4,1) infinite}
+@keyframes da-jump{0%,100%{transform:translateY(0) scaleY(1)}12%{transform:translateY(0) scaleY(.88)}45%{transform:translateY(-38px) scaleY(1.05)}80%{transform:translateY(0) scaleY(.95)}}
+.anim-sway{animation:da-sway 2.4s ease-in-out infinite alternate;transform-origin:50% 100%}
+@keyframes da-sway{from{transform:rotate(-4deg)}to{transform:rotate(4deg)}}
+.anim-shake{animation:da-shake .35s linear infinite}
+@keyframes da-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.anim-float{animation:da-float 3s ease-in-out infinite alternate}
+@keyframes da-float{from{transform:translateY(0)}to{transform:translateY(-16px)}}
+.anim-breathe{animation:da-breathe 3.2s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes da-breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.015,1.03)}}
+.anim-talk .mouth{animation:da-talk .2s ease-in-out infinite alternate;transform-origin:center}
+@keyframes da-talk{from{transform:scaleY(.35)}to{transform:scaleY(1.25)}}
+.char .eyes{animation:da-blink 4.2s infinite;transform-origin:center}
+@keyframes da-blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.08)}}
+.anim-wave .arm-r{animation:da-wave .55s ease-in-out infinite alternate;transform-origin:15% 10%}
+@keyframes da-wave{from{transform:rotate(10deg)}to{transform:rotate(-55deg)}}
+.anim-walk .arm-l,.anim-across .arm-l{animation:da-swing .55s ease-in-out infinite alternate;transform-origin:50% 5%}
+.anim-walk .arm-r,.anim-across .arm-r{animation:da-swing .55s ease-in-out infinite alternate-reverse;transform-origin:50% 5%}
+@keyframes da-swing{from{transform:rotate(16deg)}to{transform:rotate(-16deg)}}
+.anim-walk .leg-l,.anim-across .leg-l{animation:da-swing .55s ease-in-out infinite alternate-reverse;transform-origin:50% 5%}
+.anim-walk .leg-r,.anim-across .leg-r{animation:da-swing .55s ease-in-out infinite alternate;transform-origin:50% 5%}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}`;
+const ANIM_CLASSES = ['anim-bounce', 'anim-walk', 'anim-across', 'anim-jump', 'anim-sway', 'anim-shake', 'anim-float', 'anim-breathe', 'anim-wave', 'anim-talk'];
+const charSlug = n => 'c-' + String(n || 'x').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const STYLE_SVG = {
+    'cartoon-cute': 'kawaii cartoon, pastel colours, thick soft dark-brown outlines, rounded shapes, big shiny eyes',
+    'watercolor-child': 'soft watercolour look: light desaturated pastel fills, subtle radial gradients, thin warm outlines, paper-like light background',
+    'claymation-child': 'claymation look: chunky rounded shapes, warm saturated colours, soft radial gradients for volume, small highlights',
+    'paper-cut': 'paper cut-out look: flat colours, layered shapes with soft drop shadows (feDropShadow), no outlines',
+    'crayon-child': 'crayon drawing look: bright colours, slightly irregular hand-drawn outlines (use feTurbulence + feDisplacementMap lightly)',
+    '3d-toy': '3D toy look: glossy radial gradients on every shape, strong soft highlights, rounded volumes, soft ground shadows'
+};
+
+// 1) Le casting : chaque personnage dessiné une fois (groupe réutilisable)
+async function claudeDesignCharacters(scenario) {
+    const chars = scenario.characters.slice(0, 6);
+    const style = STYLE_SVG[state.selectedStyle] || STYLE_SVG['cartoon-cute'];
+    const sys = 'You are a children\'s cartoon character designer who draws in clean, valid SVG. You answer with SVG code only.';
+    const user = `Design these recurring cartoon characters for a children's story. Visual style: ${style}.
+Characters:
+${chars.map(c => '- id "' + charSlug(c.name) + '" : ' + c.name + ' (' + (c.gender || '') + ') — ' + (c.appearance || '')).join('\n')}
+
+Return ONE <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"> containing a <defs> with one <g id="..."> per character (use exactly the ids above).
+Rules for EACH character group:
+- Coordinates: the character stands with its FEET AT (0,0), centred on x=0, about 200 units tall and 70–140 units wide (so it spans roughly x -70..70, y -200..0).
+- Facing the viewer (3/4 view allowed), friendly expression, full outfit visible. Keep EXACTLY the described colours and clothes.
+- Name sub-parts with these classes when they exist: class="head", class="eyes" (a group with both eyes), class="mouth" (a single shape, open-mouth smile), class="arm-l", class="arm-r", class="leg-l", class="leg-r", class="body".
+- Draw arms and legs as separate groups so they can move; the top of each arm/leg group is the shoulder/hip.
+- Use only basic SVG (path, circle, ellipse, rect, polygon, g, linearGradient, radialGradient, filter). Gradient/filter ids must start with the character id. No text, no <image>, no script, no external links, no CSS animations.
+- Rich but compact: about 30–80 shapes per character.
+After the <defs>, show all characters side by side (with <use>) so the sheet can be previewed.`;
+    const raw = await callClaude(sys, user, { maxTokens: 16000, temperature: 0.7, label: 'dessin des personnages' });
+    const svg = sanitizeSvg(raw);
+    const found = {};
+    chars.forEach(c => { const g = svg.querySelector('[id="' + charSlug(c.name) + '"]'); if (g) found[charSlug(c.name)] = new XMLSerializer().serializeToString(g); });
+    if (!Object.keys(found).length) throw new Error('personnages non trouvés dans le dessin');
+    // définitions partagées (dégradés, filtres) hors des groupes de personnages
+    const extra = [...svg.querySelectorAll('defs > linearGradient, defs > radialGradient, defs > filter, defs > clipPath, defs > pattern')].map(n => new XMLSerializer().serializeToString(n)).join('');
+    logConsole('Claude a dessiné ' + Object.keys(found).length + ' personnage(s) : ' + chars.filter(c => found[charSlug(c.name)]).map(c => c.name).join(', '), 'success');
+    return { groups: found, extra, sheet: new XMLSerializer().serializeToString(svg) };
+}
+
+// 2) Chaque scène : décor animé + personnages du casting placés et animés
+async function claudeDrawScene(scene, idx, total, cast) {
+    const style = STYLE_SVG[state.selectedStyle] || STYLE_SVG['cartoon-cute'];
+    const ids = state.scenario.characters.filter(c => cast.groups[charSlug(c.name)]).map(c => '"#' + charSlug(c.name) + '" = ' + c.name);
+    const speakers = [...new Set(dialoguesOf(scene).map(d => d.character))];
+    const sys = 'You are an animation director who draws children\'s cartoon scenes in clean, valid, animated SVG. You answer with SVG code only.';
+    const user = `Draw scene ${idx + 1}/${total} of the children's cartoon "${state.scenario.title}". Style: ${style}.
+Scene: ${scene.image_prompt || scene.description}
+Narration (French): ${narrationOf(scene)}
+${speakers.length ? 'Characters who talk in this scene: ' + speakers.join(', ') : ''}
+
+Available characters (already drawn, feet at their origin, ~200 units tall) — place them ONLY with <use>:
+${ids.join('\n') || '(none)'}
+
+Return ONE <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">:
+- A complete, colourful background that fills the whole 512×512 frame (sky/walls, ground, decor matching the scene). Add gentle ambient animation with SMIL (<animate>, <animateTransform>, <animateMotion>): drifting clouds, swaying grass or leaves, twinkling stars, rippling water, smoke… as fits the scene. Loop them (repeatCount="indefinite"), slow and smooth.
+- Place each character present in the scene with: <use href="#id" transform="translate(X Y) scale(S)" class="..."/> where Y is the ground line (feet), S between 0.6 and 1.3 for depth, and add scale(-1 1) at the end of the transform to make a character face left. Characters must not overlap their faces and must be well inside the frame (leave the top 120 units free for speech bubbles when possible).
+- In class, choose 1 or 2 movements from: anim-bounce, anim-walk, anim-across, anim-jump, anim-sway, anim-shake, anim-float, anim-breathe, anim-wave (the app animates them). Characters who talk also get anim-talk.
+- Do NOT redraw the characters, do NOT write any text, no <image>, no script, no external links. Gradient/filter ids must start with "s${idx + 1}-". Keep the SVG under ~14 KB.`;
+    const raw = await callClaude(sys, user, { maxTokens: 12000, temperature: 0.8, label: 'scène ' + (idx + 1) });
+    return assembleSceneSvg(sanitizeSvg(raw), cast, speakers);
+}
+
+// Remplace chaque <use href="#perso"> par une vraie copie du personnage (animable), et ajoute les animations
+function assembleSceneSvg(svg, cast, speakers) {
+    const doc = svg.ownerDocument, NS = 'http://www.w3.org/2000/svg';
+    svg.setAttribute('viewBox', '0 0 512 512'); svg.setAttribute('width', '512'); svg.setAttribute('height', '512');
+    const speakerIds = new Set(speakers.map(charSlug));
+    const parse = s => new DOMParser().parseFromString('<svg xmlns="' + NS + '">' + s + '</svg>', 'image/svg+xml').documentElement;
+    let n = 0;
+    svg.querySelectorAll('use').forEach(u => {
+        const id = (u.getAttribute('href') || u.getAttribute('xlink:href') || '').replace('#', '');
+        if (!cast.groups[id]) return;
+        const outer = doc.createElementNS(NS, 'g');
+        const x = u.getAttribute('x'), y = u.getAttribute('y');
+        outer.setAttribute('transform', (u.getAttribute('transform') || '') + (x || y ? ' translate(' + (x || 0) + ' ' + (y || 0) + ')' : ''));
+        const anim = doc.createElementNS(NS, 'g');
+        const cls = (u.getAttribute('class') || '').split(/\s+/).filter(c => ANIM_CLASSES.includes(c));
+        if (speakerIds.has(id) && !cls.includes('anim-talk')) cls.push('anim-talk');
+        if (!cls.some(c => c !== 'anim-talk')) cls.push('anim-breathe');
+        anim.setAttribute('class', cls.join(' '));
+        anim.style.animationDelay = (-(n++ * 0.37)).toFixed(2) + 's';   // les personnages ne bougent pas en même temps
+        const g = doc.importNode(parse(cast.groups[id]).firstElementChild, true);
+        g.removeAttribute('id'); g.setAttribute('class', ((g.getAttribute('class') || '') + ' char ' + id).trim());
+        anim.appendChild(g); outer.appendChild(anim);
+        u.replaceWith(outer);
+    });
+    let defs = svg.querySelector('defs');
+    if (!defs) { defs = doc.createElementNS(NS, 'defs'); svg.insertBefore(defs, svg.firstChild); }
+    if (cast.extra) [...parse(cast.extra).children].forEach(el => defs.appendChild(doc.importNode(el, true)));
+    const st = doc.createElementNS(NS, 'style'); st.textContent = SVG_ANIM_CSS; svg.insertBefore(st, svg.firstChild);
+    return new XMLSerializer().serializeToString(svg);
+}
+const svgUrl = code => URL.createObjectURL(new Blob([code], { type: 'image/svg+xml' }));
+
+// Génère toutes les scènes (3 à la fois)
+async function claudeDrawAllScenes(scenario) {
+    setStatus('Claude dessine les personnages…');
+    let cast = state.claudeCast;
+    if (!cast) { cast = await claudeDesignCharacters(scenario); state.claudeCast = cast; scenario.claudeCast = cast; }
+    const total = scenario.scenes.length; let done = 0, next = 0;
+    const worker = async () => {
+        while (next < total && !state.stopRequested) {
+            const i = next++; const scene = scenario.scenes[i];
+            for (let tryN = 1; tryN <= 2; tryN++) {
+                try {
+                    const code = await claudeDrawScene(scene, i, total, cast);
+                    scene.svg = code;
+                    const url = svgUrl(code);
+                    const entry = { sceneIndex: i, url, localUrl: url, scene, _blob: new Blob([code], { type: 'image/svg+xml' }) };
+                    state.images.push(entry); state.images.sort((a, b) => a.sceneIndex - b.sceneIndex);
+                    displayGeneratedImage(url, 'Scène ' + (i + 1), i);
+                    logConsole('Scène ' + (i + 1) + ' dessinée par Claude ✓', 'success');
+                    break;
+                } catch (e) { logConsole('Scène ' + (i + 1) + ' (essai ' + tryN + ') : ' + e.message, 'error'); if (/clé|crédit/.test(e.message)) throw e; }
+            }
+            setStatus('Claude dessine les scènes : ' + (++done) + '/' + total);
+        }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    setStatus(null);
+}
+
+async function regenerateClaudeScene(sceneIndex) {
+    const scene = state.scenario.scenes[sceneIndex];
+    const cast = state.claudeCast || state.scenario.claudeCast;
+    if (!cast) { showToast('Personnages Claude introuvables : relancez la création', 'warn'); return null; }
+    const code = await claudeDrawScene(scene, sceneIndex, state.scenario.scenes.length, cast);
+    scene.svg = code;
+    return svgUrl(code);
+}
+
+// ══════════════════════════════════════════════════════════════════
 // PIPELINE PRINCIPAL
 // ══════════════════════════════════════════════════════════════════
 async function runFullPipeline() {
     if (state.isRunning) return;
     const idea = document.getElementById('idea-input').value.trim();
     if (idea.length < 10) { showToast('Histoire trop courte', 'error'); return; }
-    if (!getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
+    const claudeOnly = document.getElementById('mode-select').value === 'claude';
+    if (claudeOnly ? !getClaudeKey() : !getApiKey()) { showToast(claudeOnly ? 'Ajoutez votre clé Claude (panneau du haut)' : 'Ajoutez votre clé API', 'error'); return; }
 
     stopAllVideos();
     Object.assign(state, {
@@ -1653,7 +1913,7 @@ async function runFullPipeline() {
         videoSeconds: parseInt(document.getElementById('duration-select').value),
         selectedStyle: document.getElementById('style-select').value,
         mode: document.getElementById('mode-select').value,
-        images: [], videos: [], projectId: null
+        images: [], videos: [], projectId: null, claudeCast: null
     });
 
     document.getElementById('stop-btn').classList.add('visible');
@@ -1733,10 +1993,11 @@ Réponds UNIQUEMENT en JSON valide, sans markdown.` + pickedCharsPrompt();
         saveProject();
 
         // ═══ ÉTAPE 2 : IMAGES ═══
-        await ensureCharacterSheets(scenario);
+        if (!isClaudeMode()) await ensureCharacterSheets(scenario);
         logConsole('ÉTAPE 2/' + (state.mode === 'video' ? 3 : 2) + ' — Images (image par image)', 'success');
 
-        for (let i = 0; i < scenario.scenes.length; i++) {
+        if (isClaudeMode()) await claudeDrawAllScenes(scenario);
+        else for (let i = 0; i < scenario.scenes.length; i++) {
             if (state.stopRequested) break;
             const scene = scenario.scenes[i];
             setStatus('Image ' + (i + 1) + '/' + scenario.scenes.length + '…');
@@ -1762,9 +2023,10 @@ Réponds UNIQUEMENT en JSON valide, sans markdown.` + pickedCharsPrompt();
         if (state.images.length < 1) throw new Error('Aucune image générée');
 
         if (state.mode !== 'video') {
-            // ═══ BD / PLANCHE PHOTO : assemblage, pas de vidéo ═══
+            // ═══ BD / PLANCHE PHOTO / CLAUDE : assemblage, pas de vidéo Agnes ═══
             await composeBoard();
             await saveToLibrary(true);
+            if (isClaudeMode()) { logConsole('Dessin animé prêt : « ▶ Regarder » pour le voir, ⏺ pour l\'enregistrer en vidéo MP4.', 'success'); }
             setStatus(null);
             showToast(state.mode === 'photo' ? 'Planche photo prête !' : 'Bande dessinée prête !', 'success');
         } else {
@@ -1927,7 +2189,7 @@ function sceneImageRequest(scene) {
 
 async function regenerateImage(sceneIndex) {
     if (state.isRunning) { showToast('Attendez la fin de la génération', 'warn'); return; }
-    if (!getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
+    if (isClaudeMode() ? !getClaudeKey() : !getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
     const scene = state.scenario && state.scenario.scenes[sceneIndex];
     if (!scene) return;
     const card = document.getElementById('img-card-' + sceneIndex);
@@ -1935,8 +2197,10 @@ async function regenerateImage(sceneIndex) {
     state.stopRequested = false;
     logConsole('Régénération de l\'image de la scène ' + (sceneIndex + 1) + '…', 'info');
     try {
-        const req = sceneImageRequest(scene);
-        const url = await callImageAPI(req.prompt, '1K', '1:1', req.refs);
+        let url;
+        if (isClaudeMode()) url = await regenerateClaudeScene(sceneIndex);
+        else { const req = sceneImageRequest(scene); url = await callImageAPI(req.prompt, '1K', '1:1', req.refs); }
+        if (!url) throw new Error('scène non régénérée');
         const existing = state.images.find(im => im.sceneIndex === sceneIndex);
         if (existing) { existing.url = url; existing.localUrl = null; keepLocalCopy(existing); }
         else { state.images.push({ sceneIndex, url, scene }); state.images.sort((a, b) => a.sceneIndex - b.sceneIndex); }
@@ -2012,6 +2276,11 @@ async function loadImageForCanvas(url) {
     // 1) image récupérée en fichier (directement ou via le relais) : PDF et vidéo possibles
     const blob = await getImageBlob(url);
     if (blob) { try { img = await make(URL.createObjectURL(blob), false); } catch (e) {} }
+    if (img && blob && /svg/.test(blob.type)) {
+        let live = document.getElementById('svg-live');
+        if (!live) { live = document.createElement('div'); live.id = 'svg-live'; live.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;overflow:hidden;opacity:0.01;pointer-events:none;z-index:-1'; document.body.appendChild(live); }
+        img.style.cssText = 'width:512px;height:512px'; live.appendChild(img);
+    }
     // 2) image avec autorisation CORS
     if (!img && !/^(data|blob):/.test(url)) { try { img = await make(url, true); } catch (e) {} }
     // 3) dernier recours : s'affiche, mais le PDF direct et la vidéo seront bloqués
@@ -4429,7 +4698,7 @@ const mb = n => (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + ' Mo';
 
 // ── Réglages de l'interface (gardés sur l'appareil, et envoyés sur GitHub) ──
 const UI_KEY = 'da_ui';
-const UI_FIELDS = ['style-select', 'mode-select', 'scene-count-select', 'dialog-count-select', 'duration-select', 'columns-select', 'pp-select', 'orient-select', 'format-select', 'margin-select',
+const UI_FIELDS = ['style-select', 'mode-select', 'text-engine', 'scene-count-select', 'dialog-count-select', 'duration-select', 'columns-select', 'pp-select', 'orient-select', 'format-select', 'margin-select',
     'opt-bubbles', 'opt-captions', 'opt-titlebar', 'opt-cover', 'opt-endpage', 'opt-pagenum', 'opt-sameface', 'vw-music-style', 'vw-music-vol', 'vw-sfx', 'vw-sfx-vol', 'vw-anim', 'vw-auto', 'vw-rate', 'vw-voice', 'vw-music'];
 function readUiState() {
     const o = {};
@@ -5711,6 +5980,9 @@ async function animateFromImages() {
 
 function updateModeUI() {
     state.mode = document.getElementById('mode-select').value;
+    document.getElementById('opt-sameface').closest('.control-row').classList.toggle('hidden', state.mode === 'claude');
+    document.getElementById('text-engine').closest('.control-row').classList.toggle('hidden', state.mode === 'claude');
+    document.getElementById('style-select').title = state.mode === 'claude' ? 'Claude adapte son dessin à ce style' : '';
     document.getElementById('row-duration').classList.toggle('hidden', state.mode !== 'video');
     document.getElementById('row-columns').classList.toggle('hidden', state.mode === 'video');
     document.getElementById('opt-bubbles').parentNode.classList.toggle('hidden', state.mode === 'photo');
@@ -5927,6 +6199,19 @@ function stopAllVideos() {
     renderCharCatalog();
     initNotes();
     initBackup();
+    (() => {
+        const k = document.getElementById('claude-key-input'), m = document.getElementById('claude-model'), st = document.getElementById('claude-state');
+        m.innerHTML = CLAUDE_MODELS.map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('');
+        m.value = getClaudeModel();
+        const sync = () => { const has = !!getClaudeKey(); st.textContent = has ? '✓ prêt' : 'non configuré'; st.classList.toggle('ok', has); k.value = has ? getClaudeKey() : ''; updateGenerateBtn(); };
+        document.getElementById('claude-save-btn').onclick = () => {
+            const v = k.value.trim();
+            try { v ? localStorage.setItem(CLAUDE_KEY, v) : localStorage.removeItem(CLAUDE_KEY); localStorage.setItem(CLAUDE_MODEL_KEY, m.value); } catch (e) {}
+            showToast(v ? 'Clé Claude enregistrée' : 'Clé Claude supprimée', v ? 'success' : 'warn'); sync();
+        };
+        m.onchange = () => { try { localStorage.setItem(CLAUDE_MODEL_KEY, m.value); } catch (e) {} };
+        sync();
+    })();
     loadRecKeys().then(() => { updateManualStatus(); if (state.scenario) displayScenario(state.scenario); });
     document.getElementById('voice-manual').checked = manualOn();
     document.getElementById('voice-manual').addEventListener('change', e => { voiceCfg.manual = e.target.checked; saveVoiceCfg(); });

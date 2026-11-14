@@ -605,6 +605,11 @@
     .claude-box summary span { font-weight: 600; font-size: 0.7rem; color: var(--ink-faint); margin-left: 0.3rem; } .claude-box summary span.ok { color: var(--success); }
     .claude-box[open] summary { margin-bottom: 0.5rem; }
     .claude-box select { margin-bottom: 0.6rem; }
+    .engines-box { border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.75rem 0.2rem; margin-bottom: 0.9rem; background: rgba(74,108,247,0.06); }
+    .engines-box > .control-label { color: var(--ink); margin-bottom: 0.6rem; }
+    .engines-box .control-row { margin-bottom: 0.65rem; }
+    #engines-summary { margin: -0.2rem 0 0.6rem; }
+    #om-box a { color: var(--info); }
     /* ── Impression : seule la planche ── */
     @media print {
         body.printing-board > *:not(.layout) { display: none !important; }
@@ -662,6 +667,13 @@
         <span class="status-dot"></span>
         <span id="api-status-text">Aucune clé API enregistrée</span>
     </div>
+    <details class="claude-box" id="om-box">
+        <summary>🧩 1min.ai <span id="om-state">non configuré</span></summary>
+        <input type="text" class="api-key-input" id="om-relay" placeholder="Adresse du relais (https://relais-1min….workers.dev)" autocomplete="off" spellcheck="false">
+        <input type="password" class="api-key-input" id="om-key" placeholder="Clé API 1min.ai (inutile si elle est gardée sur le relais)" autocomplete="off" spellcheck="false">
+        <button type="button" class="api-save-btn" id="om-save">Enregistrer et tester</button>
+        <div class="voice-note">1min.ai bloque les appels venant d'un autre site : un petit <b>relais gratuit Cloudflare</b> est nécessaire (5 min, une fois). Code et marche à suivre : dossier <a href="https://github.com/aliand0810/dessin-anime-enfants/tree/main/relais-1min" target="_blank" rel="noopener">relais-1min ↗</a>. Facturé en crédits sur votre compte 1min.ai.</div>
+    </details>
     <details class="claude-box" id="claude-box">
         <summary>🤖 Claude (Anthropic) <span id="claude-state">non configuré</span></summary>
         <input type="password" class="api-key-input" id="claude-key-input" placeholder="Clé API Anthropic (sk-ant-…)" autocomplete="off" spellcheck="false">
@@ -717,12 +729,39 @@
                 <option value="claude">🤖 Dessin animé Claude (scènes animées dessinées par Claude)</option>
             </select>
         </div>
+        <div class="engines-box">
+        <div class="control-label">🧩 Fournisseurs</div>
+        <div class="control-row">
+            <label class="control-label">Dessiner les images avec</label>
+            <select id="image-engine">
+                <option value="agnes">Agnes</option>
+                <optgroup label="1min.ai">
+                    <option value="1min:black-forest-labs/flux-1.1-pro">1min.ai — Flux 1.1 Pro (accepte un portrait de référence)</option>
+                    <option value="1min:gemini-3-pro-image-preview">1min.ai — Gemini 3 Pro Image</option>
+                    <option value="1min:custom">1min.ai — autre modèle…</option>
+                </optgroup>
+            </select>
+            <input type="text" id="om-custom-image" class="hidden" placeholder="Identifiant du modèle 1min.ai (ex. black-forest-labs/flux-2-pro)" style="margin-top:0.4rem">
+        </div>
+        <div class="control-row" id="row-video-engine">
+            <label class="control-label">Animer les vidéos avec</label>
+            <select id="video-engine">
+                <option value="agnes">Agnes</option>
+                <optgroup label="1min.ai">
+                    <option value="1min:kling">1min.ai — Kling (image → vidéo, mouvements naturels)</option>
+                    <option value="1min:hailuo">1min.ai — Hailuo (image → vidéo, très fluide)</option>
+                    <option value="1min:seedance">1min.ai — Seedance 2.0 Fast (rapide)</option>
+                </optgroup>
+            </select>
+        </div>
         <div class="control-row">
             <label class="control-label">Écrire l'histoire avec</label>
             <select id="text-engine">
                 <option value="agnes">Agnes</option>
                 <option value="claude">🤖 Claude (meilleur français, dialogues plus naturels)</option>
             </select>
+        </div>
+        <div class="voice-note" id="engines-summary"></div>
         </div>
         <div class="control-row" id="row-columns">
             <label class="control-label">Disposition de la planche</label>
@@ -1077,9 +1116,10 @@ const MODEL_IMAGE = 'agnes-image-2.5-flash';
 const MODEL_VIDEO = 'agnes-video-2.5-flash';
 const POLL_INTERVAL_MS = 2000;
 const PROJECT_KEY = 'dessin_anime_last_project';
-const APP_VERSION = '3.16.0';
-const APP_DATE = '11/11/2026';
+const APP_VERSION = '3.17.0';
+const APP_DATE = '14/11/2026';
 const CHANGELOG = [
+    ['3.17.0', '1min.ai intégré (via un relais) : images Flux / Gemini et vidéos Kling / Hailuo / Seedance ; choix du fournisseur pour l\'histoire, les images et les vidéos'],
     ['3.16.0', 'Claude : dessin animé dessiné et animé par Claude (personnages identiques dans chaque scène, décors animés), enregistrable en MP4 ; Claude peut aussi écrire l\'histoire'],
     ['3.15.1', 'Boutons pour masquer la colonne de gauche, de droite ou les deux (Alt+1, Alt+2, Alt+0), mémorisé'],
     ['3.15.0', 'Vrais échanges entre personnages : 1 à 6 répliques par scène (ou variable), bulles empilées, voix et bulles au fil de la conversation'],
@@ -1472,11 +1512,11 @@ function updateApiPanel() {
 }
 function updateGenerateBtn() {
     const btn = document.getElementById('generate-btn');
-    const hasKey = (document.getElementById('mode-select') || {}).value === 'claude' ? !!getClaudeKey() : !!getApiKey();
+    const need = missingKeyMsg(), hasKey = !need;
     const hasIdea = document.getElementById('idea-input').value.trim().length > 10;
     btn.disabled = !hasKey || !hasIdea || state.isRunning;
     if (state.isRunning) btn.textContent = 'Génération en cours…';
-    else if (!hasKey) btn.textContent = (document.getElementById('mode-select') || {}).value === 'claude' ? 'Ajoutez votre clé Claude' : 'Ajoutez votre clé API';
+    else if (!hasKey) btn.textContent = need;
     else if (!hasIdea) btn.textContent = 'Décrivez votre histoire';
     else btn.textContent = ({ video: '🎬 Générer le dessin animé', comic: '💬 Créer la bande dessinée', photo: '🖼️ Créer la planche photo', claude: '🤖 Créer le dessin animé avec Claude' })[state.mode] || '🎬 Générer';
     updateReadBtn();
@@ -1547,6 +1587,7 @@ async function callTextAPI(messages, options = {}) {
 }
 
 async function callImageAPI(prompt, size = '1K', ratio = '1:1', refs) {
+    if (imageProvider() === '1min') return omImage(prompt, refs);
     const withRefs = Array.isArray(refs) && refs.length > 0;
     const model = withRefs ? MODEL_IMAGE_REF : MODEL_IMAGE;
     logConsole('Requête image → ' + model + (withRefs ? ' avec ' + refs.length + ' portrait(s) de référence' : ''), 'info');
@@ -1897,14 +1938,168 @@ async function regenerateClaudeScene(sceneIndex) {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// 1min.ai : images (Flux, Gemini…) et vidéos (Kling, Hailuo, Seedance) — via le relais Cloudflare
+// ══════════════════════════════════════════════════════════════════
+const OM_KEY = 'da_1min';
+const om = (() => { try { return Object.assign({ relay: '', key: '' }, JSON.parse(localStorage.getItem(OM_KEY) || '{}')); } catch (e) { return { relay: '', key: '' }; } })();
+const saveOm = () => { try { localStorage.setItem(OM_KEY, JSON.stringify(om)); } catch (e) {} };
+const omReady = () => !!om.relay && (!!om.key || om.serverKey);
+const OM_IMAGE_MODELS = [
+    ['black-forest-labs/flux-1.1-pro', 'Flux 1.1 Pro — très beau rendu, accepte un portrait de référence'],
+    ['gemini-3-pro-image-preview', 'Gemini 3 Pro Image — fidèle aux consignes'],
+    ['custom', 'Autre modèle 1min.ai (identifiant à saisir)']
+];
+const OM_VIDEO_MODELS = [
+    ['kling', 'Kling — image → vidéo, mouvements naturels'],
+    ['hailuo', 'Hailuo — image → vidéo, très fluide'],
+    ['seedance', 'Seedance 2.0 Fast — rapide, image de référence']
+];
+const imageProvider = () => { const v = (document.getElementById('image-engine') || {}).value || 'agnes'; return v.startsWith('1min') ? '1min' : 'agnes'; };
+const videoProvider = () => { const v = (document.getElementById('video-engine') || {}).value || 'agnes'; return v.startsWith('1min') ? '1min' : 'agnes'; };
+const omImageModel = () => { const v = ((document.getElementById('image-engine') || {}).value || '').replace(/^1min:/, ''); return v === 'custom' ? (om.customImage || '').trim() : v; };
+const omVideoModel = () => ((document.getElementById('video-engine') || {}).value || '').replace(/^1min:/, '');
+
+async function omFetch(path, opts = {}) {
+    if (!om.relay) throw new Error('adresse du relais 1min.ai manquante');
+    const headers = Object.assign({}, opts.headers || {});
+    if (om.key) headers['API-KEY'] = om.key;
+    let res;
+    try { res = await fetch(om.relay.replace(/\/+$/, '') + path, Object.assign({}, opts, { headers })); }
+    catch (e) { throw new Error('relais 1min.ai injoignable (adresse incorrecte ou relais non déployé)'); }
+    if (opts.raw) { if (!res.ok) throw new Error('téléchargement 1min.ai : HTTP ' + res.status); return res; }
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        const m = j.message || j.errorCode || 'HTTP ' + res.status;
+        throw new Error(res.status === 401 ? 'clé 1min.ai invalide' : /credit|insufficient|balance/i.test(m) ? 'crédits 1min.ai insuffisants' : '1min.ai : ' + m);
+    }
+    return j;
+}
+async function omUpload(blob, name) {
+    const fd = new FormData();
+    fd.append('asset', blob, name || ('scene_' + Date.now() + '.' + ((blob.type || '').includes('png') ? 'png' : 'jpg')));
+    const j = await omFetch('/api/assets', { method: 'POST', body: fd });
+    const key = (j.asset && (j.asset.key || j.asset.path)) || (j.fileContent && j.fileContent.path);
+    if (!key) throw new Error('envoi de l\'image vers 1min.ai refusé');
+    return key;
+}
+// Les images SVG (mode Claude) ou WebP sont converties en PNG avant envoi
+async function asPng(blob) {
+    if (/png|jpe?g/.test(blob.type || '')) return blob;
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(blob); });
+    const c = document.createElement('canvas'); c.width = c.height = 1024;
+    c.getContext('2d').drawImage(img, 0, 0, 1024, 1024);
+    return new Promise(r => c.toBlob(r, 'image/png'));
+}
+const _omAsset = new Map();
+async function omAssetFor(url) {
+    if (_omAsset.has(url)) return _omAsset.get(url);
+    const blob = await getImageBlob(url);
+    if (!blob) throw new Error('image introuvable pour 1min.ai');
+    const key = await omUpload(await asPng(blob));
+    _omAsset.set(url, key);
+    return key;
+}
+// Lance une génération (mode asynchrone) et attend le résultat
+async function omRun(body, label, onTick) {
+    const j = await omFetch('/api/features', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(Object.assign({ async: true }, body)) });
+    let rec = j.aiRecord || j;
+    const t0 = Date.now();
+    while (rec && rec.status !== 'SUCCESS') {
+        if (state.stopRequested) throw new Error('Arrêt demandé');
+        if (/FAIL/.test(rec.status || '')) {
+            const ro = rec.aiRecordDetail && rec.aiRecordDetail.resultObject;
+            throw new Error(label + ' : échec 1min.ai' + (ro && ro.message ? ' (' + String(ro.message).slice(0, 120) + ')' : ''));
+        }
+        if (Date.now() - t0 > 25 * 60000) throw new Error(label + ' : délai dépassé (25 min)');
+        if (onTick) onTick(Math.round((Date.now() - t0) / 1000));
+        await sleep(4000);
+        const r = await omFetch('/api/results/' + encodeURIComponent(rec.uuid));
+        if (!r.aiRecord) throw new Error(label + ' : résultat introuvable');
+        rec = r.aiRecord;
+    }
+    const url = rec.temporaryUrl || (rec.aiRecordDetail && Array.isArray(rec.aiRecordDetail.resultObject) && /^https?:/.test(rec.aiRecordDetail.resultObject[0] || '') ? rec.aiRecordDetail.resultObject[0] : '');
+    if (!url) throw new Error(label + ' : pas de fichier dans la réponse 1min.ai');
+    return { url, elapsed: Math.round((Date.now() - t0) / 1000) };
+}
+// Fichier généré récupéré tout de suite (les liens 1min.ai expirent)
+async function omKeep(url) {
+    const res = await omFetch('/file?url=' + encodeURIComponent(url), { raw: true });
+    return URL.createObjectURL(await res.blob());
+}
+
+// ── Images ──
+async function omImage(prompt, refs) {
+    const model = omImageModel();
+    if (!model) throw new Error('identifiant du modèle d\'image 1min.ai manquant');
+    logConsole('Requête image → 1min.ai ' + model + (refs && refs.length ? ' (avec portrait de référence)' : ''), 'info');
+    const po = { prompt: prompt.slice(0, 3800) };
+    if (model.includes('flux')) {
+        Object.assign(po, { aspect_ratio: '1:1', output_quality: 90, safety_tolerance: 2 });
+        if (refs && refs.length) { try { po.image_prompt = await omAssetFor(refs[0]); } catch (e) { logConsole('Portrait de référence non envoyé : ' + e.message, 'warn'); } }
+    } else if (model.includes('gemini')) Object.assign(po, { imageSize: '1K' });
+    else Object.assign(po, { aspect_ratio: '1:1' });
+    const r = await omRun({ type: 'IMAGE_GENERATOR', model, promptObject: po }, 'Image');
+    return omKeep(r.url);
+}
+
+// ── Vidéos : une scène = un clip, à partir de son image ──
+async function omVideo(startImg, endImg, prompt, index) {
+    const model = omVideoModel();
+    const sec = state.videoSeconds || 5;
+    updatePendingVideoCard(index, 'Envoi de l\'image…', 0, 0);
+    const startKey = await omAssetFor(startImg.localUrl || startImg.url);
+    let body;
+    if (model === 'kling') {
+        body = { type: 'IMAGE_TO_VIDEO', model: 'kling', promptObject: { imageUrl: startKey, prompt: prompt.slice(0, 2400), duration: sec > 7 ? 10 : 5, aspect_ratio: '1:1', mode: 'std', version: '2.1', cfg_scale: 0.5,
+            negative_prompt: 'text, watermark, deformed face, extra limbs' } };
+    } else if (model === 'hailuo') {
+        body = { type: 'IMAGE_TO_VIDEO', model: 'hailuo', promptObject: { imageUrl: startKey, taskType: 'i2v-02', prompt: prompt.slice(0, 1900), duration: 6, resolution: 768, expand_prompt: false } };
+    } else {
+        body = { type: 'TEXT_TO_VIDEO', model: 'bytedance/seedance-2.0-fast', promptObject: { prompt: prompt.slice(0, 4800), resolution: '720p', duration: Math.max(4, Math.min(15, sec)), ratio: '1:1', imageUrls: [startKey], generateAudio: false, watermark: false } };
+    }
+    logConsole('Requête vidéo → 1min.ai ' + model + ' (clip ' + (index + 1) + ')', 'info');
+    updatePendingVideoCard(index, 'En file d\'attente 1min.ai…', 0, 0);
+    const r = await omRun(body, 'Clip ' + (index + 1), s => updatePendingVideoCard(index, 'Génération 1min.ai…', Math.min(95, Math.round(s / 3)), s));
+    updatePendingVideoCard(index, 'Téléchargement…', 98, r.elapsed);
+    const videoUrl = await omKeep(r.url);
+    logConsole('✅ Clip ' + (index + 1) + ' prêt (1min.ai ' + model + ', ' + r.elapsed + ' s)', 'success');
+    return { videoUrl, elapsed: r.elapsed };
+}
+
+async function omTest() {
+    const st = document.getElementById('om-state');
+    st.textContent = 'Test…';
+    try {
+        const p = await omFetch('/ping');
+        om.serverKey = !!p.cleServeur; saveOm();
+        await omFetch('/api/results/00000000-0000-0000-0000-000000000000');   // valide la clé sans consommer de crédit
+        st.textContent = '✓ prêt'; st.classList.add('ok');
+        showToast('1min.ai connecté' + (om.serverKey ? ' (clé gardée sur le relais)' : ''), 'success');
+    } catch (e) { st.textContent = '⚠️ ' + e.message; st.classList.remove('ok'); showToast('1min.ai : ' + e.message, 'error', 5000); }
+    updateGenerateBtn();
+}
+
+// Clés nécessaires selon les choix (texte, images, vidéos)
+function missingKeyMsg() {
+    const mode = (document.getElementById('mode-select') || {}).value;
+    if (mode === 'claude') return getClaudeKey() ? '' : 'Ajoutez votre clé Claude';
+    const textClaude = (document.getElementById('text-engine') || {}).value === 'claude';
+    if (textClaude ? !getClaudeKey() : !getApiKey()) return textClaude ? 'Ajoutez votre clé Claude' : 'Ajoutez votre clé Agnes (histoire)';
+    if (imageProvider() === '1min' ? !omReady() : !getApiKey()) return imageProvider() === '1min' ? 'Configurez 1min.ai' : 'Ajoutez votre clé Agnes (images)';
+    if (mode === 'video' && (videoProvider() === '1min' ? !omReady() : !getApiKey())) return videoProvider() === '1min' ? 'Configurez 1min.ai' : 'Ajoutez votre clé Agnes (vidéos)';
+    if (imageProvider() === '1min' && omImageModel() === '') return 'Indiquez le modèle d\'image 1min.ai';
+    return '';
+}
+
+// ══════════════════════════════════════════════════════════════════
 // PIPELINE PRINCIPAL
 // ══════════════════════════════════════════════════════════════════
 async function runFullPipeline() {
     if (state.isRunning) return;
     const idea = document.getElementById('idea-input').value.trim();
     if (idea.length < 10) { showToast('Histoire trop courte', 'error'); return; }
-    const claudeOnly = document.getElementById('mode-select').value === 'claude';
-    if (claudeOnly ? !getClaudeKey() : !getApiKey()) { showToast(claudeOnly ? 'Ajoutez votre clé Claude (panneau du haut)' : 'Ajoutez votre clé API', 'error'); return; }
+    const need = missingKeyMsg();
+    if (need) { showToast(need + ' (panneau du haut)', 'error', 4000); return; }
 
     stopAllVideos();
     Object.assign(state, {
@@ -2077,10 +2272,15 @@ async function runVideoStage() {
 
             updatePendingVideoCard(i, 'Création de la tâche…', 0, 0);
             try {
-                const videoId = await createVideoTask(startImg.url, endImg.url, buildVideoPrompt(scene, nextScene, isLast));
-                updatePendingVideoCard(i, 'En file d\'attente…', 0, 0);
+                let job;
+                if (videoProvider() === '1min') job = omVideo(startImg, endImg, buildVideoPrompt(scene, nextScene, isLast), i);
+                else {
+                    const videoId = await createVideoTask(startImg.url, endImg.url, buildVideoPrompt(scene, nextScene, isLast));
+                    updatePendingVideoCard(i, 'En file d\'attente…', 0, 0);
+                    job = pollVideo(videoId, i);
+                }
                 videoPromises.push(
-                    pollVideo(videoId, i).then(result => {
+                    job.then(result => {
                         state.videos[i] = { sceneIndex: startImg.sceneIndex, url: result.videoUrl, dialogue, sceneNumber: i + 1 };
                         replacePendingWithVideo(i, result.videoUrl, dialogue, i + 1);
                         document.getElementById('section-player').classList.remove('hidden');
@@ -2189,7 +2389,7 @@ function sceneImageRequest(scene) {
 
 async function regenerateImage(sceneIndex) {
     if (state.isRunning) { showToast('Attendez la fin de la génération', 'warn'); return; }
-    if (isClaudeMode() ? !getClaudeKey() : !getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
+    if (isClaudeMode() ? !getClaudeKey() : imageProvider() === '1min' ? !omReady() : !getApiKey()) { showToast('Ajoutez la clé du fournisseur d\'images', 'error'); return; }
     const scene = state.scenario && state.scenario.scenes[sceneIndex];
     if (!scene) return;
     const card = document.getElementById('img-card-' + sceneIndex);
@@ -4698,7 +4898,7 @@ const mb = n => (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + ' Mo';
 
 // ── Réglages de l'interface (gardés sur l'appareil, et envoyés sur GitHub) ──
 const UI_KEY = 'da_ui';
-const UI_FIELDS = ['style-select', 'mode-select', 'text-engine', 'scene-count-select', 'dialog-count-select', 'duration-select', 'columns-select', 'pp-select', 'orient-select', 'format-select', 'margin-select',
+const UI_FIELDS = ['style-select', 'mode-select', 'text-engine', 'image-engine', 'video-engine', 'scene-count-select', 'dialog-count-select', 'duration-select', 'columns-select', 'pp-select', 'orient-select', 'format-select', 'margin-select',
     'opt-bubbles', 'opt-captions', 'opt-titlebar', 'opt-cover', 'opt-endpage', 'opt-pagenum', 'opt-sameface', 'vw-music-style', 'vw-music-vol', 'vw-sfx', 'vw-sfx-vol', 'vw-anim', 'vw-auto', 'vw-rate', 'vw-voice', 'vw-music'];
 function readUiState() {
     const o = {};
@@ -5963,7 +6163,7 @@ function downloadBoard() {
 async function animateFromImages() {
     if (state.isRunning) return;
     if (state.images.length < 1) { showToast('Aucune image', 'warn'); return; }
-    if (!getApiKey()) { showToast('Ajoutez votre clé API', 'error'); return; }
+    if (videoProvider() === '1min' ? !omReady() : !getApiKey()) { showToast(videoProvider() === '1min' ? 'Configurez 1min.ai' : 'Ajoutez votre clé API', 'error'); return; }
     state.isRunning = true; state.stopRequested = false;
     state.videoSeconds = parseInt(document.getElementById('duration-select').value);
     document.getElementById('stop-btn').classList.add('visible');
@@ -5978,10 +6178,20 @@ async function animateFromImages() {
     await deactivateWakeLock();
 }
 
+function updateEnginesSummary() {
+    const box = document.getElementById('engines-summary'); if (!box) return;
+    const mode = document.getElementById('mode-select').value;
+    const label = id => { const sel = document.getElementById(id); return sel ? sel.options[sel.selectedIndex].text.split(' (')[0] : ''; };
+    document.getElementById('om-custom-image').classList.toggle('hidden', document.getElementById('image-engine').value !== '1min:custom');
+    document.getElementById('row-video-engine').classList.toggle('hidden', mode !== 'video');
+    document.querySelector('.engines-box').classList.toggle('hidden', mode === 'claude');
+    box.textContent = mode === 'claude' ? '' : 'Histoire : ' + label('text-engine') + ' · Images : ' + label('image-engine') + (mode === 'video' ? ' · Vidéos : ' + label('video-engine') : '');
+}
 function updateModeUI() {
     state.mode = document.getElementById('mode-select').value;
+    setTimeout(updateEnginesSummary, 0);
     document.getElementById('opt-sameface').closest('.control-row').classList.toggle('hidden', state.mode === 'claude');
-    document.getElementById('text-engine').closest('.control-row').classList.toggle('hidden', state.mode === 'claude');
+
     document.getElementById('style-select').title = state.mode === 'claude' ? 'Claude adapte son dessin à ce style' : '';
     document.getElementById('row-duration').classList.toggle('hidden', state.mode !== 'video');
     document.getElementById('row-columns').classList.toggle('hidden', state.mode === 'video');
@@ -6211,6 +6421,15 @@ function stopAllVideos() {
         };
         m.onchange = () => { try { localStorage.setItem(CLAUDE_MODEL_KEY, m.value); } catch (e) {} };
         sync();
+    })();
+    (() => {
+        const relay = document.getElementById('om-relay'), key = document.getElementById('om-key'), st = document.getElementById('om-state'), cust = document.getElementById('om-custom-image');
+        relay.value = om.relay || ''; key.value = om.key || ''; cust.value = om.customImage || '';
+        if (omReady()) { st.textContent = '✓ configuré'; st.classList.add('ok'); }
+        document.getElementById('om-save').onclick = () => { om.relay = relay.value.trim().replace(/\/+$/, ''); om.key = key.value.trim(); saveOm(); _omAsset.clear(); omTest(); };
+        cust.oninput = () => { om.customImage = cust.value.trim(); saveOm(); updateGenerateBtn(); };
+        ['image-engine', 'video-engine', 'text-engine'].forEach(id => document.getElementById(id).addEventListener('change', () => { updateEnginesSummary(); updateGenerateBtn(); }));
+        updateEnginesSummary();
     })();
     loadRecKeys().then(() => { updateManualStatus(); if (state.scenario) displayScenario(state.scenario); });
     document.getElementById('voice-manual').checked = manualOn();
